@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Download, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Download, CheckCircle, Send } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { Invoice, Client, Job } from '@/types';
@@ -44,6 +44,22 @@ export default function InvoiceDetailPage() {
   }
 
   useEffect(() => { loadInvoice(); }, [invoiceId]);
+
+  async function handleSendInvoice() {
+    setSubmitting(true);
+    try {
+      const { error } = await supabase.current
+        .from('invoices')
+        .update({ status: 'sent' })
+        .eq('id', invoiceId);
+      if (error) throw error;
+      await loadInvoice();
+    } catch (err) {
+      console.error('[InvoiceDetail] send invoice error', err);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleMarkPaid() {
     setSubmitting(true);
@@ -105,6 +121,11 @@ export default function InvoiceDetailPage() {
           </div>
         </div>
         <div className="flex gap-3">
+          {invoice.status === 'draft' && (
+            <Button variant="ghost" onClick={handleSendInvoice} loading={submitting} disabled={submitting}>
+              <Send className="w-4 h-4 mr-2" />Send Invoice
+            </Button>
+          )}
           {invoice.status !== 'paid' && (
             <Button variant="ghost" onClick={handleMarkPaid} loading={submitting} disabled={submitting}>
               <CheckCircle className="w-4 h-4 mr-2" />Mark Paid

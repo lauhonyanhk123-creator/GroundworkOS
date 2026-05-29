@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,10 +14,30 @@ type SubcontractorRow = Subcontractor & {
   document_count: number;
 };
 
+interface AddForm {
+  company_name: string;
+  contact_name: string;
+  trade: string;
+  utr_number: string;
+  email: string;
+  phone: string;
+  notes: string;
+}
+
 export default function SubcontractorsPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [subcontractors, setSubcontractors] = useState<SubcontractorRow[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [addForm, setAddForm] = useState<AddForm>({
+    company_name: '', contact_name: '', trade: '', utr_number: '',
+    email: '', phone: '', notes: '',
+  });
+  const [addSubmitting, setAddSubmitting] = useState(false);
+  const [addFormError, setAddFormError] = useState<string | null>(null);
+
   const supabase = useRef(createClient());
 
   async function loadSubcontractors() {
@@ -50,19 +71,60 @@ export default function SubcontractorsPage() {
 
   useEffect(() => { loadSubcontractors(); }, []);
 
+  async function handleAddSubcontractor() {
+    if (!addForm.company_name.trim()) { setAddFormError('Company name is required.'); return; }
+    setAddSubmitting(true);
+    setAddFormError(null);
+    try {
+      const { data: uc } = await supabase.current
+        .from('user_companies')
+        .select('company_id')
+        .single();
+      if (!uc?.company_id) throw new Error('No company associated with this account.');
+
+      const { error } = await supabase.current.from('subcontractors').insert({
+        company_name: addForm.company_name.trim(),
+        contact_name: addForm.contact_name || null,
+        trade: addForm.trade || null,
+        utr_number: addForm.utr_number || null,
+        email: addForm.email || null,
+        phone: addForm.phone || null,
+        notes: addForm.notes || null,
+        company_id: uc.company_id,
+        cis_status: 'unverified',
+      });
+      if (error) throw error;
+      setShowAddModal(false);
+      setAddForm({ company_name: '', contact_name: '', trade: '', utr_number: '', email: '', phone: '', notes: '' });
+      await loadSubcontractors();
+    } catch (err) {
+      setAddFormError(err instanceof Error ? err.message : 'Failed to add subcontractor. Please try again.');
+    } finally {
+      setAddSubmitting(false);
+    }
+  }
+
+  async function handleVerifyCIS(subId: string, utrNumber: string | null) {
+    try {
+      await supabase.current
+        .from('subcontractors')
+        .update({ cis_status: utrNumber ? 'net' : 'unverified', cis_verified_at: new Date().toISOString() })
+        .eq('id', subId);
+      await loadSubcontractors();
+    } catch (err) {
+      console.error('[Subcontractors] verify CIS error', err);
+    }
+  }
+
   const showWarning = subcontractors.some(s => s.cis_status === 'unverified' || s.has_expiring_documents);
 
   function getCISIcon(status: string) {
     switch (status) {
-      case 'net':
-        return <CheckCircle className="w-4 h-4 text-success" />;
+      case 'net': return <CheckCircle className="w-4 h-4 text-success" />;
       case 'unverified':
-      case 'unmatched':
-        return <AlertTriangle className="w-4 h-4 text-warning" />;
-      case 'gross':
-        return <XCircle className="w-4 h-4 text-danger" />;
-      default:
-        return null;
+      case 'unmatched': return <AlertTriangle className="w-4 h-4 text-warning" />;
+      case 'gross': return <XCircle className="w-4 h-4 text-danger" />;
+      default: return null;
     }
   }
 
@@ -94,7 +156,7 @@ export default function SubcontractorsPage() {
           <h1 className="text-2xl font-condensed font-bold">Subcontractors</h1>
           <p className="text-muted text-sm mt-1">Manage your subbies and CIS compliance</p>
         </div>
-        <Button>
+        <Button onClick={() => setShowAddModal(true)}>
           <Plus className="w-4 h-4 mr-2" />
           Add Subcontractor
         </Button>
@@ -154,9 +216,13 @@ export default function SubcontractorsPage() {
                 </div>
                 <div className="flex gap-2">
                   {(sub.cis_status === 'unverified' || sub.cis_status === 'unmatched') && (
-                    <Button variant="ghost" size="sm">Verify CIS</Button>
+                    <Button variant="ghost" size="sm" onClick={() => handleVerifyCIS(sub.id, sub.utr_number ?? null)}>
+                      Verify CIS
+                    </Button>
                   )}
-                  <Button variant="ghost" size="sm">View</Button>
+                  <Button variant="ghost" size="sm" onClick={() => router.push(`/subcontractors/${sub.id}`)}>
+                    View
+                  </Button>
                 </div>
               </div>
             ))}
@@ -200,6 +266,94 @@ export default function SubcontractorsPage() {
           </div>
         </div>
       </Panel>
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded w-full max-w-lg max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-xl font-condensed font-bold">Add Subcontractor</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {addFormError && (
+                <div className="p-3 rounded bg-danger/10 border border-danger/30 text-danger text-sm">{addFormError}</div>
+              )}
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Company Name *</label>
+                <input
+                  type="text"
+                  value={addForm.company_name}
+                  onChange={(e) => setAddForm(f => ({ ...f, company_name: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Contact Name</label>
+                  <input
+                    type="text"
+                    value={addForm.contact_name}
+                    onChange={(e) => setAddForm(f => ({ ...f, contact_name: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Trade</label>
+                  <input
+                    type="text"
+                    value={addForm.trade}
+                    onChange={(e) => setAddForm(f => ({ ...f, trade: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                    placeholder="e.g. Drainage, Groundworks"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">UTR Number</label>
+                  <input
+                    type="text"
+                    value={addForm.utr_number}
+                    onChange={(e) => setAddForm(f => ({ ...f, utr_number: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                    placeholder="10-digit UTR"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={addForm.phone}
+                    onChange={(e) => setAddForm(f => ({ ...f, phone: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Email</label>
+                <input
+                  type="email"
+                  value={addForm.email}
+                  onChange={(e) => setAddForm(f => ({ ...f, email: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  value={addForm.notes}
+                  onChange={(e) => setAddForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => { setShowAddModal(false); setAddFormError(null); }}>Cancel</Button>
+              <Button onClick={handleAddSubcontractor} loading={addSubmitting} disabled={addSubmitting}>Add Subcontractor</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

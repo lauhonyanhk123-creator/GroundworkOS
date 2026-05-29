@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
@@ -17,12 +17,14 @@ type QuoteDetail = Quote & {
 
 export default function QuoteDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const quoteId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [converting, setConverting] = useState(false);
   const supabase = useRef(createClient());
 
   async function loadQuote() {
@@ -61,6 +63,42 @@ export default function QuoteDetailPage() {
       setActionError(err instanceof Error ? err.message : 'Action failed. Please try again.');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleConvertToJob() {
+    if (!quote) return;
+    setConverting(true);
+    setActionError(null);
+    try {
+      const { data: jobNumData, error: jobNumError } = await supabase.current.rpc('generate_job_number');
+      if (jobNumError || !jobNumData) throw new Error('Failed to generate job number.');
+
+      const { data: jobData, error: jobInsertError } = await supabase.current
+        .from('jobs')
+        .insert({
+          company_id: quote.company_id,
+          job_number: jobNumData as string,
+          client_id: quote.client_id,
+          title: quote.title ?? quote.quote_number,
+          value: quote.total_amount,
+          status: 'active',
+          progress_percent: 0,
+        })
+        .select()
+        .single();
+      if (jobInsertError || !jobData) throw new Error(jobInsertError?.message ?? 'Failed to create job.');
+
+      const { error: updateError } = await supabase.current
+        .from('quotes')
+        .update({ job_id: jobData.id })
+        .eq('id', quoteId);
+      if (updateError) throw new Error(updateError.message);
+
+      router.push(`/jobs/${jobData.id}`);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Failed to convert to job. Please try again.');
+      setConverting(false);
     }
   }
 
@@ -195,10 +233,10 @@ export default function QuoteDetailPage() {
         </Panel>
       )}
 
-      {quote.status === 'accepted' && (
+      {quote.status === 'accepted' && !quote.job_id && (
         <Panel title="Convert to Job">
           <p className="text-sm text-muted mb-4">This quote has been accepted. Create a job to track the work.</p>
-          <Button>
+          <Button onClick={handleConvertToJob} loading={converting} disabled={converting}>
             <RefreshCw className="w-4 h-4 mr-2" />Convert to Job
           </Button>
         </Panel>

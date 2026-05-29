@@ -17,6 +17,16 @@ const tabs = [
   { id: 'invoices', label: 'Invoices', icon: Receipt },
 ];
 
+interface EditForm {
+  company_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  address: string;
+  companies_house_number: string;
+  notes: string;
+}
+
 export default function ClientDetailPage() {
   const params = useParams();
   const clientId = params.id as string;
@@ -26,6 +36,15 @@ export default function ClientDetailPage() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm>({
+    company_name: '', contact_name: '', email: '', phone: '',
+    address: '', companies_house_number: '', notes: '',
+  });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
   const supabase = useRef(createClient());
 
   useEffect(() => {
@@ -43,6 +62,15 @@ export default function ClientDetailPage() {
         if (clientError) throw clientError;
         if (!clientData) { setError('Client not found.'); return; }
         setClient(clientData as Client);
+        setEditForm({
+          company_name: clientData.company_name,
+          contact_name: clientData.contact_name ?? '',
+          email: clientData.email ?? '',
+          phone: clientData.phone ?? '',
+          address: clientData.address ?? '',
+          companies_house_number: clientData.companies_house_number ?? '',
+          notes: clientData.notes ?? '',
+        });
         setJobs((jobsData ?? []) as Job[]);
         setInvoices((invoicesData ?? []) as Invoice[]);
       } catch (err) {
@@ -54,6 +82,31 @@ export default function ClientDetailPage() {
     }
     load();
   }, [clientId]);
+
+  async function handleEditClient() {
+    if (!editForm.company_name.trim()) { setEditError('Company name is required.'); return; }
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      const { error } = await supabase.current.from('clients').update({
+        company_name: editForm.company_name.trim(),
+        contact_name: editForm.contact_name || null,
+        email: editForm.email || null,
+        phone: editForm.phone || null,
+        address: editForm.address || null,
+        companies_house_number: editForm.companies_house_number || null,
+        notes: editForm.notes || null,
+      }).eq('id', clientId);
+      if (error) throw error;
+      const { data: updated } = await supabase.current.from('clients').select('*').eq('id', clientId).single();
+      if (updated) setClient(updated as Client);
+      setShowEditModal(false);
+    } catch (err) {
+      setEditError(err instanceof Error ? err.message : 'Failed to update client. Please try again.');
+    } finally {
+      setEditSubmitting(false);
+    }
+  }
 
   if (isLoading) {
     return (
@@ -94,7 +147,7 @@ export default function ClientDetailPage() {
             {client.contact_name && <p className="text-muted text-sm mt-1">{client.contact_name}</p>}
           </div>
         </div>
-        <Button>Edit Client</Button>
+        <Button onClick={() => setShowEditModal(true)}>Edit Client</Button>
       </div>
 
       <Panel>
@@ -240,6 +293,93 @@ export default function ClientDetailPage() {
           </div>
         )}
       </Panel>
+
+      {/* Edit Client Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded w-full max-w-lg max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-xl font-condensed font-bold">Edit Client</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {editError && (
+                <div className="p-3 rounded bg-danger/10 border border-danger/30 text-danger text-sm">{editError}</div>
+              )}
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Company Name *</label>
+                <input
+                  type="text"
+                  value={editForm.company_name}
+                  onChange={(e) => setEditForm(f => ({ ...f, company_name: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Contact Name</label>
+                  <input
+                    type="text"
+                    value={editForm.contact_name}
+                    onChange={(e) => setEditForm(f => ({ ...f, contact_name: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Companies House No.</label>
+                  <input
+                    type="text"
+                    value={editForm.companies_house_number}
+                    onChange={(e) => setEditForm(f => ({ ...f, companies_house_number: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Email</label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm(f => ({ ...f, email: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm(f => ({ ...f, phone: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Address</label>
+                <textarea
+                  rows={3}
+                  value={editForm.address}
+                  onChange={(e) => setEditForm(f => ({ ...f, address: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow resize-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Notes</label>
+                <textarea
+                  rows={3}
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => { setShowEditModal(false); setEditError(null); }}>Cancel</Button>
+              <Button onClick={handleEditClient} loading={editSubmitting} disabled={editSubmitting}>Save Changes</Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
