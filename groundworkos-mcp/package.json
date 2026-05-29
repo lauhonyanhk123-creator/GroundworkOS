@@ -1,0 +1,31 @@
+{
+  "name": "groundworkos-mcp",
+  "version": "1.0.0",
+  "description": "MCP servers for GroundworkOS CRM",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch shared/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev:clients": "tsx servers/clients-mcp/index.ts",
+    "dev:jobs": "tsx servers/jobs-mcp/index.ts",
+    "dev:quotes": "tsx servers/quotes-mcp/index.ts",
+    "dev:invoices": "tsx servers/invoices-mcp/index.ts",
+    "dev:subcon": "tsx servers/subcon-mcp/index.ts",
+    "dev:schedule": "tsx servers/schedule-mcp/index.ts",
+    "dev:compliance": "tsx servers/compliance-mcp/index.ts",
+    "dev:reporting": "tsx servers/reporting-mcp/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.5.0"
+  }
+}

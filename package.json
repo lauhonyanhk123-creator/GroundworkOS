@@ -1,0 +1,5 @@
+{
+  "name": "groundworkos-workspace",
+  "private": true,
+  "workspaces": ["groundworkos", "groundworkos-mcp"]
+}
