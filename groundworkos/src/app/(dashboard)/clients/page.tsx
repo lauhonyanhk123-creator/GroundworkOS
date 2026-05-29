@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Building2, Mail, Phone, MapPin } from 'lucide-react';
@@ -24,6 +25,7 @@ const EMPTY_FORM: NewClientForm = {
 };
 
 export default function ClientsPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showNewClientModal, setShowNewClientModal] = useState(false);
@@ -134,6 +136,7 @@ export default function ClientsPage() {
           filteredClients.map(client => (
             <div
               key={client.id}
+              onClick={() => router.push(`/clients/${client.id}`)}
               className="bg-surface border border-border rounded p-4 hover:border-yellow transition-colors cursor-pointer"
             >
               <div className="flex items-start justify-between mb-3">

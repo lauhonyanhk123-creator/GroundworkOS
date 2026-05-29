@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
@@ -25,6 +26,7 @@ interface InvoiceForm {
 }
 
 export default function InvoicesPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -196,7 +198,8 @@ export default function InvoicesPage() {
                   return (
                     <tr
                       key={invoice.id}
-                      className={cn('border-b border-border last:border-0', isOverdue && 'bg-danger/5')}
+                      onClick={() => router.push(`/invoices/${invoice.id}`)}
+                      className={cn('border-b border-border last:border-0 cursor-pointer hover:bg-surface-2 transition-colors', isOverdue && 'bg-danger/5')}
                     >
                       <td className="py-3 px-4">
                         <div className="font-mono text-sm">{invoice.invoice_number}</div>
