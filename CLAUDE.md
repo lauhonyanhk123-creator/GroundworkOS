@@ -101,7 +101,7 @@ MCP:          @modelcontextprotocol/sdk
 PDF:          Puppeteer
 Email:        SendGrid
 Storage:      Supabase Storage
-Hosting:      Oracle Free Tier (MCP servers) + Vercel (frontend)
+Hosting:      Oracle Free Tier (Docker + Nginx) — full stack, no Vercel
 
 ---
 

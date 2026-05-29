@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  // Disable turbo and heavy features for lower memory usage
+  output: "standalone",
+  // Trace deps from the monorepo root so workspace node_modules are included
+  outputFileTracingRoot: path.join(__dirname, "../"),
   typescript: {
     ignoreBuildErrors: true,
   },
