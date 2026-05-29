@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
@@ -34,6 +35,7 @@ const tabs = [
 ];
 
 export default function JobsPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -195,6 +197,7 @@ export default function JobsPage() {
             {filteredJobs.map(job => (
               <div
                 key={job.id}
+                onClick={() => router.push(`/jobs/${job.id}`)}
                 className="flex items-center gap-4 p-4 bg-surface-2 rounded hover:bg-surface-3 transition-colors cursor-pointer"
               >
                 <div className="font-mono text-sm text-muted w-20">{job.job_number}</div>
