@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -15,8 +15,6 @@ import {
   Users,
   HardHat,
   FolderOpen,
-  Shield,
-  Truck,
   BarChart3,
   Settings,
   LogOut,
@@ -37,11 +35,9 @@ const navigation = [
   { name: 'Subcontractors', href: '/subcontractors', icon: HardHat },
   { section: 'Compliance' },
   { name: 'Documents', href: '/documents', icon: FolderOpen },
-  { name: 'H&S / RAMS', href: '/safety', icon: Shield },
-  { name: 'Plant', href: '/plant', icon: Truck },
   { section: 'Finance' },
   { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Xero Sync', href: '/xero', icon: Settings },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export default function DashboardLayout({
@@ -52,6 +48,14 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userEmail, setUserEmail] = useState<string>('');
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? '');
+    });
+  }, []);
 
   const handleSignOut = useCallback(async () => {
     const supabase = createClient();
@@ -59,6 +63,11 @@ export default function DashboardLayout({
     router.push('/login');
     router.refresh();
   }, [router]);
+
+  const currentPage = navigation.find(
+    (item) => 'href' in item && (pathname === item.href || pathname.startsWith(`${item.href}/`))
+  );
+  const pageTitle = currentPage && 'name' in currentPage ? currentPage.name : 'Dashboard';
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -70,18 +79,7 @@ export default function DashboardLayout({
       >
         <div className="h-16 flex items-center px-4 border-b border-border">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div
-              className="w-8 h-8 bg-yellow"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-                  45deg,
-                  transparent,
-                  transparent 2px,
-                  rgba(0,0,0,0.3) 2px,
-                  rgba(0,0,0,0.3) 4px
-                )`,
-              }}
-            />
+            <div className="w-8 h-8 bg-yellow hazard-stripe-diagonal" />
             <span className="text-xl font-condensed font-bold tracking-tight">
               GROUNDWORK<span className="text-yellow">OS</span>
             </span>
@@ -92,10 +90,7 @@ export default function DashboardLayout({
           {navigation.map((item, index) => {
             if ('section' in item) {
               return (
-                <div
-                  key={`section-${index}`}
-                  className="px-3 py-2 mt-4 first:mt-0"
-                >
+                <div key={`section-${index}`} className="px-3 py-2 mt-4 first:mt-0">
                   <span className="text-xs font-mono text-muted uppercase tracking-wider">
                     {item.section}
                   </span>
@@ -130,11 +125,13 @@ export default function DashboardLayout({
         <div className="p-4 border-t border-border">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full bg-surface-3 flex items-center justify-center text-xs font-mono text-muted">
-              U
+              {userEmail ? userEmail[0].toUpperCase() : 'U'}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-text truncate">User</p>
-              <p className="text-xs text-muted truncate">user@company.co.uk</p>
+              <p className="text-sm text-text truncate">
+                {userEmail ? userEmail.split('@')[0] : '—'}
+              </p>
+              <p className="text-xs text-muted truncate">{userEmail || '—'}</p>
             </div>
           </div>
           <Button
@@ -148,18 +145,7 @@ export default function DashboardLayout({
           </Button>
         </div>
 
-        <div
-          className="absolute bottom-0 left-0 right-0 h-2 opacity-10"
-          style={{
-            background: `repeating-linear-gradient(
-              90deg,
-              #FFD600,
-              #FFD600 10px,
-              #0c0c0c 10px,
-              #0c0c0c 20px
-            )`,
-          }}
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-2 opacity-10 hazard-stripe-horizontal" />
       </aside>
 
       {sidebarOpen && (
@@ -179,7 +165,7 @@ export default function DashboardLayout({
               <Menu className="w-5 h-5" />
             </button>
             <h1 className="text-lg font-condensed font-semibold">
-              <span className="text-yellow">/</span> Dashboard
+              <span className="text-yellow">/</span> {pageTitle}
             </h1>
           </div>
 
