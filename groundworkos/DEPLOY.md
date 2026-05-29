@@ -1,8 +1,51 @@
 # GroundworkOS Deployment Guide
 
+## Prerequisites (both options)
+
+- Supabase project created and schema applied (see below)
+- Mistral AI API key
+
+---
+
+## Option A: Vercel (Recommended — 5 minutes)
+
+The MCP servers are imported as TypeScript modules inside the Next.js API route — they are **not separate processes**. The entire app is a standard Next.js project and deploys to Vercel with zero infrastructure to manage.
+
+### Steps
+
+1. Push your branch to GitHub
+2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import your repo
+3. Set **Root Directory** to `groundworkos`
+4. Add environment variables in the Vercel dashboard:
+
+   | Variable | Where to get it |
+   |----------|----------------|
+   | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Settings → API Keys |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase → Settings → API Keys |
+   | `SUPABASE_SECRET_KEY` | Supabase → Settings → API Keys |
+   | `MISTRAL_API_KEY` | console.mistral.ai → API Keys |
+
+5. Click **Deploy**. Vercel handles SSL, CDN, and auto-deploys on every push to main.
+
+### Update Supabase Auth settings
+
+In Supabase Dashboard → Authentication → URL Configuration:
+- **Site URL**: `https://your-app.vercel.app`
+- **Redirect URLs**: `https://your-app.vercel.app/auth/callback`
+
+### Apply the database schema
+
+In Supabase Dashboard → SQL Editor, run the contents of `database/schema.sql`.
+
+That's it. The app is live.
+
+---
+
+## Option B: Oracle Cloud Free Tier (Self-hosted)
+
 This guide covers deploying GroundworkOS to Oracle Cloud Free Tier.
 
-## Prerequisites
+### Prerequisites
 
 - Oracle Cloud Free Tier account (always free, no expiry)
 - SSH key for server access
