@@ -1,100 +1,76 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Send, Check, FileDown, RefreshCw } from 'lucide-react';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import type { Quote, Client, LineItem } from '@/types';
 
-type LineItem = {
-  id: string;
-  description: string;
-  quantity: number;
-  unit_price: number;
-  total: number;
-};
-
-type Quote = {
-  id: string;
-  quote_number: string;
-  title: string;
-  client: {
-    id: string;
-    company_name: string;
-    contact_name: string;
-    email: string;
-  };
-  line_items: LineItem[];
-  subtotal: number;
-  vat_amount: number;
-  total_amount: number;
-  status: string;
-  created_at: string;
-  sent_at: string | null;
-  accepted_at: string | null;
-  notes: string;
+type QuoteDetail = Quote & {
+  client: Pick<Client, 'id' | 'company_name' | 'contact_name' | 'email'> | null;
 };
 
 export default function QuoteDetailPage() {
   const params = useParams();
   const quoteId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const [quote, setQuote] = useState<QuoteDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const supabase = useRef(createClient());
 
-  useEffect(() => {
-    const loadQuote = async () => {
-      await new Promise(resolve => setTimeout(resolve, 600));
-      setQuote({
-        id: quoteId,
-        quote_number: 'QT-0012',
-        title: 'Newbury Site Preparation',
-        client: {
-          id: '1',
-          company_name: 'Barrett Homes',
-          contact_name: 'John Smith',
-          email: 'john@barretthomes.co.uk',
-        },
-        line_items: [
-          { id: '1', description: 'Site clearance and preparation', quantity: 1, unit_price: 5000, total: 5000 },
-          { id: '2', description: 'Excavation works', quantity: 1, unit_price: 12000, total: 12000 },
-          { id: '3', description: 'Drainage installation', quantity: 1, unit_price: 8000, total: 8000 },
-          { id: '4', description: 'Foundation concrete pour', quantity: 1, unit_price: 12500, total: 12500 },
-          { id: '5', description: 'Backfill and compaction', quantity: 1, unit_price: 2500, total: 2500 },
-        ],
-        subtotal: 40000,
-        vat_amount: 8000,
-        total_amount: 48000,
-        status: 'sent',
-        created_at: '2024-01-10',
-        sent_at: '2024-01-12',
-        accepted_at: null,
-        notes: 'Price valid for 30 days. Work to commence upon acceptance.',
-      });
+  async function loadQuote() {
+    try {
+      const { data, error: fetchError } = await supabase.current
+        .from('quotes')
+        .select('*, client:clients(id, company_name, contact_name, email)')
+        .eq('id', quoteId)
+        .single();
+      if (fetchError) throw fetchError;
+      if (!data) { setError('Quote not found.'); return; }
+      setQuote(data as QuoteDetail);
+    } catch (err) {
+      console.error('[QuoteDetail]', err);
+      setError('Failed to load quote. Please try again.');
+    } finally {
       setIsLoading(false);
-    };
-    loadQuote();
-  }, [quoteId]);
+    }
+  }
 
-  const formatCurrency = (amount: number) => {
-    return `£${amount.toLocaleString('en-GB', { minimumFractionDigits: 2 })}`;
-  };
+  useEffect(() => { loadQuote(); }, [quoteId]);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return '-';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
+  async function handleStatusChange(newStatus: Quote['status']) {
+    if (!quote) return;
+    setSubmitting(true);
+    setActionError(null);
+    try {
+      const update: Partial<Quote> = { status: newStatus };
+      if (newStatus === 'sent') update.sent_at = new Date().toISOString();
+      if (newStatus === 'accepted') update.accepted_at = new Date().toISOString();
+
+      const { error } = await supabase.current.from('quotes').update(update).eq('id', quoteId);
+      if (error) throw error;
+      await loadQuote();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'Action failed. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const lineItems = (quote?.line_items ?? []) as LineItem[];
 
   if (isLoading) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm">
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
-          </Button>
+          <Button variant="ghost" size="sm"><ArrowLeft className="w-4 h-4 mr-2" />Back</Button>
           <Skeleton className="h-8 w-48" />
         </div>
         <Skeleton className="h-64 rounded" />
@@ -103,72 +79,77 @@ export default function QuoteDetailPage() {
     );
   }
 
+  if (error || !quote) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-danger mb-2">{error ?? 'Quote not found'}</p>
+          <Button variant="ghost" size="sm" onClick={() => window.history.back()}>Go back</Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="sm" onClick={() => window.history.back()}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Back
+            <ArrowLeft className="w-4 h-4 mr-2" />Back
           </Button>
           <div>
-            <h1 className="text-2xl font-condensed font-bold">{quote!.title}</h1>
+            <h1 className="text-2xl font-condensed font-bold">{quote.title ?? quote.quote_number}</h1>
             <div className="flex items-center gap-4 mt-1">
-              <span className="font-mono text-sm text-muted">{quote!.quote_number}</span>
-              <Badge status={quote!.status} />
+              <span className="font-mono text-sm text-muted">{quote.quote_number}</span>
+              <Badge status={quote.status} />
             </div>
           </div>
         </div>
-        <div className="flex gap-3">
-          {quote!.status === 'draft' && (
-            <Button variant="ghost">
-              <Send className="w-4 h-4 mr-2" />
-              Send Quote
+        <div className="flex gap-3 items-center">
+          {actionError && <p className="text-danger text-sm">{actionError}</p>}
+          {quote.status === 'draft' && (
+            <Button variant="ghost" onClick={() => handleStatusChange('sent')} disabled={submitting}>
+              <Send className="w-4 h-4 mr-2" />Send Quote
             </Button>
           )}
-          {quote!.status === 'sent' && (
+          {quote.status === 'sent' && (
             <>
-              <Button variant="ghost">
-                <Check className="w-4 h-4 mr-2" />
-                Mark Accepted
+              <Button variant="ghost" onClick={() => handleStatusChange('accepted')} disabled={submitting}>
+                <Check className="w-4 h-4 mr-2" />Mark Accepted
               </Button>
-              <Button variant="ghost">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Resend
+              <Button variant="ghost" onClick={() => handleStatusChange('sent')} disabled={submitting}>
+                <RefreshCw className="w-4 h-4 mr-2" />Resend
               </Button>
             </>
           )}
           <Button variant="ghost">
-            <FileDown className="w-4 h-4 mr-2" />
-            Download PDF
+            <FileDown className="w-4 h-4 mr-2" />Download PDF
           </Button>
         </div>
       </div>
 
-      {/* Client Info */}
       <Panel>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <div className="text-xs font-mono text-muted uppercase tracking-wider mb-1">Client</div>
-            <div className="font-medium">{quote!.client.company_name}</div>
+            <div className="font-medium">{quote.client?.company_name ?? '—'}</div>
           </div>
           <div>
             <div className="text-xs font-mono text-muted uppercase tracking-wider mb-1">Contact</div>
-            <div className="font-medium">{quote!.client.contact_name}</div>
-            <div className="text-sm text-muted">{quote!.client.email}</div>
+            <div className="font-medium">{quote.client?.contact_name ?? '—'}</div>
+            {quote.client?.email && <div className="text-sm text-muted">{quote.client.email}</div>}
           </div>
           <div>
             <div className="text-xs font-mono text-muted uppercase tracking-wider mb-1">Dates</div>
             <div className="text-sm">
-              Created: {formatDate(quote!.created_at)}
-              {quote!.sent_at && <span className="text-muted ml-2">| Sent: {formatDate(quote!.sent_at)}</span>}
+              Created: {formatDate(quote.created_at)}
+              {quote.sent_at && <span className="text-muted ml-2">| Sent: {formatDate(quote.sent_at)}</span>}
+              {quote.accepted_at && <span className="text-muted ml-2">| Accepted: {formatDate(quote.accepted_at)}</span>}
             </div>
           </div>
         </div>
       </Panel>
 
-      {/* Line Items */}
       <Panel title="Quote Items">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -181,49 +162,44 @@ export default function QuoteDetailPage() {
               </tr>
             </thead>
             <tbody>
-              {quote!.line_items.map((item, index) => (
-                <tr key={item.id} className="border-b border-border last:border-0">
+              {lineItems.map((item, index) => (
+                <tr key={index} className="border-b border-border last:border-0">
                   <td className="py-3 px-4">{item.description}</td>
                   <td className="py-3 px-4 text-right font-mono">{item.quantity}</td>
                   <td className="py-3 px-4 text-right font-mono">{formatCurrency(item.unit_price)}</td>
-                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(item.total)}</td>
+                  <td className="py-3 px-4 text-right font-mono">{formatCurrency(item.quantity * item.unit_price)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-
-        {/* Totals */}
         <div className="mt-6 border-t border-border pt-6 space-y-2 max-w-xs ml-auto">
           <div className="flex justify-between text-sm">
             <span className="text-muted">Subtotal</span>
-            <span className="font-mono">{formatCurrency(quote!.subtotal)}</span>
+            <span className="font-mono">{formatCurrency(quote.subtotal)}</span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted">VAT (20%)</span>
-            <span className="font-mono">{formatCurrency(quote!.vat_amount)}</span>
+            <span className="font-mono">{formatCurrency(quote.vat_amount)}</span>
           </div>
           <div className="flex justify-between items-baseline pt-2 border-t border-border">
             <span className="font-semibold">Total</span>
-            <span className="text-2xl font-condensed font-bold text-yellow">{formatCurrency(quote!.total_amount)}</span>
+            <span className="text-2xl font-condensed font-bold text-yellow">{formatCurrency(quote.total_amount)}</span>
           </div>
         </div>
       </Panel>
 
-      {/* Notes */}
-      {quote!.notes && (
+      {quote.notes && (
         <Panel title="Notes">
-          <p className="text-sm">{quote!.notes}</p>
+          <p className="text-sm">{quote.notes}</p>
         </Panel>
       )}
 
-      {/* Actions */}
-      {quote!.status === 'accepted' && (
+      {quote.status === 'accepted' && (
         <Panel title="Convert to Job">
           <p className="text-sm text-muted mb-4">This quote has been accepted. Create a job to track the work.</p>
           <Button>
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Convert to Job
+            <RefreshCw className="w-4 h-4 mr-2" />Convert to Job
           </Button>
         </Panel>
       )}

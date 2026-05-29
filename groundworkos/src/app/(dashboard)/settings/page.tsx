@@ -1,73 +1,210 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  Settings, User, Building, Bell, Shield, Palette, 
-  Database, Key, Save, AlertTriangle, CheckCircle 
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { User, Building, Bell, Shield, Database, Key, Save, AlertTriangle, CheckCircle } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
+import type { Company } from '@/types';
+
+interface ProfileForm {
+  full_name: string;
+  email: string;
+  phone: string;
+}
+
+interface CompanyForm {
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+  vat_number: string;
+  quote_validity: string;
+  payment_terms: string;
+}
+
+interface NotificationPrefs {
+  quote_accepted: boolean;
+  invoice_overdue: boolean;
+  document_expiring: boolean;
+  weekly_summary: boolean;
+  weather_alerts: boolean;
+  compliance_alerts: boolean;
+}
+
+interface SecurityForm {
+  new_password: string;
+  confirm_password: string;
+}
+
+const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
+  quote_accepted: true,
+  invoice_overdue: true,
+  document_expiring: true,
+  weekly_summary: false,
+  weather_alerts: true,
+  compliance_alerts: true,
+};
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('profile');
+  const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  const [profileForm, setProfileForm] = useState<ProfileForm>({ full_name: '', email: '', phone: '' });
+  const [companyForm, setCompanyForm] = useState<CompanyForm>({ name: '', email: '', phone: '', address: '', vat_number: '', quote_validity: '30', payment_terms: '30' });
+  const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS);
+  const [securityForm, setSecurityForm] = useState<SecurityForm>({ new_password: '', confirm_password: '' });
+  const [companyId, setCompanyId] = useState<string | null>(null);
+
+  const supabase = useRef(createClient());
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const { data: { user } } = await supabase.current.auth.getUser();
+        if (!user) return;
+
+        const meta = user.user_metadata ?? {};
+        setProfileForm({
+          full_name: meta.full_name ?? '',
+          email: user.email ?? '',
+          phone: meta.phone ?? '',
+        });
+        setNotifications({
+          quote_accepted: meta.notifications?.quote_accepted ?? true,
+          invoice_overdue: meta.notifications?.invoice_overdue ?? true,
+          document_expiring: meta.notifications?.document_expiring ?? true,
+          weekly_summary: meta.notifications?.weekly_summary ?? false,
+          weather_alerts: meta.notifications?.weather_alerts ?? true,
+          compliance_alerts: meta.notifications?.compliance_alerts ?? true,
+        });
+
+        const { data: uc } = await supabase.current
+          .from('user_companies').select('company_id').eq('user_id', user.id).single();
+        if (!uc?.company_id) return;
+        setCompanyId(uc.company_id);
+
+        const { data: company } = await supabase.current
+          .from('companies').select('*').eq('id', uc.company_id).single();
+        if (company) {
+          const cs = meta.company_settings ?? {};
+          setCompanyForm({
+            name: company.name ?? '',
+            email: company.email ?? '',
+            phone: company.phone ?? '',
+            address: company.address ?? '',
+            vat_number: company.vat_number ?? '',
+            quote_validity: cs.quote_validity ?? '30',
+            payment_terms: cs.payment_terms ?? '30',
+          });
+        }
+      } catch (err) {
+        console.error('[Settings] load error', err);
+      }
+    }
+    load();
+  }, []);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaveError(null);
+    try {
+      if (activeTab === 'profile') {
+        const { error } = await supabase.current.auth.updateUser({
+          data: { full_name: profileForm.full_name, phone: profileForm.phone },
+        });
+        if (error) throw error;
+      }
+
+      if (activeTab === 'company' && companyId) {
+        const { error } = await supabase.current.from('companies').update({
+          name: companyForm.name,
+          email: companyForm.email || null,
+          phone: companyForm.phone || null,
+          address: companyForm.address || null,
+          vat_number: companyForm.vat_number || null,
+        }).eq('id', companyId);
+        if (error) throw error;
+
+        await supabase.current.auth.updateUser({
+          data: { company_settings: { quote_validity: companyForm.quote_validity, payment_terms: companyForm.payment_terms } },
+        });
+      }
+
+      if (activeTab === 'notifications') {
+        const { error } = await supabase.current.auth.updateUser({
+          data: { notifications },
+        });
+        if (error) throw error;
+      }
+
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleUpdatePassword() {
+    if (!securityForm.new_password) { setSaveError('New password is required.'); return; }
+    if (securityForm.new_password !== securityForm.confirm_password) { setSaveError('Passwords do not match.'); return; }
+    if (securityForm.new_password.length < 8) { setSaveError('Password must be at least 8 characters.'); return; }
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const { error } = await supabase.current.auth.updateUser({ password: securityForm.new_password });
+      if (error) throw error;
+      setSecurityForm({ new_password: '', confirm_password: '' });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to update password. Please try again.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const showSaveButton = activeTab !== 'security' && activeTab !== 'integrations';
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-condensed font-bold">Settings</h1>
           <p className="text-muted text-sm mt-1">Manage your account and preferences</p>
         </div>
         <div className="flex items-center gap-3">
+          {saveError && <p className="text-danger text-sm">{saveError}</p>}
           {saved && (
             <div className="flex items-center gap-2 text-success text-sm">
               <CheckCircle className="w-4 h-4" />
               <span>Saved</span>
             </div>
           )}
-          <Button onClick={handleSave}>
-            <Save className="w-4 h-4 mr-2" />
-            Save Changes
-          </Button>
+          {showSaveButton && (
+            <Button onClick={handleSave} loading={saving} disabled={saving}>
+              <Save className="w-4 h-4 mr-2" />
+              Save Changes
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Settings Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setSaveError(null); setSaved(false); }}>
         <TabsList>
-          <TabsTrigger value="profile">
-            <User className="w-4 h-4 mr-2" />
-            Profile
-          </TabsTrigger>
-          <TabsTrigger value="company">
-            <Building className="w-4 h-4 mr-2" />
-            Company
-          </TabsTrigger>
-          <TabsTrigger value="integrations">
-            <Database className="w-4 h-4 mr-2" />
-            Integrations
-          </TabsTrigger>
-          <TabsTrigger value="notifications">
-            <Bell className="w-4 h-4 mr-2" />
-            Notifications
-          </TabsTrigger>
-          <TabsTrigger value="security">
-            <Shield className="w-4 h-4 mr-2" />
-            Security
-          </TabsTrigger>
+          <TabsTrigger value="profile"><User className="w-4 h-4 mr-2" />Profile</TabsTrigger>
+          <TabsTrigger value="company"><Building className="w-4 h-4 mr-2" />Company</TabsTrigger>
+          <TabsTrigger value="integrations"><Database className="w-4 h-4 mr-2" />Integrations</TabsTrigger>
+          <TabsTrigger value="notifications"><Bell className="w-4 h-4 mr-2" />Notifications</TabsTrigger>
+          <TabsTrigger value="security"><Shield className="w-4 h-4 mr-2" />Security</TabsTrigger>
         </TabsList>
 
-        {/* Profile Settings */}
         <TabsContent value="profile">
           <Panel title="User Profile">
             <div className="space-y-6">
@@ -76,7 +213,8 @@ export default function SettingsPage() {
                   <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Full Name</label>
                   <input
                     type="text"
-                    defaultValue="John Smith"
+                    value={profileForm.full_name}
+                    onChange={(e) => setProfileForm(f => ({ ...f, full_name: e.target.value }))}
                     className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                   />
                 </div>
@@ -84,31 +222,27 @@ export default function SettingsPage() {
                   <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Email</label>
                   <input
                     type="email"
-                    defaultValue="john@groundworkos.co.uk"
-                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                    value={profileForm.email}
+                    disabled
+                    className="w-full bg-surface-3 border border-border rounded px-3 py-2 text-sm opacity-60"
                   />
+                  <p className="text-xs text-muted mt-1">Email cannot be changed here.</p>
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Phone</label>
                 <input
                   type="tel"
-                  defaultValue="07700 900123"
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm(f => ({ ...f, phone: e.target.value }))}
+                  placeholder="07700 900123"
                   className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Role</label>
-                <div className="flex items-center gap-2">
-                  <Badge status="active">Admin</Badge>
-                  <span className="text-sm text-muted">Full access to all features</span>
-                </div>
               </div>
             </div>
           </Panel>
         </TabsContent>
 
-        {/* Company Settings */}
         <TabsContent value="company">
           <Panel title="Company Information">
             <div className="space-y-6">
@@ -116,7 +250,8 @@ export default function SettingsPage() {
                 <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Company Name</label>
                 <input
                   type="text"
-                  defaultValue="GroundworkOS Ltd"
+                  value={companyForm.name}
+                  onChange={(e) => setCompanyForm(f => ({ ...f, name: e.target.value }))}
                   className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                 />
               </div>
@@ -125,7 +260,8 @@ export default function SettingsPage() {
                   <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Address</label>
                   <textarea
                     rows={3}
-                    defaultValue="GroundworkOS HQ&#10;123 Industrial Estate&#10;Reading, RG1 1AB"
+                    value={companyForm.address}
+                    onChange={(e) => setCompanyForm(f => ({ ...f, address: e.target.value }))}
                     className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow resize-none"
                   />
                 </div>
@@ -134,7 +270,8 @@ export default function SettingsPage() {
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Phone</label>
                     <input
                       type="tel"
-                      defaultValue="01189 000000"
+                      value={companyForm.phone}
+                      onChange={(e) => setCompanyForm(f => ({ ...f, phone: e.target.value }))}
                       className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                     />
                   </div>
@@ -142,17 +279,20 @@ export default function SettingsPage() {
                     <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Email</label>
                     <input
                       type="email"
-                      defaultValue="info@groundworkos.co.uk"
+                      value={companyForm.email}
+                      onChange={(e) => setCompanyForm(f => ({ ...f, email: e.target.value }))}
                       className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                     />
                   </div>
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Companies House Number</label>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">VAT Number</label>
                 <input
                   type="text"
-                  defaultValue="12345678"
+                  value={companyForm.vat_number}
+                  onChange={(e) => setCompanyForm(f => ({ ...f, vat_number: e.target.value }))}
+                  placeholder="GB 123 456 789"
                   className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                 />
               </div>
@@ -166,32 +306,27 @@ export default function SettingsPage() {
                   <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Default Quote Validity (days)</label>
                   <input
                     type="number"
-                    defaultValue="30"
+                    value={companyForm.quote_validity}
+                    onChange={(e) => setCompanyForm(f => ({ ...f, quote_validity: e.target.value }))}
+                    min="1"
                     className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">VAT Rate (%)</label>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Invoice Payment Terms (days)</label>
                   <input
                     type="number"
-                    defaultValue="20"
+                    value={companyForm.payment_terms}
+                    onChange={(e) => setCompanyForm(f => ({ ...f, payment_terms: e.target.value }))}
+                    min="1"
                     className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                   />
                 </div>
-              </div>
-              <div>
-                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Invoice Payment Terms (days)</label>
-                <input
-                  type="number"
-                  defaultValue="30"
-                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
-                />
               </div>
             </div>
           </Panel>
         </TabsContent>
 
-        {/* Integrations */}
         <TabsContent value="integrations">
           <div className="space-y-6">
             <Panel title="Supabase">
@@ -203,44 +338,19 @@ export default function SettingsPage() {
                   </div>
                   <Badge status="active">Connected</Badge>
                 </div>
-                <div>
-                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Project URL</label>
-                  <input
-                    type="text"
-                    defaultValue="https://xxxxx.supabase.co"
-                    disabled
-                    className="w-full bg-surface-3 border border-border rounded px-3 py-2 text-sm opacity-60"
-                  />
-                </div>
               </div>
             </Panel>
-
             <Panel title="Mistral AI">
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">AI Assistant</div>
-                    <div className="text-sm text-muted">Powered by Mistral Large</div>
+                    <div className="text-sm text-muted">Powered by Mistral Small</div>
                   </div>
                   <Badge status="active">Active</Badge>
                 </div>
-                <div>
-                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">API Key</label>
-                  <div className="relative">
-                    <input
-                      type="password"
-                      defaultValue="xxxxxxxxxxxx"
-                      disabled
-                      className="w-full bg-surface-3 border border-border rounded px-3 py-2 text-sm opacity-60"
-                    />
-                    <Button variant="ghost" size="sm" className="absolute right-2 top-1/2 -translate-y-1/2">
-                      Update
-                    </Button>
-                  </div>
-                </div>
               </div>
             </Panel>
-
             <Panel title="External Services">
               <div className="space-y-4">
                 <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
@@ -257,8 +367,8 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-yellow-500/20 flex items-center justify-center">
-                      <Key className="w-5 h-5 text-yellow-500" />
+                    <div className="w-10 h-10 rounded bg-yellow/20 flex items-center justify-center">
+                      <Key className="w-5 h-5 text-yellow" />
                     </div>
                     <div>
                       <div className="font-medium">Xero</div>
@@ -272,78 +382,73 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {/* Notifications */}
         <TabsContent value="notifications">
           <Panel title="Email Notifications">
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
-                <div>
-                  <div className="font-medium">New Quote Accepted</div>
-                  <div className="text-sm text-muted">Email when a client accepts a quote</div>
+              {([
+                { key: 'quote_accepted' as const, label: 'New Quote Accepted', desc: 'Email when a client accepts a quote' },
+                { key: 'invoice_overdue' as const, label: 'Invoice Overdue', desc: 'Email when an invoice becomes overdue' },
+                { key: 'document_expiring' as const, label: 'Document Expiring', desc: 'Email 30 days before document expiry' },
+                { key: 'weekly_summary' as const, label: 'Weekly Summary', desc: "Email summary of week's activity" },
+              ]).map(({ key, label, desc }) => (
+                <div key={key} className="flex items-center justify-between p-4 bg-surface-2 rounded">
+                  <div>
+                    <div className="font-medium">{label}</div>
+                    <div className="text-sm text-muted">{desc}</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications[key]}
+                    onChange={(e) => setNotifications(n => ({ ...n, [key]: e.target.checked }))}
+                    className="w-5 h-5"
+                  />
                 </div>
-                <input type="checkbox" defaultChecked className="w-5 h-5" />
-              </div>
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
-                <div>
-                  <div className="font-medium">Invoice Overdue</div>
-                  <div className="text-sm text-muted">Email when an invoice becomes overdue</div>
-                </div>
-                <input type="checkbox" defaultChecked className="w-5 h-5" />
-              </div>
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
-                <div>
-                  <div className="font-medium">Document Expiring</div>
-                  <div className="text-sm text-muted">Email 30 days before document expiry</div>
-                </div>
-                <input type="checkbox" defaultChecked className="w-5 h-5" />
-              </div>
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
-                <div>
-                  <div className="font-medium">Weekly Summary</div>
-                  <div className="text-sm text-muted">Email summary of week's activity</div>
-                </div>
-                <input type="checkbox" className="w-5 h-5" />
-              </div>
+              ))}
             </div>
           </Panel>
 
           <Panel title="In-App Notifications" className="mt-6">
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
-                <div>
-                  <div className="font-medium">Weather Alerts</div>
-                  <div className="text-sm text-muted">Show weather risk warnings on dashboard</div>
+              {([
+                { key: 'weather_alerts' as const, label: 'Weather Alerts', desc: 'Show weather risk warnings on dashboard' },
+                { key: 'compliance_alerts' as const, label: 'Compliance Alerts', desc: 'Show document expiry warnings' },
+              ]).map(({ key, label, desc }) => (
+                <div key={key} className="flex items-center justify-between p-4 bg-surface-2 rounded">
+                  <div>
+                    <div className="font-medium">{label}</div>
+                    <div className="text-sm text-muted">{desc}</div>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications[key]}
+                    onChange={(e) => setNotifications(n => ({ ...n, [key]: e.target.checked }))}
+                    className="w-5 h-5"
+                  />
                 </div>
-                <input type="checkbox" defaultChecked className="w-5 h-5" />
-              </div>
-              <div className="flex items-center justify-between p-4 bg-surface-2 rounded">
-                <div>
-                  <div className="font-medium">Compliance Alerts</div>
-                  <div className="text-sm text-muted">Show document expiry warnings</div>
-                </div>
-                <input type="checkbox" defaultChecked className="w-5 h-5" />
-              </div>
+              ))}
             </div>
           </Panel>
         </TabsContent>
 
-        {/* Security */}
         <TabsContent value="security">
-          <Panel title="Password">
+          <Panel title="Change Password">
             <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Current Password</label>
-                <input
-                  type="password"
-                  placeholder="Enter current password"
-                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
-                />
-              </div>
+              {saveError && activeTab === 'security' && (
+                <div className="p-3 rounded bg-danger/10 border border-danger text-danger text-sm">{saveError}</div>
+              )}
+              {saved && activeTab === 'security' && (
+                <div className="flex items-center gap-2 text-success text-sm p-3 bg-success/10 border border-success rounded">
+                  <CheckCircle className="w-4 h-4" />
+                  Password updated successfully.
+                </div>
+              )}
               <div>
                 <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">New Password</label>
                 <input
                   type="password"
-                  placeholder="Enter new password"
+                  placeholder="Enter new password (min 8 characters)"
+                  value={securityForm.new_password}
+                  onChange={(e) => setSecurityForm(f => ({ ...f, new_password: e.target.value }))}
                   className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                 />
               </div>
@@ -352,10 +457,14 @@ export default function SettingsPage() {
                 <input
                   type="password"
                   placeholder="Confirm new password"
+                  value={securityForm.confirm_password}
+                  onChange={(e) => setSecurityForm(f => ({ ...f, confirm_password: e.target.value }))}
                   className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                 />
               </div>
-              <Button>Update Password</Button>
+              <Button onClick={handleUpdatePassword} loading={saving} disabled={saving}>
+                Update Password
+              </Button>
             </div>
           </Panel>
 
@@ -377,23 +486,6 @@ export default function SettingsPage() {
                   </div>
                 </div>
               </div>
-            </div>
-          </Panel>
-
-          <Panel title="Active Sessions" className="mt-6">
-            <div className="space-y-4">
-              <div className="p-4 bg-surface-2 rounded">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="font-medium">Current Session</div>
-                  <Badge status="active">Active</Badge>
-                </div>
-                <div className="text-sm text-muted">
-                  Chrome on MacOS • Reading, UK • Last active now
-                </div>
-              </div>
-              <Button variant="ghost" className="text-danger hover:text-danger">
-                Sign Out All Other Sessions
-              </Button>
             </div>
           </Panel>
         </TabsContent>
