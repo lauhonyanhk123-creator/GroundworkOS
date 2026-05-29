@@ -6,16 +6,34 @@ import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Calendar, MapPin, User, FileText, Clock } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, User, FileText } from 'lucide-react';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import type { Job, Document, ScheduleEntry, StatusHistory, Client } from '@/types';
+import type { Job, Document, ScheduleEntry, StatusHistory, Client, DocumentType, DocumentStatus } from '@/types';
 
 type JobDetail = Job & {
   client: Pick<Client, 'id' | 'company_name' | 'contact_name' | 'phone'> | null;
 };
 
 const STATUS_OPTIONS: Job['status'][] = ['enquiry', 'quoted', 'active', 'on-hold', 'complete', 'cancelled'];
+
+const DOC_TYPES: DocumentType[] = ['insurance', 'rams', 'permit', 'cscs', 'other'];
+
+interface DocForm {
+  name: string;
+  type: DocumentType;
+  expiry_date: string;
+}
+
+interface SchedForm {
+  title: string;
+  description: string;
+  start_datetime: string;
+  end_datetime: string;
+  crew_count: string;
+  plant_assigned: string;
+  notes: string;
+}
 
 export default function JobDetailPage() {
   const params = useParams();
@@ -34,6 +52,18 @@ export default function JobDetailPage() {
   const [progressValue, setProgressValue] = useState(0);
   const [visitNotes, setVisitNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  const [showAddDocModal, setShowAddDocModal] = useState(false);
+  const [showAddScheduleModal, setShowAddScheduleModal] = useState(false);
+  const [docForm, setDocForm] = useState<DocForm>({ name: '', type: 'other', expiry_date: '' });
+  const [schedForm, setSchedForm] = useState<SchedForm>({
+    title: '', description: '', start_datetime: '', end_datetime: '',
+    crew_count: '1', plant_assigned: '', notes: '',
+  });
+  const [submittingDoc, setSubmittingDoc] = useState(false);
+  const [submittingSchedule, setSubmittingSchedule] = useState(false);
+  const [docFormError, setDocFormError] = useState<string | null>(null);
+  const [schedFormError, setSchedFormError] = useState<string | null>(null);
 
   const supabase = useRef(createClient());
 
@@ -115,6 +145,70 @@ export default function JobDetailPage() {
       console.error('[JobDetail] log visit error', err);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleAddDocument() {
+    if (!docForm.name.trim()) { setDocFormError('Document name is required.'); return; }
+    setSubmittingDoc(true);
+    setDocFormError(null);
+    try {
+      let status: DocumentStatus = 'active';
+      if (docForm.expiry_date) {
+        const expiry = new Date(docForm.expiry_date);
+        const today = new Date();
+        const thirtyDays = new Date(today);
+        thirtyDays.setDate(thirtyDays.getDate() + 30);
+        if (expiry < today) status = 'expired';
+        else if (expiry < thirtyDays) status = 'expiring_soon';
+      }
+      const { error } = await supabase.current.from('documents').insert({
+        company_id: job!.company_id,
+        name: docForm.name.trim(),
+        type: docForm.type,
+        related_to: 'job',
+        related_id: jobId,
+        expiry_date: docForm.expiry_date || null,
+        status,
+        file_path: null,
+      });
+      if (error) throw error;
+      setShowAddDocModal(false);
+      setDocForm({ name: '', type: 'other', expiry_date: '' });
+      await loadJob();
+    } catch (err) {
+      setDocFormError(err instanceof Error ? err.message : 'Failed to add document. Please try again.');
+    } finally {
+      setSubmittingDoc(false);
+    }
+  }
+
+  async function handleAddScheduleEntry() {
+    if (!schedForm.title.trim()) { setSchedFormError('Title is required.'); return; }
+    if (!schedForm.start_datetime) { setSchedFormError('Start date/time is required.'); return; }
+    if (!schedForm.end_datetime) { setSchedFormError('End date/time is required.'); return; }
+    setSubmittingSchedule(true);
+    setSchedFormError(null);
+    try {
+      const { error } = await supabase.current.from('schedule_entries').insert({
+        company_id: job!.company_id,
+        job_id: jobId,
+        title: schedForm.title.trim(),
+        description: schedForm.description || null,
+        start_datetime: schedForm.start_datetime,
+        end_datetime: schedForm.end_datetime,
+        crew_count: parseInt(schedForm.crew_count, 10) || 1,
+        plant_assigned: schedForm.plant_assigned || null,
+        notes: schedForm.notes || null,
+      });
+      if (error) throw error;
+      setShowAddScheduleModal(false);
+      setSchedForm({ title: '', description: '', start_datetime: '', end_datetime: '', crew_count: '1', plant_assigned: '', notes: '' });
+      await loadJob();
+    } catch (err) {
+      setSchedFormError(err instanceof Error ? err.message : 'Failed to add schedule entry. Please try again.');
+    } finally {
+      setSubmittingSchedule(false);
     }
   }
 
@@ -270,14 +364,11 @@ export default function JobDetailPage() {
         <div className="space-y-6">
           <Panel title="Quick Actions">
             <div className="space-y-3">
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setShowAddDocModal(true)}>
                 <FileText className="w-4 h-4 mr-2" />Add Document
               </Button>
-              <Button variant="ghost" className="w-full justify-start">
+              <Button variant="ghost" className="w-full justify-start" onClick={() => setShowAddScheduleModal(true)}>
                 <Calendar className="w-4 h-4 mr-2" />Add Schedule Entry
-              </Button>
-              <Button variant="ghost" className="w-full justify-start">
-                <Clock className="w-4 h-4 mr-2" />View Timeline
               </Button>
             </div>
           </Panel>
@@ -321,6 +412,7 @@ export default function JobDetailPage() {
         </div>
       </div>
 
+      {/* Update Status Modal */}
       {showUpdateStatusModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-surface border border-border rounded w-full max-w-md">
@@ -366,6 +458,7 @@ export default function JobDetailPage() {
         </div>
       )}
 
+      {/* Log Site Visit Modal */}
       {showLogVisitModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-surface border border-border rounded w-full max-w-md">
@@ -401,6 +494,136 @@ export default function JobDetailPage() {
             <div className="p-6 border-t border-border flex justify-end gap-3">
               <Button variant="ghost" onClick={() => setShowLogVisitModal(false)}>Cancel</Button>
               <Button onClick={handleLogVisit} loading={submitting} disabled={submitting}>Save Visit</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Document Modal */}
+      {showAddDocModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded w-full max-w-md">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-xl font-condensed font-bold">Add Document</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {docFormError && (
+                <div className="p-3 rounded bg-danger/10 border border-danger/30 text-danger text-sm">{docFormError}</div>
+              )}
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Document Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. RAMS — Drainage Works"
+                  value={docForm.name}
+                  onChange={(e) => setDocForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Type</label>
+                <select
+                  value={docForm.type}
+                  onChange={(e) => setDocForm(f => ({ ...f, type: e.target.value as DocumentType }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                >
+                  {DOC_TYPES.map(t => (
+                    <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Expiry Date (optional)</label>
+                <input
+                  type="date"
+                  value={docForm.expiry_date}
+                  onChange={(e) => setDocForm(f => ({ ...f, expiry_date: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => { setShowAddDocModal(false); setDocFormError(null); }}>Cancel</Button>
+              <Button onClick={handleAddDocument} loading={submittingDoc} disabled={submittingDoc}>Add Document</Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Schedule Entry Modal */}
+      {showAddScheduleModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-border rounded w-full max-w-md max-h-[90vh] overflow-auto">
+            <div className="p-6 border-b border-border">
+              <h2 className="text-xl font-condensed font-bold">Add Schedule Entry</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              {schedFormError && (
+                <div className="p-3 rounded bg-danger/10 border border-danger/30 text-danger text-sm">{schedFormError}</div>
+              )}
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Title *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Site excavation day 1"
+                  value={schedForm.title}
+                  onChange={(e) => setSchedForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Start *</label>
+                  <input
+                    type="datetime-local"
+                    value={schedForm.start_datetime}
+                    onChange={(e) => setSchedForm(f => ({ ...f, start_datetime: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">End *</label>
+                  <input
+                    type="datetime-local"
+                    value={schedForm.end_datetime}
+                    onChange={(e) => setSchedForm(f => ({ ...f, end_datetime: e.target.value }))}
+                    className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Crew Count</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={schedForm.crew_count}
+                  onChange={(e) => setSchedForm(f => ({ ...f, crew_count: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Plant Assigned (optional)</label>
+                <input
+                  type="text"
+                  placeholder="e.g. 8-tonne digger"
+                  value={schedForm.plant_assigned}
+                  onChange={(e) => setSchedForm(f => ({ ...f, plant_assigned: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">Notes (optional)</label>
+                <textarea
+                  rows={2}
+                  value={schedForm.notes}
+                  onChange={(e) => setSchedForm(f => ({ ...f, notes: e.target.value }))}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow resize-none"
+                />
+              </div>
+            </div>
+            <div className="p-6 border-t border-border flex justify-end gap-3">
+              <Button variant="ghost" onClick={() => { setShowAddScheduleModal(false); setSchedFormError(null); }}>Cancel</Button>
+              <Button onClick={handleAddScheduleEntry} loading={submittingSchedule} disabled={submittingSchedule}>Save Entry</Button>
             </div>
           </div>
         </div>
