@@ -308,7 +308,20 @@ export default function DocumentsPage() {
                   {getStatusIcon(doc.status)}
                   <Badge status={doc.status} />
                 </div>
-                <Button variant="ghost" size="sm">View</Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={!doc.file_path}
+                  onClick={async () => {
+                    if (!doc.file_path) return;
+                    const { data } = await supabase.current.storage
+                      .from('groundworkos-documents')
+                      .createSignedUrl(doc.file_path, 120);
+                    if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                  }}
+                >
+                  View
+                </Button>
               </div>
             ))}
           </div>

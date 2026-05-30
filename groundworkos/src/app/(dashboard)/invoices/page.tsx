@@ -72,6 +72,57 @@ export default function InvoicesPage() {
     loadDropdownData();
   }, []);
 
+  function handleDownloadInvoicePDF(invoice: InvoiceRow) {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const statusLabel = invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Invoice ${invoice.invoice_number}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #111; padding: 48px; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+    .company-name { font-size: 24px; font-weight: 800; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: 700; text-transform: uppercase; background: ${invoice.status === 'paid' ? '#d1fae5' : invoice.status === 'overdue' ? '#fee2e2' : '#fef9c3'}; color: ${invoice.status === 'paid' ? '#065f46' : invoice.status === 'overdue' ? '#991b1b' : '#713f12'}; }
+    .invoice-number { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #666; margin-bottom: 8px; margin-top: 32px; }
+    .info { line-height: 1.6; color: #333; }
+    .divider { border: none; border-top: 1px solid #e5e7eb; margin: 32px 0; }
+    .totals { max-width: 260px; margin-left: auto; }
+    .totals-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+    .totals-total { display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid #111; font-size: 18px; font-weight: 800; }
+    @media print { body { padding: 32px; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="company-name">GroundworkOS</div>
+    <div style="text-align:right">
+      <div class="invoice-number">${invoice.invoice_number}</div>
+      <span class="badge">${statusLabel}</span>
+    </div>
+  </div>
+  <div class="info">
+    ${invoice.client?.company_name ? `<strong>${invoice.client.company_name}</strong><br/>` : ''}
+    ${invoice.job?.title ? `Job: ${invoice.job.title}<br/>` : ''}
+    ${invoice.due_date ? `Due: ${new Date(invoice.due_date).toLocaleDateString('en-GB')}<br/>` : ''}
+  </div>
+  <hr class="divider"/>
+  <div class="totals">
+    <div class="totals-row"><span style="color:#666">Subtotal</span><span>£${(invoice.subtotal ?? 0).toFixed(2)}</span></div>
+    <div class="totals-row"><span style="color:#666">VAT (20%)</span><span>£${(invoice.vat_amount ?? 0).toFixed(2)}</span></div>
+    <div class="totals-total"><span>Total</span><span>£${(invoice.total_amount ?? 0).toFixed(2)}</span></div>
+  </div>
+  <script>window.onload=function(){window.print();}</script>
+</body>
+</html>`;
+    w.document.write(html);
+    w.document.close();
+  }
+
   async function markPaid(invoiceId: string) {
     const { error } = await supabase.current
       .from('invoices')
@@ -229,7 +280,7 @@ export default function InvoicesPage() {
                               Mark Paid
                             </Button>
                           )}
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={(e) => { e.stopPropagation(); handleDownloadInvoicePDF(invoice); }}>
                             <Download className="w-4 h-4" />
                           </Button>
                         </div>
