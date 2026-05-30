@@ -44,18 +44,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-3 mb-4">
-            <div
-              className="w-10 h-10 bg-yellow flex items-center justify-center"
-              style={{
-                backgroundImage: `repeating-linear-gradient(
-                  45deg,
-                  transparent,
-                  transparent 2px,
-                  rgba(0,0,0,0.3) 2px,
-                  rgba(0,0,0,0.3) 4px
-                )`,
-              }}
-            />
+            <div className="w-10 h-10 bg-yellow hazard-stripe-diagonal" />
             <h1 className="text-3xl font-condensed font-bold tracking-tight">
               GROUNDWORK<span className="text-yellow">OS</span>
             </h1>
