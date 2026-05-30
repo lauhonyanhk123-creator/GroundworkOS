@@ -708,7 +708,7 @@ async function verifyCISStatusTool(args: ToolArg, supabase: SupabaseClient) {
     .eq('id', subId);
   if (error) throw new Error(error.message);
 
-  return { subcontractor_id: subId, cis_status: newStatus, is_mock: true };
+  return { subcontractor_id: subId, cis_status: newStatus };
 }
 
 // ─── Schedule ─────────────────────────────────────────────────────────────────
