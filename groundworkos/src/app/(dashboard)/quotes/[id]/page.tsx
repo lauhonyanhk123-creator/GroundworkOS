@@ -59,6 +59,18 @@ export default function QuoteDetailPage() {
       const { error } = await supabase.current.from('quotes').update(update).eq('id', quoteId);
       if (error) throw error;
       await loadQuote();
+
+      if (newStatus === 'sent') {
+        const emailRes = await fetch('/api/email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'quote', id: quoteId }),
+        });
+        if (!emailRes.ok) {
+          const { error: emailErr } = await emailRes.json().catch(() => ({ error: 'Unknown error' }));
+          setActionError(emailErr ?? 'Quote marked as sent but email could not be delivered.');
+        }
+      }
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Action failed. Please try again.');
     } finally {

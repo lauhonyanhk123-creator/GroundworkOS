@@ -23,6 +23,7 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [emailWarning, setEmailWarning] = useState<string | null>(null);
   const supabase = useRef(createClient());
 
   async function loadInvoice() {
@@ -47,6 +48,7 @@ export default function InvoiceDetailPage() {
 
   async function handleSendInvoice() {
     setSubmitting(true);
+    setEmailWarning(null);
     try {
       const { error } = await supabase.current
         .from('invoices')
@@ -54,6 +56,15 @@ export default function InvoiceDetailPage() {
         .eq('id', invoiceId);
       if (error) throw error;
       await loadInvoice();
+      const emailRes = await fetch('/api/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'invoice', id: invoiceId }),
+      });
+      if (!emailRes.ok) {
+        const { error: emailErr } = await emailRes.json().catch(() => ({ error: 'Unknown error' }));
+        setEmailWarning(emailErr ?? 'Invoice marked as sent but email could not be delivered.');
+      }
     } catch (err) {
       console.error('[InvoiceDetail] send invoice error', err);
     } finally {
@@ -219,6 +230,12 @@ export default function InvoiceDetailPage() {
           </Button>
         </div>
       </div>
+
+      {emailWarning && (
+        <div className="p-3 rounded bg-warning/10 border border-warning/30 text-warning text-sm">
+          ⚠️ {emailWarning}
+        </div>
+      )}
 
       <Panel>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

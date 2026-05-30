@@ -39,6 +39,8 @@ export default function JobsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [filterTypes, setFilterTypes] = useState<string[]>([]);
   const [showNewJobModal, setShowNewJobModal] = useState(false);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [clients, setClients] = useState<{ id: string; company_name: string }[]>([]);
@@ -120,8 +122,40 @@ export default function JobsPage() {
       job.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       clientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       job.job_number.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesTab && matchesSearch;
+    const matchesType = filterTypes.length === 0 || filterTypes.includes(job.type ?? '');
+    return matchesTab && matchesSearch && matchesType;
   });
+
+  function handleExport() {
+    const headers = ['Job Number', 'Title', 'Client', 'Type', 'Status', 'Value (£)', 'Progress %', 'Created'];
+    const rows = filteredJobs.map(job => [
+      job.job_number,
+      job.title,
+      job.client?.company_name ?? '',
+      job.type ?? '',
+      job.status,
+      (job.value ?? 0).toFixed(2),
+      job.progress_percent ?? 0,
+      new Date(job.created_at).toLocaleDateString('en-GB'),
+    ]);
+    const csv = [headers, ...rows].map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `jobs-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const JOB_TYPES = [
+    { value: 'drainage', label: 'Drainage' },
+    { value: 'foundations', label: 'Foundations' },
+    { value: 'excavation', label: 'Excavation' },
+    { value: 'kerbing', label: 'Kerbing' },
+    { value: 'sewers', label: 'Sewers' },
+    { value: 'reinstatement', label: 'Reinstatement' },
+  ];
 
   if (error) {
     return (
@@ -176,16 +210,54 @@ export default function JobsPage() {
               className="bg-surface border border-border rounded pl-10 pr-4 py-2 text-sm w-64 focus:outline-none focus:border-yellow"
             />
           </div>
-          <Button variant="ghost" size="sm">
+          <Button variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}>
             <Filter className="w-4 h-4 mr-2" />
             Filter
+            {filterTypes.length > 0 && (
+              <span className="ml-2 bg-yellow text-black text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {filterTypes.length}
+              </span>
+            )}
           </Button>
         </div>
-        <Button variant="ghost" size="sm">
+        <Button variant="ghost" size="sm" onClick={handleExport}>
           <Download className="w-4 h-4 mr-2" />
           Export
         </Button>
       </div>
+
+      {showFilters && (
+        <div className="bg-surface border border-border rounded p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-mono text-muted uppercase tracking-wider">Filter by Type</span>
+            {filterTypes.length > 0 && (
+              <button
+                onClick={() => setFilterTypes([])}
+                className="text-xs text-yellow hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {JOB_TYPES.map(t => (
+              <label key={t.value} className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={filterTypes.includes(t.value)}
+                  onChange={(e) => {
+                    setFilterTypes(prev =>
+                      e.target.checked ? [...prev, t.value] : prev.filter(v => v !== t.value)
+                    );
+                  }}
+                  className="accent-yellow"
+                />
+                <span className="text-sm capitalize">{t.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <Panel>
         {isLoading ? (
