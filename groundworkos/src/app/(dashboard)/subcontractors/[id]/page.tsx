@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +23,7 @@ interface EditForm {
 
 export default function SubcontractorDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const subcontractorId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [subcontractor, setSubcontractor] = useState<Subcontractor | null>(null);
@@ -283,7 +284,7 @@ export default function SubcontractorDetailPage() {
                       <div className="font-medium text-sm">{job.title}</div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">View</Button>
+                  <Button variant="ghost" size="sm" onClick={() => router.push(`/jobs/${job.id}`)}>View</Button>
                 </div>
               ))}
             </div>
