@@ -22,6 +22,12 @@ import {
   Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { CompanySwitcher } from '@/components/ui/company-switcher';
+
+interface CompanyOption {
+  id: string;
+  name: string;
+}
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -49,11 +55,39 @@ export default function DashboardLayout({
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userEmail, setUserEmail] = useState<string>('');
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [currentCompanyId, setCurrentCompanyId] = useState<string>('');
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       setUserEmail(data.user?.email ?? '');
+      if (!data.user) return;
+
+      try {
+        const { data: userCompanies } = await supabase
+          .from('user_companies')
+          .select('company_id, companies:company_id(id, name)')
+          .eq('user_id', data.user.id);
+
+        if (!userCompanies) return;
+
+        const options: CompanyOption[] = (userCompanies as Array<{ company_id: string; companies: unknown }>)
+          .map((uc) => {
+            const co = uc.companies as { id: string; name: string } | null;
+            return { id: uc.company_id, name: co?.name ?? uc.company_id };
+          });
+
+        setCompanies(options);
+
+        // Determine current company from cookie or default to first
+        const cookieMatch = document.cookie.match(/(?:^|; )selected_company_id=([^;]*)/);
+        const cookieCompanyId = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
+        const validId = options.find(o => o.id === cookieCompanyId)?.id ?? options[0]?.id ?? '';
+        setCurrentCompanyId(validId);
+      } catch (err) {
+        console.error('[DashboardLayout] Failed to load companies:', err);
+      }
     });
   }, []);
 
@@ -85,6 +119,12 @@ export default function DashboardLayout({
             </span>
           </Link>
         </div>
+
+        {companies.length > 1 && currentCompanyId && (
+          <div className="px-2 pt-3 border-b border-border">
+            <CompanySwitcher companies={companies} currentCompanyId={currentCompanyId} />
+          </div>
+        )}
 
         <nav className="flex-1 overflow-y-auto py-4 px-2">
           {navigation.map((item, index) => {

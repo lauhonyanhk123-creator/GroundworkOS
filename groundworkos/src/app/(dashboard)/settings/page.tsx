@@ -1,13 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Building, Bell, Shield, Database, Key, Save, AlertTriangle, CheckCircle } from 'lucide-react';
+import { User, Building, Bell, Shield, Database, Key, Save, AlertTriangle, CheckCircle, Link2, Link2Off } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import type { Company } from '@/types';
+
+interface XeroConnection {
+  tenant_name: string | null;
+  connected_at: string;
+}
 
 interface ProfileForm {
   full_name: string;
@@ -49,6 +55,7 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
 };
 
 export default function SettingsPage() {
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState('profile');
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -59,6 +66,9 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS);
   const [securityForm, setSecurityForm] = useState<SecurityForm>({ new_password: '', confirm_password: '' });
   const [companyId, setCompanyId] = useState<string | null>(null);
+  const [xeroConnection, setXeroConnection] = useState<XeroConnection | null>(null);
+  const [xeroLoading, setXeroLoading] = useState(false);
+  const [xeroToast, setXeroToast] = useState<string | null>(null);
 
   const supabase = useRef(createClient());
 
@@ -102,12 +112,34 @@ export default function SettingsPage() {
             payment_terms: cs.payment_terms ?? '30',
           });
         }
+
+        // Load Xero connection status
+        const { data: xeroConn } = await supabase.current
+          .from('xero_connections')
+          .select('tenant_name, connected_at')
+          .eq('company_id', uc.company_id)
+          .maybeSingle();
+        if (xeroConn) {
+          setXeroConnection({ tenant_name: xeroConn.tenant_name, connected_at: xeroConn.connected_at });
+        }
       } catch (err) {
         console.error('[Settings] load error', err);
       }
     }
     load();
-  }, []);
+
+    // Handle Xero OAuth redirect result
+    const xeroParam = searchParams.get('xero');
+    if (xeroParam === 'connected') {
+      setXeroToast('Xero connected successfully.');
+      setActiveTab('integrations');
+      setTimeout(() => setXeroToast(null), 4000);
+    } else if (xeroParam === 'error') {
+      setXeroToast('Failed to connect Xero. Please try again.');
+      setActiveTab('integrations');
+      setTimeout(() => setXeroToast(null), 4000);
+    }
+  }, [searchParams]);
 
   async function handleSave() {
     setSaving(true);
@@ -336,7 +368,7 @@ export default function SettingsPage() {
                     <div className="font-medium">Database Connection</div>
                     <div className="text-sm text-muted">Connected to Supabase</div>
                   </div>
-                  <Badge status="active">Connected</Badge>
+                  <Badge status="active" />
                 </div>
               </div>
             </Panel>
@@ -347,7 +379,7 @@ export default function SettingsPage() {
                     <div className="font-medium">AI Assistant</div>
                     <div className="text-sm text-muted">Powered by Mistral Small</div>
                   </div>
-                  <Badge status="active">Active</Badge>
+                  <Badge status="active" />
                 </div>
               </div>
             </Panel>
@@ -372,11 +404,58 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <div className="font-medium">Xero</div>
-                      <div className="text-sm text-muted">Accounting integration</div>
+                      {xeroConnection ? (
+                        <div className="text-sm text-muted">
+                          Connected to {xeroConnection.tenant_name ?? 'Xero'} &mdash; since {new Date(xeroConnection.connected_at).toLocaleDateString('en-GB')}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted">Accounting integration</div>
+                      )}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm">Configure</Button>
+                  {xeroConnection ? (
+                    <div className="flex items-center gap-2">
+                      <Badge status="active" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        loading={xeroLoading}
+                        disabled={xeroLoading}
+                        onClick={async () => {
+                          if (!companyId) return;
+                          setXeroLoading(true);
+                          try {
+                            const { error } = await supabase.current
+                              .from('xero_connections')
+                              .delete()
+                              .eq('company_id', companyId);
+                            if (error) throw error;
+                            setXeroConnection(null);
+                          } catch (err) {
+                            console.error('[Settings] Xero disconnect error', err);
+                          } finally {
+                            setXeroLoading(false);
+                          }
+                        }}
+                      >
+                        <Link2Off className="w-4 h-4 mr-2" />Disconnect
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { window.location.href = '/api/xero/connect'; }}
+                    >
+                      <Link2 className="w-4 h-4 mr-2" />Connect Xero
+                    </Button>
+                  )}
                 </div>
+                {xeroToast && (
+                  <div className={`p-3 rounded text-sm ${xeroToast.includes('success') ? 'bg-success/10 border border-success/30 text-success' : 'bg-danger/10 border border-danger/30 text-danger'}`}>
+                    {xeroToast}
+                  </div>
+                )}
               </div>
             </Panel>
           </div>

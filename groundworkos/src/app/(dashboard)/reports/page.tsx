@@ -5,8 +5,9 @@ import { Panel } from '@/components/ui/panel';
 import { StatCard } from '@/components/ui/stat-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Briefcase, FileText, TrendingUp } from 'lucide-react';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import Link from 'next/link';
 
 interface RevenueData {
   month: string;
@@ -21,10 +22,27 @@ interface PipelineData {
   value: number;
 }
 
+interface AgedDebtorRow {
+  id: string;
+  invoice_number: string;
+  client_name: string;
+  total_amount: number;
+  due_date: string | null;
+  days_overdue: number;
+}
+
+interface AgedBucket {
+  label: string;
+  rows: AgedDebtorRow[];
+  total: number;
+}
+
 export default function ReportsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
   const [pipelineData, setPipelineData] = useState<PipelineData[]>([]);
+  const [agedBuckets, setAgedBuckets] = useState<AgedBucket[]>([]);
+  const [agedGrandTotal, setAgedGrandTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const supabase = useRef(createClient());
 
@@ -33,7 +51,11 @@ export default function ReportsPage() {
       const sixMonthsAgo = new Date();
       sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-      const [{ data: invoices, error: invError }, { data: jobs, error: jobsError }] = await Promise.all([
+      const [
+        { data: invoices, error: invError },
+        { data: jobs, error: jobsError },
+        { data: outstandingInvoices, error: outstandingError },
+      ] = await Promise.all([
         supabase.current
           .from('invoices')
           .select('total_amount, paid_at')
@@ -42,10 +64,17 @@ export default function ReportsPage() {
         supabase.current
           .from('jobs')
           .select('status, value'),
+        supabase.current
+          .from('invoices')
+          .select('id, invoice_number, total_amount, due_date, status, clients:client_id(company_name)')
+          .in('status', ['sent', 'overdue'])
+          .order('due_date', { ascending: true }),
       ]);
       if (invError) throw invError;
       if (jobsError) throw jobsError;
+      if (outstandingError) throw outstandingError;
 
+      // Revenue data
       const monthMap = new Map<string, { total: number; count: number }>();
       for (const inv of invoices ?? []) {
         if (!inv.paid_at) continue;
@@ -66,6 +95,7 @@ export default function ReportsPage() {
       }
       setRevenueData(last6Months);
 
+      // Pipeline data
       const pipelineMap: Record<string, { count: number; value: number; label: string }> = {
         active: { count: 0, value: 0, label: 'Active' },
         quoted: { count: 0, value: 0, label: 'Quoted' },
@@ -80,6 +110,53 @@ export default function ReportsPage() {
       setPipelineData(
         Object.entries(pipelineMap).map(([status, d]) => ({ status, ...d }))
       );
+
+      // Aged debtors
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      const buckets: AgedBucket[] = [
+        { label: 'Current (not yet due)', rows: [], total: 0 },
+        { label: '1–30 days overdue', rows: [], total: 0 },
+        { label: '31–60 days overdue', rows: [], total: 0 },
+        { label: '61–90 days overdue', rows: [], total: 0 },
+        { label: '90+ days overdue', rows: [], total: 0 },
+      ];
+
+      let grandTotal = 0;
+
+      for (const inv of outstandingInvoices ?? []) {
+        const clientData = (inv.clients as unknown) as { company_name: string } | null;
+        let daysOverdue = 0;
+        if (inv.due_date) {
+          const due = new Date(inv.due_date);
+          due.setHours(0, 0, 0, 0);
+          daysOverdue = Math.floor((today.getTime() - due.getTime()) / (1000 * 60 * 60 * 24));
+        }
+
+        const row: AgedDebtorRow = {
+          id: inv.id,
+          invoice_number: inv.invoice_number,
+          client_name: clientData?.company_name ?? 'Unknown',
+          total_amount: inv.total_amount ?? 0,
+          due_date: inv.due_date,
+          days_overdue: daysOverdue,
+        };
+
+        let bucketIndex: number;
+        if (daysOverdue <= 0) bucketIndex = 0;
+        else if (daysOverdue <= 30) bucketIndex = 1;
+        else if (daysOverdue <= 60) bucketIndex = 2;
+        else if (daysOverdue <= 90) bucketIndex = 3;
+        else bucketIndex = 4;
+
+        buckets[bucketIndex].rows.push(row);
+        buckets[bucketIndex].total += row.total_amount;
+        grandTotal += row.total_amount;
+      }
+
+      setAgedBuckets(buckets);
+      setAgedGrandTotal(grandTotal);
     } catch (err) {
       console.error('[Reports]', err);
       setError('Failed to load reports. Please try again.');
@@ -119,6 +196,14 @@ export default function ReportsPage() {
         <div>
           <h1 className="text-2xl font-condensed font-bold">Reports</h1>
           <p className="text-muted text-sm mt-1">Business insights and analytics</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/reports/cis"
+            className="px-4 py-2 text-sm font-mono border border-border text-muted hover:text-text hover:border-yellow transition-colors"
+          >
+            CIS Return
+          </Link>
         </div>
       </div>
 
@@ -224,6 +309,67 @@ export default function ReportsPage() {
           )}
         </Panel>
       </div>
+
+      {/* Aged Debtors Section */}
+      <Panel title="Aged Debtors">
+        {isLoading ? (
+          <Skeleton className="h-64 rounded" />
+        ) : agedGrandTotal === 0 ? (
+          <p className="text-sm text-muted">No outstanding invoices. All clear.</p>
+        ) : (
+          <div className="space-y-6">
+            {agedBuckets.map((bucket, bucketIndex) => {
+              if (bucket.rows.length === 0) return null;
+              const isCurrentBucket = bucketIndex === 0;
+              const headerColour = isCurrentBucket
+                ? 'text-text'
+                : bucketIndex === 1
+                ? 'text-warning'
+                : bucketIndex === 2
+                ? 'text-orange-400'
+                : 'text-danger';
+
+              return (
+                <div key={bucketIndex}>
+                  <div className={cn('text-xs font-mono uppercase tracking-wider mb-2 font-bold', headerColour)}>
+                    {bucket.label} — {formatCurrency(bucket.total)}
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="text-xs font-mono text-muted uppercase tracking-wider border-b border-border">
+                          <th className="text-left py-2 px-3">Client</th>
+                          <th className="text-left py-2 px-3">Invoice #</th>
+                          <th className="text-left py-2 px-3">Due Date</th>
+                          <th className="text-right py-2 px-3">Days Overdue</th>
+                          <th className="text-right py-2 px-3">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bucket.rows.map(row => (
+                          <tr key={row.id} className="border-b border-border last:border-0 hover:bg-surface-2 transition-colors">
+                            <td className="py-2 px-3 text-sm">{row.client_name}</td>
+                            <td className="py-2 px-3 font-mono text-sm text-muted">{row.invoice_number}</td>
+                            <td className="py-2 px-3 text-sm text-muted">{row.due_date ? formatDate(row.due_date) : '—'}</td>
+                            <td className={cn('py-2 px-3 text-right font-mono text-sm', row.days_overdue > 0 ? headerColour : 'text-muted')}>
+                              {row.days_overdue > 0 ? `${row.days_overdue}d` : 'Current'}
+                            </td>
+                            <td className="py-2 px-3 text-right font-mono text-sm font-medium">{formatCurrency(row.total_amount)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
+            <div className="border-t-2 border-border pt-4 flex justify-between items-baseline">
+              <span className="text-muted font-mono text-sm uppercase tracking-wider">Total Outstanding</span>
+              <span className="text-2xl font-condensed font-bold text-danger">{formatCurrency(agedGrandTotal)}</span>
+            </div>
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }
