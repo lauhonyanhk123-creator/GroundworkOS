@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ArrowLeft, Calendar, MapPin, User, FileText } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, User, FileText, Download } from 'lucide-react';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { Job, Document, ScheduleEntry, StatusHistory, Client, DocumentType, DocumentStatus } from '@/types';
@@ -64,6 +64,7 @@ export default function JobDetailPage() {
   const [submittingSchedule, setSubmittingSchedule] = useState(false);
   const [docFormError, setDocFormError] = useState<string | null>(null);
   const [schedFormError, setSchedFormError] = useState<string | null>(null);
+  const [docFile, setDocFile] = useState<File | null>(null);
 
   const supabase = useRef(createClient());
 
@@ -162,6 +163,19 @@ export default function JobDetailPage() {
         if (expiry < today) status = 'expired';
         else if (expiry < thirtyDays) status = 'expiring_soon';
       }
+      let filePath: string | null = null;
+      if (docFile) {
+        const ext = docFile.name.split('.').pop() ?? 'bin';
+        const path = `${job!.company_id}/${Date.now()}_${docForm.name.trim().replace(/\s+/g, '-')}.${ext}`;
+        const { data: storageData, error: storageError } = await supabase.current.storage
+          .from('groundworkos-documents')
+          .upload(path, docFile);
+        if (storageError) {
+          console.error('[JobDetail] Storage upload failed, continuing without file:', storageError.message);
+        } else {
+          filePath = storageData?.path ?? null;
+        }
+      }
       const { error } = await supabase.current.from('documents').insert({
         company_id: job!.company_id,
         name: docForm.name.trim(),
@@ -170,11 +184,12 @@ export default function JobDetailPage() {
         related_id: jobId,
         expiry_date: docForm.expiry_date || null,
         status,
-        file_path: null,
+        file_path: filePath,
       });
       if (error) throw error;
       setShowAddDocModal(false);
       setDocForm({ name: '', type: 'other', expiry_date: '' });
+      setDocFile(null);
       await loadJob();
     } catch (err) {
       setDocFormError(err instanceof Error ? err.message : 'Failed to add document. Please try again.');
@@ -384,9 +399,26 @@ export default function JobDetailPage() {
                       <div className="font-medium text-sm">{doc.name}</div>
                       <div className="text-xs text-muted uppercase">{doc.type}</div>
                     </div>
-                    {doc.expiry_date && (
-                      <span className="text-xs text-muted font-mono">{formatDate(doc.expiry_date)}</span>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {doc.expiry_date && (
+                        <span className="text-xs text-muted font-mono">{formatDate(doc.expiry_date)}</span>
+                      )}
+                      {doc.file_path && (
+                        <button
+                          type="button"
+                          title="Download file"
+                          className="text-muted hover:text-yellow transition-colors"
+                          onClick={async () => {
+                            const { data } = await supabase.current.storage
+                              .from('groundworkos-documents')
+                              .createSignedUrl(doc.file_path!, 3600);
+                            if (data?.signedUrl) window.open(data.signedUrl, '_blank');
+                          }}
+                        >
+                          <Download className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -541,9 +573,18 @@ export default function JobDetailPage() {
                   className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-mono text-muted uppercase tracking-wider mb-2">File (optional)</label>
+                <input
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
+                  onChange={(e) => setDocFile(e.target.files?.[0] ?? null)}
+                  className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm text-muted focus:outline-none focus:border-yellow"
+                />
+              </div>
             </div>
             <div className="p-6 border-t border-border flex justify-end gap-3">
-              <Button variant="ghost" onClick={() => { setShowAddDocModal(false); setDocFormError(null); }}>Cancel</Button>
+              <Button variant="ghost" onClick={() => { setShowAddDocModal(false); setDocFormError(null); setDocFile(null); }}>Cancel</Button>
               <Button onClick={handleAddDocument} loading={submittingDoc} disabled={submittingDoc}>Add Document</Button>
             </div>
           </div>
