@@ -487,4 +487,34 @@ export const tools = [
       parameters: z.object({}).strict(),
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_aged_debtor_report',
+      description: 'Get an aged debtor report showing outstanding invoices grouped by age buckets: current, 1-30, 31-60, 61-90, and 90+ days overdue. Use when the user asks about aged debtors, outstanding debt analysis, or overdue invoice ageing.',
+      parameters: z.object({}).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_cis_monthly_return',
+      description: 'Get a CIS monthly return showing all subcontractor payments with gross amount, 20% CIS deduction, and net payment for a given month and year. Use when the user asks about CIS returns, monthly CIS submissions, or subcontractor deductions.',
+      parameters: z.object({
+        month: z.number().min(1).max(12),
+        year: z.number(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_subcontractor_payment_schedule',
+      description: 'Get a payment schedule for one or all subcontractors, optionally filtered by UK tax year (e.g. "2025-26"). Returns payments grouped by subcontractor with running totals. Use when the user asks about subcontractor payment history or annual CIS summaries.',
+      parameters: z.object({
+        subcontractor_id: z.string().optional(),
+        tax_year: z.string().optional(),
+      }).strict(),
+    },
+  },
 ];

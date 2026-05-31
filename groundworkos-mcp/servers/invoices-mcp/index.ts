@@ -87,6 +87,31 @@ server.tool(
       };
     }
 
+    // Fire-and-forget Xero sync — check if company has a connection and attempt sync.
+    // We deliberately do not await this or fail the mark-paid if Xero sync fails.
+    if (data?.company_id) {
+      const companyId = data.company_id as string;
+      supabase
+        .from('xero_connections')
+        .select('tenant_id')
+        .eq('company_id', companyId)
+        .maybeSingle()
+        .then(({ data: xeroConn }) => {
+          if (!xeroConn?.tenant_id) return;
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000';
+          fetch(`${siteUrl}/api/xero/sync`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ invoice_id: args.invoice_id }),
+          }).catch((err: Error) => {
+            console.error('[InvoicesMCP] Xero sync failed (non-critical):', err.message);
+          });
+        })
+        .catch((err: Error) => {
+          console.error('[InvoicesMCP] Xero connection check failed (non-critical):', err.message);
+        });
+    }
+
     return {
       content: [{ type: 'text', text: JSON.stringify(data, null, 2) }],
     };
