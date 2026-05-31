@@ -7,9 +7,9 @@ import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Send, Check, FileDown, RefreshCw } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import type { Quote, Client, LineItem } from '@/types';
+import type { Quote, Client, LineItem, StatusHistory } from '@/types';
 
 type QuoteDetail = Quote & {
   client: Pick<Client, 'id' | 'company_name' | 'contact_name' | 'email'> | null;
@@ -21,6 +21,7 @@ export default function QuoteDetailPage() {
   const quoteId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [quote, setQuote] = useState<QuoteDetail | null>(null);
+  const [history, setHistory] = useState<StatusHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,14 +30,26 @@ export default function QuoteDetailPage() {
 
   async function loadQuote() {
     try {
-      const { data, error: fetchError } = await supabase.current
-        .from('quotes')
-        .select('*, client:clients(id, company_name, contact_name, email)')
-        .eq('id', quoteId)
-        .single();
+      const [
+        { data, error: fetchError },
+        { data: histData },
+      ] = await Promise.all([
+        supabase.current
+          .from('quotes')
+          .select('*, client:clients(id, company_name, contact_name, email)')
+          .eq('id', quoteId)
+          .single(),
+        supabase.current
+          .from('status_history')
+          .select('*')
+          .eq('entity_type', 'quote')
+          .eq('entity_id', quoteId)
+          .order('created_at', { ascending: true }),
+      ]);
       if (fetchError) throw fetchError;
       if (!data) { setError('Quote not found.'); return; }
       setQuote(data as QuoteDetail);
+      setHistory(histData ?? []);
     } catch (err) {
       console.error('[QuoteDetail]', err);
       setError('Failed to load quote. Please try again.');
@@ -352,6 +365,36 @@ export default function QuoteDetailPage() {
           </Button>
         </Panel>
       )}
+
+      <Panel title="Status History">
+        {history.length === 0 ? (
+          <p className="text-sm text-muted">No status changes recorded.</p>
+        ) : (
+          <div className="relative">
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+            <div className="space-y-4">
+              {history.map((item, index) => (
+                <div key={item.id} className="relative pl-12">
+                  <div className={cn(
+                    'absolute left-2 top-0 w-5 h-5 rounded-full border-2',
+                    index === history.length - 1 ? 'bg-yellow border-yellow' : 'bg-surface-2 border-border'
+                  )} />
+                  <div className="flex items-center justify-between">
+                    <Badge status={item.new_status} />
+                    <span className="text-xs text-muted font-mono">{formatDate(item.created_at)}</span>
+                  </div>
+                  {item.old_status && (
+                    <p className="text-xs text-muted mt-1 font-mono">
+                      {item.old_status} &rarr; {item.new_status}
+                    </p>
+                  )}
+                  {item.notes && <p className="text-sm text-muted mt-1">{item.notes}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }

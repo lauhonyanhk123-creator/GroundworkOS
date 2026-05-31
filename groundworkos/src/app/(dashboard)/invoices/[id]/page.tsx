@@ -7,9 +7,9 @@ import { Panel } from '@/components/ui/panel';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ArrowLeft, Download, CheckCircle, Send } from 'lucide-react';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import type { Invoice, Client, Job } from '@/types';
+import type { Invoice, Client, Job, StatusHistory } from '@/types';
 
 type InvoiceDetail = Invoice & {
   client: Pick<Client, 'id' | 'company_name' | 'contact_name' | 'email' | 'address'> | null;
@@ -21,6 +21,7 @@ export default function InvoiceDetailPage() {
   const invoiceId = params.id as string;
   const [isLoading, setIsLoading] = useState(true);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
+  const [history, setHistory] = useState<StatusHistory[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [emailWarning, setEmailWarning] = useState<string | null>(null);
@@ -28,14 +29,26 @@ export default function InvoiceDetailPage() {
 
   async function loadInvoice() {
     try {
-      const { data, error: fetchError } = await supabase.current
-        .from('invoices')
-        .select('*, client:clients(id, company_name, contact_name, email, address), job:jobs(id, job_number, title)')
-        .eq('id', invoiceId)
-        .single();
+      const [
+        { data, error: fetchError },
+        { data: histData },
+      ] = await Promise.all([
+        supabase.current
+          .from('invoices')
+          .select('*, client:clients(id, company_name, contact_name, email, address), job:jobs(id, job_number, title)')
+          .eq('id', invoiceId)
+          .single(),
+        supabase.current
+          .from('status_history')
+          .select('*')
+          .eq('entity_type', 'invoice')
+          .eq('entity_id', invoiceId)
+          .order('created_at', { ascending: true }),
+      ]);
       if (fetchError) throw fetchError;
       if (!data) { setError('Invoice not found.'); return; }
       setInvoice(data as InvoiceDetail);
+      setHistory(histData ?? []);
     } catch (err) {
       console.error('[InvoiceDetail]', err);
       setError('Failed to load invoice. Please try again.');
@@ -317,6 +330,36 @@ export default function InvoiceDetailPage() {
           <p className="text-sm">{invoice.notes}</p>
         </Panel>
       )}
+
+      <Panel title="Status History">
+        {history.length === 0 ? (
+          <p className="text-sm text-muted">No status changes recorded.</p>
+        ) : (
+          <div className="relative">
+            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+            <div className="space-y-4">
+              {history.map((item, index) => (
+                <div key={item.id} className="relative pl-12">
+                  <div className={cn(
+                    'absolute left-2 top-0 w-5 h-5 rounded-full border-2',
+                    index === history.length - 1 ? 'bg-yellow border-yellow' : 'bg-surface-2 border-border'
+                  )} />
+                  <div className="flex items-center justify-between">
+                    <Badge status={item.new_status} />
+                    <span className="text-xs text-muted font-mono">{formatDate(item.created_at)}</span>
+                  </div>
+                  {item.old_status && (
+                    <p className="text-xs text-muted mt-1 font-mono">
+                      {item.old_status} &rarr; {item.new_status}
+                    </p>
+                  )}
+                  {item.notes && <p className="text-sm text-muted mt-1">{item.notes}</p>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </Panel>
     </div>
   );
 }

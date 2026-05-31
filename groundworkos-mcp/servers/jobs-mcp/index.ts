@@ -293,6 +293,41 @@ server.tool(
   }
 );
 
+server.tool(
+  'get_entity_history',
+  'Retrieve the full status change history for a job, quote, or invoice. Use when the user asks about status changes, audit trail, or history for a specific entity.',
+  {
+    entity_type: z.enum(['job', 'quote', 'invoice']),
+    entity_id: z.string(),
+  },
+  async (args) => {
+    try {
+      const { data, error } = await supabase
+        .from('status_history')
+        .select('*')
+        .eq('entity_type', args.entity_type)
+        .eq('entity_id', args.entity_id)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        return {
+          content: [{ type: 'text', text: JSON.stringify({ error: error.message }) }],
+          isError: true,
+        };
+      }
+
+      return {
+        content: [{ type: 'text', text: JSON.stringify(data ?? [], null, 2) }],
+      };
+    } catch (err) {
+      return {
+        content: [{ type: 'text', text: JSON.stringify({ error: 'Failed to retrieve entity history.' }) }],
+        isError: true,
+      };
+    }
+  }
+);
+
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
