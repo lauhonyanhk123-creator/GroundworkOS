@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChatPanel } from '@/components/ai/chat-panel';
 import { StatCard } from '@/components/ui/stat-card';
 import { Panel } from '@/components/ui/panel';
@@ -27,6 +28,7 @@ interface DashboardData {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -202,7 +204,7 @@ export default function DashboardPage() {
             <Panel
               title="Active Jobs"
               actions={
-                <Button variant="ghost" size="sm" onClick={() => (window.location.href = '/jobs')}>
+                <Button variant="ghost" size="sm" onClick={() => router.push('/jobs')}>
                   View All
                 </Button>
               }
