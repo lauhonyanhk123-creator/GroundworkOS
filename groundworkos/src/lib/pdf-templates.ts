@@ -1,6 +1,6 @@
 import type { QuoteWithClient, InvoiceWithDetails, LineItem } from '@/types';
 
-function formatDate(dateStr: string | null): string {
+export function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
 }

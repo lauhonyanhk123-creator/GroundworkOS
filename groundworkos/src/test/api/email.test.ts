@@ -12,6 +12,7 @@ vi.mock('puppeteer', () => ({
 vi.mock('@/lib/pdf-templates', () => ({
   buildQuoteHTML: vi.fn().mockReturnValue('<html>Quote</html>'),
   buildInvoiceHTML: vi.fn().mockReturnValue('<html>Invoice</html>'),
+  formatDate: vi.fn().mockReturnValue('01 January 2025'),
 }));
 
 import { POST } from '@/app/api/email/route';
