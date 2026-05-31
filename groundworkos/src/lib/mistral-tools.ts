@@ -141,6 +141,17 @@ export const tools = [
       parameters: z.object({}).strict(),
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_entity_history',
+      description: 'Retrieve the full status change history for a job, quote, or invoice. Use when the user asks about status changes, audit trail, or history for a specific entity.',
+      parameters: z.object({
+        entity_type: z.enum(['job', 'quote', 'invoice']),
+        entity_id: z.string(),
+      }).strict(),
+    },
+  },
   // Quotes MCP tools
   {
     type: 'function' as const,
