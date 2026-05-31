@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import type { LineItem } from '@/types';
+import { buildQuoteHTML, buildInvoiceHTML } from '@/lib/pdf-templates';
+import type { LineItem, QuoteWithClient, InvoiceWithDetails } from '@/types';
+import puppeteer from 'puppeteer';
 
 if (!process.env.SENDGRID_API_KEY) {
   console.error('[Email] SENDGRID_API_KEY is not set');
@@ -52,9 +54,47 @@ function emailWrapper(subject: string, bodyHtml: string): string {
 </html>`;
 }
 
-async function sendViaSendGrid(to: string, subject: string, html: string): Promise<void> {
+async function generatePDFBuffer(html: string): Promise<Uint8Array> {
+  const browser = await puppeteer.launch({
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+  });
+  try {
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'domcontentloaded' });
+    return await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '20mm', right: '15mm', bottom: '20mm', left: '15mm' },
+    });
+  } finally {
+    await browser.close();
+  }
+}
+
+async function sendViaSendGrid(
+  to: string,
+  subject: string,
+  html: string,
+  attachment?: { content: string; filename: string }
+): Promise<void> {
   const apiKey = process.env.SENDGRID_API_KEY;
   if (!apiKey) throw new Error('SENDGRID_API_KEY is not configured.');
+
+  const payload: Record<string, unknown> = {
+    personalizations: [{ to: [{ email: to }] }],
+    from: { email: FROM_EMAIL, name: FROM_NAME },
+    subject,
+    content: [{ type: 'text/html', value: html }],
+  };
+
+  if (attachment) {
+    payload.attachments = [{
+      content: attachment.content,
+      filename: attachment.filename,
+      type: 'application/pdf',
+      disposition: 'attachment',
+    }];
+  }
 
   const res = await fetch('https://api.sendgrid.com/v3/mail/send', {
     method: 'POST',
@@ -62,12 +102,7 @@ async function sendViaSendGrid(to: string, subject: string, html: string): Promi
       Authorization: `Bearer ${apiKey}`,
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }] }],
-      from: { email: FROM_EMAIL, name: FROM_NAME },
-      subject,
-      content: [{ type: 'text/html', value: html }],
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {
@@ -145,8 +180,20 @@ export async function POST(request: NextRequest) {
         <p style="margin:0;font-size:13px;color:#666;">If you have any questions about this invoice, please contact us directly.</p>
       `;
 
-      await sendViaSendGrid(clientEmail, subject, emailWrapper(subject, bodyHtml));
-      return NextResponse.json({ success: true });
+      let attachment: { content: string; filename: string } | undefined;
+      try {
+        const pdfHtml = buildInvoiceHTML(invoice as InvoiceWithDetails);
+        const pdfBuffer = await generatePDFBuffer(pdfHtml);
+        attachment = {
+          content: Buffer.from(pdfBuffer).toString('base64'),
+          filename: `invoice-${invoice.invoice_number}.pdf`,
+        };
+      } catch (pdfErr) {
+        console.error('[Email] PDF generation failed, sending without attachment:', pdfErr);
+      }
+
+      await sendViaSendGrid(clientEmail, subject, emailWrapper(subject, bodyHtml), attachment);
+      return NextResponse.json({ success: true, pdf_attached: !!attachment });
     }
 
     // Quote
@@ -207,8 +254,20 @@ export async function POST(request: NextRequest) {
       <p style="margin:0;font-size:13px;color:#666;">Please review this quote and get in touch if you have any questions or would like to proceed.</p>
     `;
 
-    await sendViaSendGrid(clientEmail, subject, emailWrapper(subject, bodyHtml));
-    return NextResponse.json({ success: true });
+    let attachment: { content: string; filename: string } | undefined;
+    try {
+      const pdfHtml = buildQuoteHTML(quote as QuoteWithClient);
+      const pdfBuffer = await generatePDFBuffer(pdfHtml);
+      attachment = {
+        content: Buffer.from(pdfBuffer).toString('base64'),
+        filename: `quote-${quote.quote_number}.pdf`,
+      };
+    } catch (pdfErr) {
+      console.error('[Email] PDF generation failed, sending without attachment:', pdfErr);
+    }
+
+    await sendViaSendGrid(clientEmail, subject, emailWrapper(subject, bodyHtml), attachment);
+    return NextResponse.json({ success: true, pdf_attached: !!attachment });
 
   } catch (err) {
     console.error('[Email] Error:', err);
