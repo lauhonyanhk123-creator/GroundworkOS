@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { buildQuoteHTML, buildInvoiceHTML } from '@/lib/pdf-templates';
+import { buildQuoteHTML, buildInvoiceHTML, formatDate as formatDateLong } from '@/lib/pdf-templates';
 import type { LineItem, QuoteWithClient, InvoiceWithDetails } from '@/types';
 import puppeteer from 'puppeteer';
 
@@ -15,10 +15,6 @@ function formatGBP(amount: number | null): string {
   return `£${(amount ?? 0).toFixed(2)}`;
 }
 
-function formatDateGB(dateStr: string | null): string {
-  if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-}
 
 function emailWrapper(subject: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
@@ -144,7 +140,7 @@ export async function POST(request: NextRequest) {
       const client = invoice.client as { company_name: string; contact_name?: string } | null;
       const job = invoice.job as { title: string } | null;
 
-      const subject = `Invoice ${invoice.invoice_number} — Payment Due ${formatDateGB(invoice.due_date)}`;
+      const subject = `Invoice ${invoice.invoice_number} — Payment Due ${formatDateLong(invoice.due_date)}`;
 
       const bodyHtml = `
         <h2 style="margin:0 0 8px;font-size:24px;font-weight:800;color:#0c0c0c;">Invoice ${invoice.invoice_number}</h2>
@@ -170,7 +166,7 @@ export async function POST(request: NextRequest) {
         <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:24px;">
           <tr>
             <td style="padding:8px 0;color:#666;font-size:13px;">Due Date</td>
-            <td style="padding:8px 0;text-align:right;font-weight:700;">${formatDateGB(invoice.due_date)}</td>
+            <td style="padding:8px 0;text-align:right;font-weight:700;">${formatDateLong(invoice.due_date)}</td>
           </tr>
           ${invoice.status === 'paid' ? `<tr><td style="padding:8px 0;color:#666;font-size:13px;">Status</td><td style="padding:8px 0;text-align:right;"><span style="background:#d1fae5;color:#065f46;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;">PAID</span></td></tr>` : ''}
         </table>
