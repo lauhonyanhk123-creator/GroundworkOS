@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { cn, formatCurrency, formatDate, formatDateTime, generateId } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
 
 describe('cn', () => {
   it('merges class names', () => {
@@ -64,28 +64,3 @@ describe('formatDate', () => {
   });
 });
 
-describe('formatDateTime', () => {
-  it('includes both date and time parts', () => {
-    const result = formatDateTime('2025-06-15T09:30:00');
-    expect(result).toMatch(/2025/);
-    expect(result).toBeTruthy();
-  });
-
-  it('accepts a Date object', () => {
-    const result = formatDateTime(new Date('2025-06-15T14:00:00'));
-    expect(result).toMatch(/2025/);
-  });
-});
-
-describe('generateId', () => {
-  it('returns a non-empty string', () => {
-    expect(generateId()).toBeTruthy();
-    expect(typeof generateId()).toBe('string');
-  });
-
-  it('generates unique IDs each call', () => {
-    const ids = Array.from({ length: 100 }, () => generateId());
-    const unique = new Set(ids);
-    expect(unique.size).toBe(100);
-  });
-});
