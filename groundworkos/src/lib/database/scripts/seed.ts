@@ -13,10 +13,9 @@ async function seed() {
 
   try {
     console.log('🗑️  Clearing existing data...');
-    await supabase.from('job_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    await supabase.from('status_history').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('schedule_entries').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('documents').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-    await supabase.from('quote_line_items').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('invoices').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('quotes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
     await supabase.from('jobs').delete().neq('id', '00000000-0000-0000-0000-000000000000');
@@ -85,7 +84,7 @@ async function seed() {
           email: 'mike@abcexcavations.co.uk',
           phone: '07700 900123',
           trade: 'Excavation',
-          cis_status: 'verified',
+          cis_status: 'net',
           utr_number: '12345678901',
           notes: 'Primary excavation subcontractor. Very reliable.',
         },
@@ -114,7 +113,7 @@ async function seed() {
           email: 'lisa@profkerb.co.uk',
           phone: '07700 900321',
           trade: 'Kerbing',
-          cis_status: 'verified',
+          cis_status: 'net',
           utr_number: '24681357912',
         },
       ])
@@ -192,10 +191,10 @@ async function seed() {
 
     console.log('📝 Adding job history...');
     for (const job of jobs) {
-      await supabase.from('job_history').insert([
-        { job_id: job.id, status: 'enquiry', notes: 'Initial enquiry received' },
-        { job_id: job.id, status: 'quoted', notes: 'Quote sent to client' },
-        { job_id: job.id, status: job.status, notes: 'Status updated' },
+      await supabase.from('status_history').insert([
+        { entity_type: 'job', entity_id: job.id, old_status: null, new_status: 'enquiry', notes: 'Initial enquiry received' },
+        { entity_type: 'job', entity_id: job.id, old_status: 'enquiry', new_status: 'quoted', notes: 'Quote sent to client' },
+        { entity_type: 'job', entity_id: job.id, old_status: 'quoted', new_status: job.status, notes: 'Status updated' },
       ]);
     }
     console.log(`✅ Added history for ${jobs.length} jobs`);
@@ -208,6 +207,13 @@ async function seed() {
           client_id: clients[0].id,
           title: 'Newbury Site Preparation',
           status: 'sent',
+          line_items: [
+            { description: 'Site clearance and preparation', quantity: 1, unit_price: 5000, total: 5000 },
+            { description: 'Excavation works', quantity: 1, unit_price: 12000, total: 12000 },
+            { description: 'Drainage installation', quantity: 1, unit_price: 8000, total: 8000 },
+            { description: 'Foundation concrete pour', quantity: 1, unit_price: 8500, total: 8500 },
+            { description: 'Backfill and compaction', quantity: 1, unit_price: 4000, total: 4000 },
+          ],
           subtotal: 37500,
           vat_amount: 7500,
           total_amount: 45000,
@@ -218,6 +224,11 @@ async function seed() {
           client_id: clients[1].id,
           title: 'Reading Excavation',
           status: 'draft',
+          line_items: [
+            { description: 'Bulk excavation', quantity: 1, unit_price: 15000, total: 15000 },
+            { description: 'Site levelling', quantity: 1, unit_price: 5000, total: 5000 },
+            { description: 'Disposal of spoil', quantity: 1, unit_price: 6666.67, total: 6666.67 },
+          ],
           subtotal: 26666.67,
           vat_amount: 5333.33,
           total_amount: 32000,
@@ -226,6 +237,12 @@ async function seed() {
           client_id: clients[3].id,
           title: 'Oxford Foundations',
           status: 'accepted',
+          line_items: [
+            { description: 'Foundation trenches', quantity: 1, unit_price: 20000, total: 20000 },
+            { description: 'Concrete fill', quantity: 1, unit_price: 15000, total: 15000 },
+            { description: 'Steel reinforcement', quantity: 1, unit_price: 8000, total: 8000 },
+            { description: 'Damp proof membrane', quantity: 1, unit_price: 5333.33, total: 5333.33 },
+          ],
           subtotal: 48333.33,
           vat_amount: 9666.67,
           total_amount: 58000,
@@ -236,23 +253,6 @@ async function seed() {
       .select();
 
     if (quotesError) throw quotesError;
-
-    const quoteLineItems = [
-      { quote_id: quotes[0].id, description: 'Site clearance and preparation', quantity: 1, unit_price: 5000, total: 5000 },
-      { quote_id: quotes[0].id, description: 'Excavation works', quantity: 1, unit_price: 12000, total: 12000 },
-      { quote_id: quotes[0].id, description: 'Drainage installation', quantity: 1, unit_price: 8000, total: 8000 },
-      { quote_id: quotes[0].id, description: 'Foundation concrete pour', quantity: 1, unit_price: 8500, total: 8500 },
-      { quote_id: quotes[0].id, description: 'Backfill and compaction', quantity: 1, unit_price: 4000, total: 4000 },
-      { quote_id: quotes[1].id, description: 'Bulk excavation', quantity: 1, unit_price: 15000, total: 15000 },
-      { quote_id: quotes[1].id, description: 'Site levelling', quantity: 1, unit_price: 5000, total: 5000 },
-      { quote_id: quotes[1].id, description: 'Disposal of spoil', quantity: 1, unit_price: 6666.67, total: 6666.67 },
-      { quote_id: quotes[2].id, description: 'Foundation trenches', quantity: 1, unit_price: 20000, total: 20000 },
-      { quote_id: quotes[2].id, description: 'Concrete fill', quantity: 1, unit_price: 15000, total: 15000 },
-      { quote_id: quotes[2].id, description: 'Steel reinforcement', quantity: 1, unit_price: 8000, total: 8000 },
-      { quote_id: quotes[2].id, description: 'Damp proof membrane', quantity: 1, unit_price: 5333.33, total: 5333.33 },
-    ];
-
-    await supabase.from('quote_line_items').insert(quoteLineItems);
     console.log(`✅ Created ${quotes.length} quotes with line items`);
 
     console.log('📄 Seeding documents...');
@@ -260,34 +260,34 @@ async function seed() {
       {
         name: 'Public Liability Insurance',
         type: 'insurance',
-        related_type: 'company',
+        related_to: 'company',
         expiry_date: '2024-12-31',
         notes: '£5M coverage',
       },
       {
         name: 'Employers Liability Insurance',
         type: 'insurance',
-        related_type: 'company',
+        related_to: 'company',
         expiry_date: '2024-06-30',
         notes: '£10M coverage',
       },
       {
         name: 'CIS Certificate',
         type: 'cis',
-        related_type: 'company',
+        related_to: 'company',
         expiry_date: '2025-03-15',
       },
       {
         name: 'CSCS Card - John Smith',
         type: 'cscs',
-        related_type: 'subcontractor',
+        related_to: 'subcontractor',
         related_id: subcontractors[0].id,
         expiry_date: '2025-06-01',
       },
       {
         name: 'RAMS Document - Newbury',
         type: 'rams',
-        related_type: 'job',
+        related_to: 'job',
         related_id: jobs[0].id,
         expiry_date: '2024-08-01',
       },

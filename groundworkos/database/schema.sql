@@ -764,17 +764,17 @@ CREATE TRIGGER log_invoice_status_change
     FOR EACH ROW EXECUTE FUNCTION log_status_change('invoice');
 
 
--- MIGRATION: Add Xero integration support
--- Run this in Supabase SQL editor:
--- ALTER TABLE invoices ADD COLUMN IF NOT EXISTS xero_invoice_id TEXT;
--- CREATE TABLE IF NOT EXISTS xero_connections (
---   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
---   company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
---   tenant_id TEXT NOT NULL,
---   tenant_name TEXT,
---   access_token TEXT NOT NULL,
---   refresh_token TEXT NOT NULL,
---   expires_at TIMESTAMPTZ NOT NULL,
---   connected_at TIMESTAMPTZ DEFAULT NOW(),
---   UNIQUE(company_id)
--- );
+-- Xero integration support
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS xero_invoice_id TEXT;
+
+CREATE TABLE IF NOT EXISTS xero_connections (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
+  tenant_id TEXT NOT NULL,
+  tenant_name TEXT,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  connected_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(company_id)
+);
