@@ -58,7 +58,7 @@ export async function addDocument(
 
 export async function checkComplianceStatus(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const today = new Date();
   const thirtyDays = new Date(today);
@@ -66,17 +66,12 @@ export async function checkComplianceStatus(
   const todayStr = today.toISOString().split('T')[0];
   const thirtyDaysStr = thirtyDays.toISOString().split('T')[0];
 
-  let expiredQuery = supabase.from('documents').select('*').lt('expiry_date', todayStr);
-  let expiringSoonQuery = supabase.from('documents').select('*').gte('expiry_date', todayStr).lte('expiry_date', thirtyDaysStr);
-  let validQuery = supabase.from('documents').select('*').gt('expiry_date', thirtyDaysStr);
-  if (companyId) {
-    expiredQuery = expiredQuery.eq('company_id', companyId);
-    expiringSoonQuery = expiringSoonQuery.eq('company_id', companyId);
-    validQuery = validQuery.eq('company_id', companyId);
-  }
-
   const [{ data: expired, error: expiredError }, { data: expiringSoon, error: expiringError }, { data: valid, error: validError }] =
-    await Promise.all([expiredQuery, expiringSoonQuery, validQuery]);
+    await Promise.all([
+      supabase.from('documents').select('*').eq('company_id', companyId).lt('expiry_date', todayStr),
+      supabase.from('documents').select('*').eq('company_id', companyId).gte('expiry_date', todayStr).lte('expiry_date', thirtyDaysStr),
+      supabase.from('documents').select('*').eq('company_id', companyId).gt('expiry_date', thirtyDaysStr),
+    ]);
 
   if (expiredError || expiringError || validError) throw new Error('Failed to fetch compliance data');
 
@@ -84,14 +79,16 @@ export async function checkComplianceStatus(
   const expiringSoonDocs = (expiringSoon ?? []) as Record<string, unknown>[];
   const validDocs = (valid ?? []) as Record<string, unknown>[];
 
-  // Update statuses in background (fire-and-forget)
+  // Update statuses in the background (fire-and-forget, scoped to this company).
   if (expiredDocs.length > 0) {
     const ids = expiredDocs.map(d => d.id);
-    supabase.from('documents').update({ status: 'expired' }).in('id', ids).then(() => {});
+    void supabase.from('documents').update({ status: 'expired' }).eq('company_id', companyId).in('id', ids)
+      .then(({ error }) => { if (error) console.error('[compliance.checkComplianceStatus] Failed to mark expired:', error); });
   }
   if (expiringSoonDocs.length > 0) {
     const ids = expiringSoonDocs.map(d => d.id);
-    supabase.from('documents').update({ status: 'expiring_soon' }).in('id', ids).then(() => {});
+    void supabase.from('documents').update({ status: 'expiring_soon' }).eq('company_id', companyId).in('id', ids)
+      .then(({ error }) => { if (error) console.error('[compliance.checkComplianceStatus] Failed to mark expiring soon:', error); });
   }
 
   const overallStatus = expiredDocs.length > 0 ? 'red' : expiringSoonDocs.length > 0 ? 'amber' : 'green';
@@ -113,7 +110,7 @@ export async function checkComplianceStatus(
 export async function flagExpiringDocuments(
   input: FlagExpiringDocumentsInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const daysAhead = input.days_ahead ?? 30;
   const today = new Date();
@@ -122,9 +119,13 @@ export async function flagExpiringDocuments(
   const todayStr = today.toISOString().split('T')[0];
   const futureStr = futureDate.toISOString().split('T')[0];
 
-  let query = supabase.from('documents').select('*').gte('expiry_date', todayStr).lte('expiry_date', futureStr).order('expiry_date', { ascending: true });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('company_id', companyId)
+    .gte('expiry_date', todayStr)
+    .lte('expiry_date', futureStr)
+    .order('expiry_date', { ascending: true });
   if (error) throw new Error(error.message);
 
   const withDaysUntil = (data ?? []).map((doc: Record<string, unknown>) => {
@@ -137,11 +138,13 @@ export async function flagExpiringDocuments(
 
 export async function getJobDocuments(
   input: GetJobDocumentsInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await supabase
     .from('documents')
     .select('*')
+    .eq('company_id', companyId)
     .eq('related_to', 'job')
     .eq('related_id', input.job_id)
     .order('expiry_date', { ascending: true });
@@ -160,11 +163,13 @@ export async function getJobDocuments(
 
 export async function getSubcontractorDocuments(
   input: GetSubcontractorDocumentsInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await supabase
     .from('documents')
     .select('*')
+    .eq('company_id', companyId)
     .eq('related_to', 'subcontractor')
     .eq('related_id', input.subcontractor_id)
     .order('expiry_date', { ascending: true });

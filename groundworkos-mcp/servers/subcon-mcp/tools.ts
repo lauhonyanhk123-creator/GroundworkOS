@@ -45,7 +45,8 @@ export async function createSubcontractor(
 
 export async function verifyCISStatus(
   input: VerifyCISStatusInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   let cisStatus: 'gross' | 'net' | 'unmatched' = 'unmatched';
   let isMock = false;
@@ -84,6 +85,7 @@ export async function verifyCISStatus(
     .from('subcontractors')
     .update({ cis_status: cisStatus, cis_verified_at: verifiedAt })
     .eq('id', input.subcontractor_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -93,14 +95,13 @@ export async function verifyCISStatus(
 
 export async function listSubcontractors(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
-  let query = supabase
+  const { data, error } = await supabase
     .from('subcontractors')
     .select('*, documents:documents(count)')
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((sub: Record<string, unknown>) => ({
@@ -111,14 +112,16 @@ export async function listSubcontractors(
 
 export async function getSubcontractorDetails(
   input: GetSubcontractorDetailsInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const [{ data: subcon, error: subconError }, { data: documents }, { data: scheduleEntries }] =
     await Promise.all([
-      supabase.from('subcontractors').select('*').eq('id', input.subcontractor_id).single(),
-      supabase.from('documents').select('*').eq('related_to', 'subcontractor').eq('related_id', input.subcontractor_id).order('expiry_date', { ascending: true }),
+      supabase.from('subcontractors').select('*').eq('id', input.subcontractor_id).eq('company_id', companyId).single(),
+      supabase.from('documents').select('*').eq('related_to', 'subcontractor').eq('related_id', input.subcontractor_id).eq('company_id', companyId).order('expiry_date', { ascending: true }),
       supabase.from('schedule_entries')
         .select('*, jobs:job_id (id, job_number, title, client_id)')
+        .eq('company_id', companyId)
         .eq('notes', `subcontractor:${input.subcontractor_id}`)
         .order('start_datetime', { ascending: false }),
     ]);
@@ -129,15 +132,12 @@ export async function getSubcontractorDetails(
 
 export async function flagCISIssues(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
-  let subsQuery = supabase.from('subcontractors').select('*').in('cis_status', ['unverified', 'unmatched']).order('company_name', { ascending: true });
-  if (companyId) subsQuery = subsQuery.eq('company_id', companyId);
-
-  let expiredDocsQuery = supabase.from('documents').select('*').eq('related_to', 'subcontractor').eq('status', 'expired');
-  if (companyId) expiredDocsQuery = expiredDocsQuery.eq('company_id', companyId);
-
-  const [{ data: subs }, { data: expiredDocs }] = await Promise.all([subsQuery, expiredDocsQuery]);
+  const [{ data: subs }, { data: expiredDocs }] = await Promise.all([
+    supabase.from('subcontractors').select('*').eq('company_id', companyId).in('cis_status', ['unverified', 'unmatched']).order('company_name', { ascending: true }),
+    supabase.from('documents').select('*').eq('company_id', companyId).eq('related_to', 'subcontractor').eq('status', 'expired'),
+  ]);
 
   const flaggedSubcons = new Set<string>();
   const issues: Record<string, unknown>[] = [];

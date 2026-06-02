@@ -161,7 +161,11 @@ export const tools = [
       parameters: z.object({
         client_id: z.string(),
         title: z.string(),
-        line_items: z.array(z.any()),
+        line_items: z.array(z.object({
+          description: z.string(),
+          quantity: z.number(),
+          unit_price: z.number(),
+        })),
         notes: z.string().optional(),
       }).strict(),
     },
@@ -173,7 +177,11 @@ export const tools = [
       description: 'Update quote line items or notes',
       parameters: z.object({
         quote_id: z.string(),
-        line_items: z.array(z.any()).optional(),
+        line_items: z.array(z.object({
+          description: z.string(),
+          quantity: z.number(),
+          unit_price: z.number(),
+        })).optional(),
         notes: z.string().optional(),
       }).strict(),
     },

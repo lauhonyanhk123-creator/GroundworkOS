@@ -778,3 +778,44 @@ CREATE TABLE IF NOT EXISTS xero_connections (
   connected_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(company_id)
 );
+
+-- xero_connections holds per-company OAuth tokens, so it must be company-scoped
+-- like every other tenant table. Without RLS, the publishable-key client could
+-- read another company's Xero access and refresh tokens.
+ALTER TABLE xero_connections ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view xero connections in their company"
+    ON xero_connections FOR SELECT
+    USING (
+        company_id IN (
+            SELECT company_id FROM user_companies
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can insert xero connections in their company"
+    ON xero_connections FOR INSERT
+    WITH CHECK (
+        company_id IN (
+            SELECT company_id FROM user_companies
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Users can update xero connections in their company"
+    ON xero_connections FOR UPDATE
+    USING (
+        company_id IN (
+            SELECT company_id FROM user_companies
+            WHERE user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Admins can delete xero connections in their company"
+    ON xero_connections FOR DELETE
+    USING (
+        company_id IN (
+            SELECT company_id FROM user_companies
+            WHERE user_id = auth.uid() AND role = 'admin'
+        )
+    );

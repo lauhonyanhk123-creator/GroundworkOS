@@ -5,6 +5,14 @@ import { supabase } from '../../shared/db.js';
 import { createSubcontractor, verifyCISStatus, listSubcontractors, getSubcontractorDetails, flagCISIssues } from './tools.js';
 import 'dotenv/config';
 
+// This stdio server has no authenticated user, so the company scope must be
+// provided explicitly. Refuse to start without it rather than defaulting to a
+// value that would read across tenants (the DB client bypasses RLS).
+const COMPANY_ID = process.env.GROUNDWORKOS_COMPANY_ID;
+if (!COMPANY_ID) {
+  throw new Error('GROUNDWORKOS_COMPANY_ID must be set to run this MCP server directly.');
+}
+
 const server = new McpServer({ name: 'groundworkos-subcon', version: '1.0.0' });
 
 function wrap(fn: () => Promise<unknown>) {
@@ -20,21 +28,21 @@ server.tool('create_subcontractor', 'Create a new subcontractor', {
   trade: z.string().optional(),
   utr_number: z.string().optional(),
   notes: z.string().optional(),
-}, async (args) => wrap(() => createSubcontractor(args, supabase, 'default')));
+}, async (args) => wrap(() => createSubcontractor(args, supabase, COMPANY_ID)));
 
 server.tool('verify_cis_status', 'Verify a subcontractor\'s CIS status with HMRC', {
   subcontractor_id: z.string(),
   utr_number: z.string(),
-}, async (args) => wrap(() => verifyCISStatus(args, supabase)));
+}, async (args) => wrap(() => verifyCISStatus(args, supabase, COMPANY_ID)));
 
 server.tool('list_subcontractors', 'List all subcontractors with document counts', {},
-  async () => wrap(() => listSubcontractors(supabase, null)));
+  async () => wrap(() => listSubcontractors(supabase, COMPANY_ID)));
 
 server.tool('get_subcontractor_details', 'Get full details for a subcontractor including all documents and payment history', { subcontractor_id: z.string() },
-  async (args) => wrap(() => getSubcontractorDetails(args, supabase)));
+  async (args) => wrap(() => getSubcontractorDetails(args, supabase, COMPANY_ID)));
 
 server.tool('flag_cis_issues', 'Find all subcontractors with unverified or expired CIS documents', {},
-  async () => wrap(() => flagCISIssues(supabase, null)));
+  async () => wrap(() => flagCISIssues(supabase, COMPANY_ID)));
 
 async function main() {
   const transport = new StdioServerTransport();
