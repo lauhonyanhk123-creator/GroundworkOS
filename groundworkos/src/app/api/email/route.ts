@@ -15,6 +15,10 @@ function formatGBP(amount: number | null): string {
   return `£${(amount ?? 0).toFixed(2)}`;
 }
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 
 function emailWrapper(subject: string, bodyHtml: string): string {
   return `<!DOCTYPE html>
@@ -136,6 +140,9 @@ export async function POST(request: NextRequest) {
       if (!clientEmail) {
         return NextResponse.json({ error: 'Client has no email address on file.' }, { status: 400 });
       }
+      if (!isValidEmail(clientEmail)) {
+        return NextResponse.json({ error: 'The client email address on file is invalid.' }, { status: 400 });
+      }
 
       const client = invoice.client as { company_name: string; contact_name?: string } | null;
       const job = invoice.job as { title: string } | null;
@@ -206,6 +213,9 @@ export async function POST(request: NextRequest) {
     const clientEmail = (quote.client as { email?: string } | null)?.email;
     if (!clientEmail) {
       return NextResponse.json({ error: 'Client has no email address on file.' }, { status: 400 });
+    }
+    if (!isValidEmail(clientEmail)) {
+      return NextResponse.json({ error: 'The client email address on file is invalid.' }, { status: 400 });
     }
 
     const client = quote.client as { company_name: string; contact_name?: string } | null;

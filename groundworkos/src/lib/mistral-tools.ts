@@ -3,8 +3,8 @@
 
 import { z } from 'zod';
 
-// Tool definitions for Mistral AI
-export const tools = [
+// Tool definitions for Mistral AI (parameters declared as Zod schemas)
+const toolDefinitions = [
   // Clients MCP tools
   {
     type: 'function' as const,
@@ -526,3 +526,18 @@ export const tools = [
     },
   },
 ];
+
+// The Mistral API expects each tool's `parameters` to be a JSON Schema object,
+// not a Zod schema. Convert once at module load using Zod's native converter
+// (Zod 4) and drop the `$schema` meta key the API does not need.
+export const tools = toolDefinitions.map((tool) => {
+  const { $schema: _schema, ...parameters } = z.toJSONSchema(tool.function.parameters) as Record<string, unknown>;
+  return {
+    type: 'function' as const,
+    function: {
+      name: tool.function.name,
+      description: tool.function.description,
+      parameters,
+    },
+  };
+});
