@@ -57,20 +57,19 @@ export async function createScheduleEntry(
 export async function getWeeklySchedule(
   input: GetWeeklyScheduleInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const startDate = new Date(input.week_start_date);
   const endDate = new Date(startDate);
   endDate.setDate(endDate.getDate() + 7);
 
-  let query = supabase
+  const { data, error } = await supabase
     .from('schedule_entries')
     .select('*, jobs:job_id (id, job_number, title, client_id, clients:client_id (id, company_name))')
+    .eq('company_id', companyId)
     .gte('start_datetime', startDate.toISOString())
     .lt('start_datetime', endDate.toISOString())
     .order('start_datetime', { ascending: true });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -90,21 +89,20 @@ export async function getWeeklySchedule(
 export async function checkAvailability(
   input: CheckAvailabilityInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const startOfDay = new Date(input.date);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(input.date);
   endOfDay.setHours(23, 59, 59, 999);
 
-  let query = supabase
+  const { data, error } = await supabase
     .from('schedule_entries')
     .select('*, jobs:job_id (id, job_number, title)')
+    .eq('company_id', companyId)
     .gte('start_datetime', startOfDay.toISOString())
     .lte('start_datetime', endOfDay.toISOString())
     .order('start_datetime', { ascending: true });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
   const conflicts = (data ?? []) as Record<string, unknown>[];
 
@@ -189,7 +187,7 @@ export async function getWeatherRisk(input: GetWeatherRiskInput): Promise<Record
 export async function getScheduleOverview(
   input: GetScheduleOverviewInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const now = new Date();
   const month = input.month ?? now.getMonth() + 1;
@@ -198,14 +196,13 @@ export async function getScheduleOverview(
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59);
 
-  let query = supabase
+  const { data, error } = await supabase
     .from('schedule_entries')
     .select('*, jobs:job_id (id, job_number, title, client_id, clients:client_id (id, company_name))')
+    .eq('company_id', companyId)
     .gte('start_datetime', startDate.toISOString())
     .lte('start_datetime', endDate.toISOString())
     .order('start_datetime', { ascending: true });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   const byDate: Record<string, unknown[]> = {};

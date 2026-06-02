@@ -80,7 +80,8 @@ export async function createQuote(
 
 export async function updateQuote(
   input: UpdateQuoteInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const updates: Record<string, unknown> = {};
   if (input.notes !== undefined) updates.notes = input.notes;
@@ -99,6 +100,7 @@ export async function updateQuote(
     .from('quotes')
     .update(updates)
     .eq('id', input.quote_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -107,12 +109,14 @@ export async function updateQuote(
 
 export async function sendQuote(
   input: SendQuoteInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await supabase
     .from('quotes')
     .update({ status: 'sent', sent_at: new Date().toISOString() })
     .eq('id', input.quote_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -121,12 +125,14 @@ export async function sendQuote(
 
 export async function acceptQuote(
   input: AcceptQuoteInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await supabase
     .from('quotes')
     .update({ status: 'accepted', accepted_at: new Date().toISOString() })
     .eq('id', input.quote_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -135,12 +141,14 @@ export async function acceptQuote(
 
 export async function convertQuoteToJob(
   input: ConvertQuoteToJobInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data: quote, error: quoteError } = await supabase
     .from('quotes')
     .select('*')
     .eq('id', input.quote_id)
+    .eq('company_id', companyId)
     .single();
   if (quoteError || !quote) throw new Error('Quote not found.');
   if (quote.status !== 'accepted') throw new Error('Quote must be accepted before converting to a job.');
@@ -151,7 +159,7 @@ export async function convertQuoteToJob(
   const { data: newJob, error: jobError } = await supabase
     .from('jobs')
     .insert({
-      company_id: quote.company_id,
+      company_id: companyId,
       job_number: jobNumData as string,
       client_id: quote.client_id,
       quote_id: quote.id,
@@ -165,20 +173,26 @@ export async function convertQuoteToJob(
     .single();
   if (jobError || !newJob) throw new Error(jobError?.message ?? 'Failed to create job.');
 
-  await supabase.from('quotes').update({ job_id: newJob.id }).eq('id', input.quote_id);
+  const { error: linkError } = await supabase
+    .from('quotes')
+    .update({ job_id: newJob.id })
+    .eq('id', input.quote_id)
+    .eq('company_id', companyId);
+  if (linkError) console.error('[quotes.convertQuoteToJob] Failed to link quote to job:', linkError);
+
   return { job: newJob, quote_id: input.quote_id };
 }
 
 export async function listQuotes(
   input: ListQuotesInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
   let query = supabase
     .from('quotes')
     .select('*, clients:client_id (id, company_name, contact_name)')
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false });
-  if (companyId) query = query.eq('company_id', companyId);
   if (input.status) query = query.eq('status', input.status);
   const { data, error } = await query;
   if (error) throw new Error(error.message);

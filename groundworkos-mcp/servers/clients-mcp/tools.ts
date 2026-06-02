@@ -58,24 +58,28 @@ export async function createClient(
 
 export async function getClient(
   input: GetClientInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .select('*')
     .eq('id', input.client_id)
+    .eq('company_id', companyId)
     .single();
   if (clientError) throw new Error(clientError.message);
 
   const { count: jobCount } = await supabase
     .from('jobs')
     .select('*', { count: 'exact', head: true })
-    .eq('client_id', input.client_id);
+    .eq('client_id', input.client_id)
+    .eq('company_id', companyId);
 
   const { data: invoices } = await supabase
     .from('invoices')
     .select('total_amount')
     .eq('client_id', input.client_id)
+    .eq('company_id', companyId)
     .eq('status', 'paid');
 
   const totalInvoiced = (invoices ?? []).reduce(
@@ -89,42 +93,49 @@ export async function getClient(
 export async function searchClients(
   input: SearchClientsInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
-  let query = supabase
+  const { data, error } = await supabase
     .from('clients')
     .select('*')
+    .eq('company_id', companyId)
     .or(`company_name.ilike.%${input.query}%,contact_name.ilike.%${input.query}%`)
     .limit(10);
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as Record<string, unknown>[];
 }
 
 export async function getClientHistory(
   input: GetClientHistoryInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data: client, error: clientError } = await supabase
     .from('clients')
     .select('*')
     .eq('id', input.client_id)
+    .eq('company_id', companyId)
     .single();
   if (clientError) throw new Error(clientError.message);
 
-  const [{ data: jobs }, { data: quotes }, { data: invoices }] = await Promise.all([
-    supabase.from('jobs').select('*').eq('client_id', input.client_id).order('created_at', { ascending: false }),
-    supabase.from('quotes').select('*').eq('client_id', input.client_id).order('created_at', { ascending: false }),
-    supabase.from('invoices').select('*').eq('client_id', input.client_id).order('created_at', { ascending: false }),
+  const [
+    { data: jobs, error: jobsError },
+    { data: quotes, error: quotesError },
+    { data: invoices, error: invoicesError },
+  ] = await Promise.all([
+    supabase.from('jobs').select('*').eq('client_id', input.client_id).eq('company_id', companyId).order('created_at', { ascending: false }),
+    supabase.from('quotes').select('*').eq('client_id', input.client_id).eq('company_id', companyId).order('created_at', { ascending: false }),
+    supabase.from('invoices').select('*').eq('client_id', input.client_id).eq('company_id', companyId).order('created_at', { ascending: false }),
   ]);
+  if (jobsError || quotesError || invoicesError) throw new Error('Failed to load client history.');
 
   return { client, jobs: jobs ?? [], quotes: quotes ?? [], invoices: invoices ?? [] };
 }
 
 export async function updateClient(
   input: UpdateClientInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { client_id, ...updates } = input;
   const cleanUpdates: Record<string, string | undefined> = {};
@@ -135,6 +146,7 @@ export async function updateClient(
     .from('clients')
     .update(cleanUpdates)
     .eq('id', client_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);

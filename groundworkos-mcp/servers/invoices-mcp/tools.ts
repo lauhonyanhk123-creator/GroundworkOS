@@ -55,12 +55,14 @@ export async function createInvoice(
 
 export async function markInvoicePaid(
   input: MarkInvoicePaidInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await supabase
     .from('invoices')
     .update({ status: 'paid', paid_at: new Date().toISOString() })
     .eq('id', input.invoice_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -69,16 +71,15 @@ export async function markInvoicePaid(
 
 export async function getOutstandingInvoices(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
   const today = new Date().toISOString().split('T')[0];
-  let query = supabase
+  const { data, error } = await supabase
     .from('invoices')
     .select('*, clients:client_id (id, company_name, contact_name)')
+    .eq('company_id', companyId)
     .neq('status', 'paid')
     .order('due_date', { ascending: true });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data, error } = await query;
   if (error) throw new Error(error.message);
 
   return (data ?? []).map((inv: { due_date: string; total_amount: number }) => {
@@ -92,19 +93,16 @@ export async function getOutstandingInvoices(
 export async function getInvoiceSummary(
   input: GetInvoiceSummaryInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const monthsBack = input.months_back ?? 6;
   const now = new Date();
 
-  let paidQuery = supabase.from('invoices').select('total_amount, paid_at').eq('status', 'paid');
-  let outstandingQuery = supabase.from('invoices').select('total_amount, status, due_date').neq('status', 'paid');
-  if (companyId) {
-    paidQuery = paidQuery.eq('company_id', companyId);
-    outstandingQuery = outstandingQuery.eq('company_id', companyId);
-  }
-
-  const [paidResult, outstandingResult] = await Promise.all([paidQuery, outstandingQuery]);
+  const [paidResult, outstandingResult] = await Promise.all([
+    supabase.from('invoices').select('total_amount, paid_at').eq('company_id', companyId).eq('status', 'paid'),
+    supabase.from('invoices').select('total_amount, status, due_date').eq('company_id', companyId).neq('status', 'paid'),
+  ]);
+  if (paidResult.error || outstandingResult.error) throw new Error('Failed to load invoice summary.');
 
   const monthlyRevenue: { month: string; total: number; invoice_count: number }[] = [];
   for (let i = 0; i < monthsBack; i++) {
@@ -138,12 +136,14 @@ export async function getInvoiceSummary(
 
 export async function sendInvoice(
   input: SendInvoiceInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data, error } = await supabase
     .from('invoices')
     .update({ status: 'sent' })
     .eq('id', input.invoice_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);

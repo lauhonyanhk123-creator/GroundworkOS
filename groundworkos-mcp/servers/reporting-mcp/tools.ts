@@ -22,19 +22,14 @@ export interface GetSubcontractorPaymentScheduleInput {
 
 export async function getPipelineSummary(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
-  let jobsQ = supabase.from('jobs').select('status, value');
-  let quotesQ = supabase.from('quotes').select('total_amount, status');
-  let invoicesQ = supabase.from('invoices').select('total_amount, paid_at').eq('status', 'paid');
-  if (companyId) {
-    jobsQ = jobsQ.eq('company_id', companyId);
-    quotesQ = quotesQ.eq('company_id', companyId);
-    invoicesQ = invoicesQ.eq('company_id', companyId);
-  }
-
   const [{ data: jobs, error: jobsError }, { data: quotes, error: quotesError }, { data: paidInvoices, error: invError }] =
-    await Promise.all([jobsQ, quotesQ, invoicesQ]);
+    await Promise.all([
+      supabase.from('jobs').select('status, value').eq('company_id', companyId),
+      supabase.from('quotes').select('total_amount, status').eq('company_id', companyId),
+      supabase.from('invoices').select('total_amount, paid_at').eq('company_id', companyId).eq('status', 'paid'),
+    ]);
   if (jobsError || quotesError || invError) throw new Error('Failed to fetch pipeline data');
 
   const statusGroups: Record<string, { count: number; value: number }> = {};
@@ -70,14 +65,17 @@ export async function getPipelineSummary(
 export async function getRevenueReport(
   input: GetRevenueReportInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const monthsBack = input.months_back ?? 6;
   const now = new Date();
 
-  let query = supabase.from('invoices').select('total_amount, paid_at').eq('status', 'paid').order('paid_at', { ascending: false });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data: paidInvoices, error } = await query;
+  const { data: paidInvoices, error } = await supabase
+    .from('invoices')
+    .select('total_amount, paid_at')
+    .eq('company_id', companyId)
+    .eq('status', 'paid')
+    .order('paid_at', { ascending: false });
   if (error) throw new Error(error.message);
 
   const monthlyRevenue: { month_label: string; month_key: string; total: number; invoice_count: number }[] = [];
@@ -101,17 +99,22 @@ export async function getRevenueReport(
 export async function getProfitabilityReport(
   input: GetProfitabilityReportInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<unknown> {
   if (input.job_id) {
     const { data: job, error: jobError } = await supabase
       .from('jobs')
       .select('*, quotes:quote_id (id, quote_number, total_amount, status)')
       .eq('id', input.job_id)
+      .eq('company_id', companyId)
       .single();
     if (jobError) throw new Error(jobError.message);
 
-    const { data: invoices } = await supabase.from('invoices').select('total_amount, status').eq('job_id', input.job_id);
+    const { data: invoices } = await supabase
+      .from('invoices')
+      .select('total_amount, status')
+      .eq('job_id', input.job_id)
+      .eq('company_id', companyId);
     const totalInvoiced = (invoices ?? []).reduce((sum: number, inv: { total_amount: number }) => sum + (inv.total_amount || 0), 0);
     const quoteValue = (job?.quotes as { total_amount?: number } | null)?.total_amount ?? 0;
     const variance = totalInvoiced - quoteValue;
@@ -127,14 +130,10 @@ export async function getProfitabilityReport(
     };
   }
 
-  let quotesQ = supabase.from('quotes').select('*, jobs:job_id (id, title, status)').eq('status', 'accepted');
-  let invoicesQ = supabase.from('invoices').select('job_id, total_amount');
-  if (companyId) {
-    quotesQ = quotesQ.eq('company_id', companyId);
-    invoicesQ = invoicesQ.eq('company_id', companyId);
-  }
-
-  const [{ data: quotes, error: quotesError }, { data: invoices, error: invoicesError }] = await Promise.all([quotesQ, invoicesQ]);
+  const [{ data: quotes, error: quotesError }, { data: invoices, error: invoicesError }] = await Promise.all([
+    supabase.from('quotes').select('*, jobs:job_id (id, title, status)').eq('company_id', companyId).eq('status', 'accepted'),
+    supabase.from('invoices').select('job_id, total_amount').eq('company_id', companyId),
+  ]);
   if (quotesError || invoicesError) throw new Error('Failed to fetch profitability data');
 
   return (quotes ?? []).map((quote: Record<string, unknown>) => {
@@ -154,25 +153,18 @@ export async function getProfitabilityReport(
 
 export async function getDailyBriefing(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const today = new Date().toISOString().split('T')[0];
 
-  let outstandingQ = supabase.from('invoices').select('*, clients:client_id (company_name)').neq('status', 'paid').order('due_date', { ascending: true });
-  let scheduleQ = supabase.from('schedule_entries').select('*, jobs:job_id (title, client_id, clients:client_id (company_name))').gte('start_datetime', `${today}T00:00:00`).lte('start_datetime', `${today}T23:59:59`);
-  let complianceQ = supabase.from('documents').select('*').in('status', ['expired', 'expiring_soon']).limit(10);
-  let activeJobsQ = supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('status', 'active');
-  let overdueJobsQ = supabase.from('jobs').select('*').eq('status', 'active').lt('end_date', today);
-  if (companyId) {
-    outstandingQ = outstandingQ.eq('company_id', companyId);
-    scheduleQ = scheduleQ.eq('company_id', companyId);
-    complianceQ = complianceQ.eq('company_id', companyId);
-    activeJobsQ = activeJobsQ.eq('company_id', companyId);
-    overdueJobsQ = overdueJobsQ.eq('company_id', companyId);
-  }
-
   const [outstandingResult, scheduleResult, complianceResult, activeJobsResult, overdueJobsResult] =
-    await Promise.all([outstandingQ, scheduleQ, complianceQ, activeJobsQ, overdueJobsQ]);
+    await Promise.all([
+      supabase.from('invoices').select('*, clients:client_id (company_name)').eq('company_id', companyId).neq('status', 'paid').order('due_date', { ascending: true }).limit(100),
+      supabase.from('schedule_entries').select('*, jobs:job_id (title, client_id, clients:client_id (company_name))').eq('company_id', companyId).gte('start_datetime', `${today}T00:00:00`).lte('start_datetime', `${today}T23:59:59`),
+      supabase.from('documents').select('*').eq('company_id', companyId).in('status', ['expired', 'expiring_soon']).limit(10),
+      supabase.from('jobs').select('*', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'active'),
+      supabase.from('jobs').select('*').eq('company_id', companyId).eq('status', 'active').lt('end_date', today).limit(100),
+    ]);
 
   const todaySchedule = scheduleResult.data ?? [];
 
@@ -193,21 +185,16 @@ export async function getDailyBriefing(
 
 export async function getOverdueSummary(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const today = new Date().toISOString().split('T')[0];
 
-  let invoicesQ = supabase.from('invoices').select('*, clients:client_id (company_name)').neq('status', 'paid').lt('due_date', today);
-  let jobsQ = supabase.from('jobs').select('*').eq('status', 'active').lt('end_date', today);
-  let docsQ = supabase.from('documents').select('*').eq('status', 'expired');
-  if (companyId) {
-    invoicesQ = invoicesQ.eq('company_id', companyId);
-    jobsQ = jobsQ.eq('company_id', companyId);
-    docsQ = docsQ.eq('company_id', companyId);
-  }
-
   const [{ data: overdueInvoices, error: invError }, { data: delayedJobs, error: jobsError }, { data: expiredDocs, error: docsError }] =
-    await Promise.all([invoicesQ, jobsQ, docsQ]);
+    await Promise.all([
+      supabase.from('invoices').select('*, clients:client_id (company_name)').eq('company_id', companyId).neq('status', 'paid').lt('due_date', today).limit(200),
+      supabase.from('jobs').select('*').eq('company_id', companyId).eq('status', 'active').lt('end_date', today).limit(200),
+      supabase.from('documents').select('*').eq('company_id', companyId).eq('status', 'expired').limit(200),
+    ]);
   if (invError || jobsError || docsError) throw new Error('Failed to fetch overdue data');
 
   const invoicesWithDays = (overdueInvoices ?? []).map((inv: Record<string, unknown>) => {
@@ -233,18 +220,18 @@ export async function getOverdueSummary(
   };
 }
 
-export async function getAgedDebtorReport(supabase: SupabaseClient, companyId: string | null): Promise<Record<string, unknown>> {
+export async function getAgedDebtorReport(supabase: SupabaseClient, companyId: string): Promise<Record<string, unknown>> {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayStr = today.toISOString().split('T')[0];
 
-  let query = supabase
+  const { data: invoices, error } = await supabase
     .from('invoices')
     .select('id, invoice_number, total_amount, due_date, status, clients:client_id (company_name)')
+    .eq('company_id', companyId)
     .in('status', ['sent', 'overdue'])
-    .order('due_date', { ascending: true });
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data: invoices, error } = await query;
+    .order('due_date', { ascending: true })
+    .limit(500);
   if (error) throw new Error(error.message);
 
   interface Bucket { label: string; days_min: number; days_max: number; invoices: Record<string, unknown>[]; total: number }
@@ -258,7 +245,7 @@ export async function getAgedDebtorReport(supabase: SupabaseClient, companyId: s
 
   let grandTotal = 0;
   for (const inv of invoices ?? []) {
-    const typedInv = inv as { id: string; invoice_number: string; total_amount: number; due_date: string | null; status: string; clients: { company_name: string } | null };
+    const typedInv = inv as unknown as { id: string; invoice_number: string; total_amount: number; due_date: string | null; status: string; clients: { company_name: string } | null };
     let daysOverdue = 0;
     if (typedInv.due_date) {
       const dueDate = new Date(typedInv.due_date);
@@ -290,7 +277,8 @@ export async function getAgedDebtorReport(supabase: SupabaseClient, companyId: s
 
 export async function getCISMonthlyReturn(
   input: GetCISMonthlyReturnInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const monthStr = String(input.month).padStart(2, '0');
   const monthStart = `${input.year}-${monthStr}-01`;
@@ -298,8 +286,8 @@ export async function getCISMonthlyReturn(
   const monthEnd = `${input.year}-${monthStr}-${String(lastDay).padStart(2, '0')}T23:59:59`;
 
   const [{ data: invoices, error }, { data: subcontractors }] = await Promise.all([
-    supabase.from('invoices').select('id, invoice_number, total_amount, subtotal, paid_at, jobs:job_id (id, title, subcontractor_id)').eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd),
-    supabase.from('subcontractors').select('id, company_name, utr_number'),
+    supabase.from('invoices').select('id, invoice_number, total_amount, subtotal, paid_at, jobs:job_id (id, title, subcontractor_id)').eq('company_id', companyId).eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd),
+    supabase.from('subcontractors').select('id, company_name, utr_number').eq('company_id', companyId),
   ]);
   if (error) throw new Error(error.message);
 
@@ -310,7 +298,7 @@ export async function getCISMonthlyReturn(
   const entries: CISEntry[] = [];
 
   for (const inv of invoices ?? []) {
-    const typedInv = inv as { id: string; invoice_number: string; total_amount: number; subtotal: number; paid_at: string; jobs: { id: string; title: string; subcontractor_id: string | null } | null };
+    const typedInv = inv as unknown as { id: string; invoice_number: string; total_amount: number; subtotal: number; paid_at: string; jobs: { id: string; title: string; subcontractor_id: string | null } | null };
     if (!typedInv.jobs?.subcontractor_id) continue;
     const sub = subMap.get(typedInv.jobs.subcontractor_id);
     if (!sub) continue;
@@ -327,7 +315,8 @@ export async function getCISMonthlyReturn(
 
 export async function getSubcontractorPaymentSchedule(
   input: GetSubcontractorPaymentScheduleInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   let dateFrom: string | null = null;
   let dateTo: string | null = null;
@@ -340,13 +329,13 @@ export async function getSubcontractorPaymentSchedule(
     }
   }
 
-  let query = supabase.from('invoices').select('id, invoice_number, subtotal, total_amount, paid_at, jobs:job_id (id, title, subcontractor_id)').eq('status', 'paid').order('paid_at', { ascending: true });
+  let query = supabase.from('invoices').select('id, invoice_number, subtotal, total_amount, paid_at, jobs:job_id (id, title, subcontractor_id)').eq('company_id', companyId).eq('status', 'paid').order('paid_at', { ascending: true });
   if (dateFrom) query = query.gte('paid_at', dateFrom);
   if (dateTo) query = query.lte('paid_at', dateTo);
   const { data: invoices, error } = await query;
   if (error) throw new Error(error.message);
 
-  let subQuery = supabase.from('subcontractors').select('id, company_name, utr_number');
+  let subQuery = supabase.from('subcontractors').select('id, company_name, utr_number').eq('company_id', companyId);
   if (input.subcontractor_id) subQuery = subQuery.eq('id', input.subcontractor_id);
   const { data: subcontractors } = await subQuery;
 
@@ -357,7 +346,7 @@ export async function getSubcontractorPaymentSchedule(
   const grouped = new Map<string, SubPayments>();
 
   for (const inv of invoices ?? []) {
-    const typedInv = inv as { id: string; invoice_number: string; subtotal: number; total_amount: number; paid_at: string; jobs: { subcontractor_id: string | null } | null };
+    const typedInv = inv as unknown as { id: string; invoice_number: string; subtotal: number; total_amount: number; paid_at: string; jobs: { subcontractor_id: string | null } | null };
     if (!typedInv.jobs?.subcontractor_id) continue;
     const sub = subMap.get(typedInv.jobs.subcontractor_id);
     if (!sub) continue;

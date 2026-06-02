@@ -73,12 +73,13 @@ export async function createJob(
 export async function updateJobStatus(
   input: UpdateJobStatusInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data: existing, error: fetchError } = await supabase
     .from('jobs')
     .select('status, notes')
     .eq('id', input.job_id)
+    .eq('company_id', companyId)
     .single();
   if (fetchError || !existing) throw new Error('Job not found.');
 
@@ -91,27 +92,28 @@ export async function updateJobStatus(
   const { error: updateError } = await supabase
     .from('jobs')
     .update({ status: input.status, notes: updatedNotes.trim() || null })
-    .eq('id', input.job_id);
+    .eq('id', input.job_id)
+    .eq('company_id', companyId);
   if (updateError) throw new Error(updateError.message);
 
-  if (companyId) {
-    await supabase.from('status_history').insert({
-      company_id: companyId,
-      entity_type: 'job',
-      entity_id: input.job_id,
-      old_status: oldStatus,
-      new_status: input.status,
-      notes: input.notes ?? null,
-      created_by: null,
-    });
-  }
+  const { error: historyError } = await supabase.from('status_history').insert({
+    company_id: companyId,
+    entity_type: 'job',
+    entity_id: input.job_id,
+    old_status: oldStatus,
+    new_status: input.status,
+    notes: input.notes ?? null,
+    created_by: null,
+  });
+  if (historyError) console.error('[jobs.updateJobStatus] Failed to log status history:', historyError);
 
   return { job_id: input.job_id, old_status: oldStatus, new_status: input.status };
 }
 
 export async function updateJobProgress(
   input: UpdateJobProgressInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const clamped = Math.max(0, Math.min(100, input.progress_percent));
 
@@ -119,8 +121,9 @@ export async function updateJobProgress(
     .from('jobs')
     .select('notes')
     .eq('id', input.job_id)
+    .eq('company_id', companyId)
     .single();
-  if (fetchError) throw new Error('Job not found.');
+  if (fetchError || !existing) throw new Error('Job not found.');
 
   let updatedNotes = (existing.notes as string) || '';
   if (input.notes) {
@@ -131,6 +134,7 @@ export async function updateJobProgress(
     .from('jobs')
     .update({ progress_percent: clamped, notes: updatedNotes.trim() || null })
     .eq('id', input.job_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -139,21 +143,23 @@ export async function updateJobProgress(
 
 export async function getJobDetails(
   input: GetJobDetailsInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>> {
   const { data: job, error: jobError } = await supabase
     .from('jobs')
     .select('*')
     .eq('id', input.job_id)
+    .eq('company_id', companyId)
     .single();
   if (jobError) throw new Error(jobError.message);
 
   const [{ data: client }, { data: schedule }, { data: documents }, { data: statusHistory }] =
     await Promise.all([
-      supabase.from('clients').select('*').eq('id', job.client_id).single(),
-      supabase.from('schedule_entries').select('*').eq('job_id', input.job_id).order('start_datetime', { ascending: true }),
-      supabase.from('documents').select('*').eq('related_to', 'job').eq('related_id', input.job_id),
-      supabase.from('status_history').select('*').eq('entity_type', 'job').eq('entity_id', input.job_id).order('created_at', { ascending: false }),
+      supabase.from('clients').select('*').eq('id', job.client_id).eq('company_id', companyId).single(),
+      supabase.from('schedule_entries').select('*').eq('job_id', input.job_id).eq('company_id', companyId).order('start_datetime', { ascending: true }),
+      supabase.from('documents').select('*').eq('related_to', 'job').eq('related_id', input.job_id).eq('company_id', companyId),
+      supabase.from('status_history').select('*').eq('entity_type', 'job').eq('entity_id', input.job_id).eq('company_id', companyId).order('created_at', { ascending: false }),
     ]);
 
   return {
@@ -168,14 +174,14 @@ export async function getJobDetails(
 export async function listJobs(
   input: ListJobsInput,
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
   let query = supabase
     .from('jobs')
     .select('*, clients:client_id (id, company_name, contact_name)')
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false })
     .limit(input.limit ?? 20);
-  if (companyId) query = query.eq('company_id', companyId);
   if (input.status) query = query.eq('status', input.status);
   if (input.client_id) query = query.eq('client_id', input.client_id);
   const { data, error } = await query;
@@ -185,11 +191,12 @@ export async function listJobs(
 
 export async function getJobSummaryStats(
   supabase: SupabaseClient,
-  companyId: string | null
+  companyId: string
 ): Promise<Record<string, unknown>> {
-  let query = supabase.from('jobs').select('status, value');
-  if (companyId) query = query.eq('company_id', companyId);
-  const { data: jobs, error } = await query;
+  const { data: jobs, error } = await supabase
+    .from('jobs')
+    .select('status, value')
+    .eq('company_id', companyId);
   if (error) throw new Error(error.message);
 
   const activeCount = (jobs ?? []).filter((j: { status: string }) => j.status === 'active').length;
@@ -205,13 +212,15 @@ export async function getJobSummaryStats(
 
 export async function getEntityHistory(
   input: GetEntityHistoryInput,
-  supabase: SupabaseClient
+  supabase: SupabaseClient,
+  companyId: string
 ): Promise<Record<string, unknown>[]> {
   const { data, error } = await supabase
     .from('status_history')
     .select('*')
     .eq('entity_type', input.entity_type)
     .eq('entity_id', input.entity_id)
+    .eq('company_id', companyId)
     .order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return (data ?? []) as Record<string, unknown>[];
