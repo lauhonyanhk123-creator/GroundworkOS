@@ -1,0 +1,9 @@
+# Build output and dependencies
+node_modules/
+**/.next/
+**/dist/
+**/out/
+**/coverage/
+**/public/sw.js
+**/public/workbox-*.js
+package-lock.json

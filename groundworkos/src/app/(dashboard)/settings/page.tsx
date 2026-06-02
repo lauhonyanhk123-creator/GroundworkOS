@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Building, Bell, Shield, Database, Key, Save, AlertTriangle, CheckCircle, Link2, Link2Off } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
-import type { Company } from '@/types';
 
 interface XeroConnection {
   tenant_name: string | null;

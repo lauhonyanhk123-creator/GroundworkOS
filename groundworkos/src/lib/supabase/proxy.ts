@@ -3,7 +3,9 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { User } from '@supabase/supabase-js'
 
 export async function updateSession(request: NextRequest): Promise<{ response: NextResponse; user: User | null }> {
-  let response = NextResponse.next({
+  // Mutated in place (cookies are set on this object) and returned as-is — it
+  // must never be reassigned to a new response, or session cookies are lost.
+  const response = NextResponse.next({
     request: {
       headers: request.headers,
     },

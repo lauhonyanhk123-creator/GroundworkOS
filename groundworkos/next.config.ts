@@ -11,6 +11,20 @@ const nextConfig: NextConfig = {
   compiler: {
     removeConsole: false,
   },
+  // Security headers applied by Next itself so they hold behind Nginx on the
+  // Oracle deployment (previously defined only in the unused vercel.json).
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+        ],
+      },
+    ];
+  },
 };
 
 export default withPWA({

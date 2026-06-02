@@ -1,5 +1,12 @@
 {
   "name": "groundworkos-workspace",
   "private": true,
-  "workspaces": ["groundworkos", "groundworkos-mcp"]
+  "workspaces": ["groundworkos", "groundworkos-mcp"],
+  "scripts": {
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
 }

@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Building2, Mail, Phone, MapPin } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { Client } from '@/types';
 
