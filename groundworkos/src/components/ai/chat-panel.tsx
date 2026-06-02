@@ -50,7 +50,7 @@ export function ChatPanel() {
             <div className="text-center py-12 text-muted-2">
               <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
               <p className="text-sm">Ask me anything about your groundwork business</p>
-              <p className="text-xs mt-2">Try: "Show me today's briefing" or "Create a new client"</p>
+              <p className="text-xs mt-2">{`Try: "Show me today's briefing" or "Create a new client"`}</p>
             </div>
           )}
 

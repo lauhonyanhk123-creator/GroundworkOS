@@ -27,6 +27,14 @@ interface DashboardData {
   expiredDocs: Document[];
 }
 
+// Returns the Monday of the week containing the given date.
+function getMonday(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay();
+  const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+  return new Date(date.setDate(diff));
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
@@ -106,13 +114,6 @@ export default function DashboardPage() {
 
     loadData();
   }, []);
-
-  function getMonday(d: Date): Date {
-    const date = new Date(d);
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-    return new Date(date.setDate(diff));
-  }
 
   const getWeekDayDates = () => {
     const monday = getMonday(new Date());
