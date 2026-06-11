@@ -204,6 +204,8 @@ async function executeTool(
         return await quoteTools.convertQuoteToJob(args as quoteTools.ConvertQuoteToJobInput, supabase, companyId);
       case 'list_quotes':
         return await quoteTools.listQuotes(args as quoteTools.ListQuotesInput, supabase, companyId);
+      case 'get_rate_book':
+        return await quoteTools.getRateBook(args as quoteTools.GetRateBookInput, supabase, companyId);
 
       // ── Invoices ─────────────────────────────────────────────────────────────
       case 'create_invoice':

@@ -8,6 +8,11 @@ import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
 import type { LineItem } from '@/types';
+import {
+  buildRateBook,
+  searchRateBook,
+  type RateBookEntry,
+} from 'groundworkos-mcp/servers/quotes-mcp/rate-book';
 
 interface FormLineItem extends LineItem {
   _id: string;
@@ -24,6 +29,8 @@ export default function NewQuotePage() {
   const [notes, setNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [rateBook, setRateBook] = useState<RateBookEntry[]>([]);
+  const [suggestForId, setSuggestForId] = useState<string | null>(null);
   const supabase = useRef(createClient());
 
   useEffect(() => {
@@ -32,8 +39,33 @@ export default function NewQuotePage() {
         .from('clients').select('id, company_name').order('company_name');
       setClients(data ?? []);
     }
+    async function loadRateBook() {
+      // Rate suggestions are an enhancement — if history fails to load the
+      // form still works, so log and carry on rather than surfacing an error.
+      try {
+        const { data, error } = await supabase.current
+          .from('quotes')
+          .select('status, created_at, line_items')
+          .order('created_at', { ascending: false })
+          .limit(1000);
+        if (error) throw error;
+        setRateBook(buildRateBook(data ?? []));
+      } catch (err) {
+        console.error('[NewQuote] Failed to load rate book:', err);
+      }
+    }
     loadClients();
+    loadRateBook();
   }, []);
+
+  function applySuggestion(id: string, entry: RateBookEntry) {
+    setLineItems(prev => prev.map(item =>
+      item._id === id
+        ? { ...item, description: entry.description, unit_price: entry.suggested_rate }
+        : item
+    ));
+    setSuggestForId(null);
+  }
 
   function addLineItem() {
     setLineItems(prev => [
@@ -174,16 +206,47 @@ export default function NewQuotePage() {
                 <div className="col-span-1">Total</div>
                 <div className="col-span-1" />
               </div>
-              {lineItems.map((item) => (
+              {lineItems.map((item) => {
+                const suggestions = suggestForId === item._id
+                  ? searchRateBook(rateBook, item.description).slice(0, 3)
+                  : [];
+                return (
                 <div key={item._id} className="grid grid-cols-12 gap-3 items-start">
-                  <div className="col-span-6">
+                  <div className="col-span-6 relative">
                     <input
                       type="text"
                       value={item.description}
                       onChange={(e) => updateLineItem(item._id, 'description', e.target.value)}
+                      onFocus={() => setSuggestForId(item._id)}
+                      onBlur={() => setSuggestForId(null)}
                       placeholder="Item description..."
                       className="w-full bg-surface-2 border border-border rounded px-3 py-2 text-sm focus:outline-none focus:border-yellow"
                     />
+                    {suggestions.length > 0 && (
+                      <div className="absolute top-full left-0 right-0 z-10 mt-1 bg-surface-2 border border-border rounded shadow-lg overflow-hidden">
+                        <div className="px-3 py-1 text-[10px] font-mono text-muted uppercase tracking-wider border-b border-border">
+                          Rate Book
+                        </div>
+                        {suggestions.map((entry) => (
+                          <button
+                            key={entry.description}
+                            type="button"
+                            onMouseDown={(e) => { e.preventDefault(); applySuggestion(item._id, entry); }}
+                            className="w-full flex items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-surface-3 transition-colors"
+                          >
+                            <span className="truncate">{entry.description}</span>
+                            <span className="flex items-baseline gap-2 whitespace-nowrap">
+                              <span className="text-[10px] font-mono text-muted">
+                                {entry.win_rate !== null
+                                  ? `${Math.round(entry.win_rate * 100)}% won`
+                                  : `${entry.times_quoted}× quoted`}
+                              </span>
+                              <span className="font-mono text-yellow">{formatCurrency(entry.suggested_rate)}</span>
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="col-span-2">
                     <input
@@ -217,7 +280,8 @@ export default function NewQuotePage() {
                     </button>
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </Panel>
 

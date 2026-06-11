@@ -199,6 +199,12 @@ export default function ReportsPage() {
         </div>
         <div className="flex items-center gap-3">
           <Link
+            href="/reports/rate-book"
+            className="px-4 py-2 text-sm font-mono border border-border text-muted hover:text-text hover:border-yellow transition-colors"
+          >
+            Rate Book
+          </Link>
+          <Link
             href="/reports/cis"
             className="px-4 py-2 text-sm font-mono border border-border text-muted hover:text-text hover:border-yellow transition-colors"
           >

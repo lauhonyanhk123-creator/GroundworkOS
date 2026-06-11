@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { buildRateBook, searchRateBook, type RateBookSourceQuote } from './rate-book';
 
 interface LineItem {
   description: string;
@@ -197,4 +198,41 @@ export async function listQuotes(
   const { data, error } = await query;
   if (error) throw new Error(error.message);
   return (data ?? []) as Record<string, unknown>[];
+}
+
+export interface GetRateBookInput {
+  search?: string;
+  limit?: number;
+}
+
+export async function getRateBook(
+  input: GetRateBookInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  // The most recent 1000 quotes are more than enough history to price from
+  // while keeping the aggregation bounded.
+  const { data, error } = await supabase
+    .from('quotes')
+    .select('status, created_at, line_items')
+    .eq('company_id', companyId)
+    .order('created_at', { ascending: false })
+    .limit(1000);
+  if (error) throw new Error(error.message);
+
+  const quotes = (data ?? []) as RateBookSourceQuote[];
+  let entries = buildRateBook(quotes);
+  if (typeof input.search === 'string' && input.search.trim()) {
+    entries = searchRateBook(entries, input.search);
+  }
+
+  const limit = typeof input.limit === 'number' && Number.isFinite(input.limit)
+    ? Math.min(Math.max(Math.floor(input.limit), 1), 200)
+    : 50;
+
+  return {
+    quotes_analysed: quotes.length,
+    total_items: entries.length,
+    entries: entries.slice(0, limit),
+  };
 }
