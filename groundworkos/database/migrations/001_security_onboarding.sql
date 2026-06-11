@@ -23,3 +23,10 @@ DROP FUNCTION IF EXISTS get_user_company_id();
 ALTER TABLE invoices DROP CONSTRAINT IF EXISTS invoices_status_check;
 ALTER TABLE invoices ADD CONSTRAINT invoices_status_check
     CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'void'));
+
+-- 5. CIS reporting (reports/cis page and the CIS reporting tools) attributes
+--    paid invoices to a job's subcontractor via jobs.subcontractor_id, but the
+--    column was never in the schema, so the feature errored at runtime.
+ALTER TABLE jobs ADD COLUMN IF NOT EXISTS subcontractor_id UUID
+    REFERENCES subcontractors(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_jobs_subcontractor_id ON jobs(subcontractor_id);

@@ -10,6 +10,20 @@ export interface CreateJobInput {
   start_date?: string;
   end_date?: string;
   notes?: string;
+  subcontractor_id?: string;
+}
+
+export interface UpdateJobInput {
+  job_id: string;
+  client_id?: string | null;
+  subcontractor_id?: string | null;
+  title?: string;
+  description?: string | null;
+  site_address?: string | null;
+  type?: string | null;
+  value?: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface UpdateJobStatusInput {
@@ -53,6 +67,7 @@ export async function createJob(
       company_id: companyId,
       job_number: jobNumData as string,
       client_id: input.client_id,
+      subcontractor_id: input.subcontractor_id ?? null,
       title: input.title,
       description: input.description ?? null,
       site_address: input.site_address ?? null,
@@ -64,6 +79,42 @@ export async function createJob(
       progress_percent: 0,
       notes: input.notes ?? null,
     })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
+
+export async function updateJob(
+  input: UpdateJobInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.job_id) throw new Error('job_id is required.');
+  if (input.title !== undefined && !input.title.trim()) {
+    throw new Error('Job title cannot be empty.');
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.title !== undefined) updates.title = input.title.trim();
+  if (input.client_id !== undefined) updates.client_id = input.client_id;
+  if (input.subcontractor_id !== undefined) updates.subcontractor_id = input.subcontractor_id;
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.site_address !== undefined) updates.site_address = input.site_address;
+  if (input.type !== undefined) updates.type = input.type;
+  if (input.value !== undefined) updates.value = input.value;
+  if (input.start_date !== undefined) updates.start_date = input.start_date;
+  if (input.end_date !== undefined) updates.end_date = input.end_date;
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No fields to update were provided.');
+  }
+
+  const { data, error } = await supabase
+    .from('jobs')
+    .update(updates)
+    .eq('id', input.job_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);

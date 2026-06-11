@@ -45,6 +45,10 @@ CREATE TABLE jobs (
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     job_number TEXT UNIQUE NOT NULL,
     client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+    -- Principal subcontractor on the job; CIS reporting attributes paid
+    -- invoices on the job to this subcontractor. The FK is added after the
+    -- subcontractors table is created (see below).
+    subcontractor_id UUID,
     title TEXT NOT NULL,
     description TEXT,
     site_address TEXT,
@@ -117,6 +121,10 @@ CREATE TABLE subcontractors (
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- jobs.subcontractor_id is declared above, before this table exists
+ALTER TABLE jobs ADD CONSTRAINT jobs_subcontractor_id_fkey
+    FOREIGN KEY (subcontractor_id) REFERENCES subcontractors(id) ON DELETE SET NULL;
 
 -- ============================================
 -- DOCUMENTS TABLE
@@ -624,6 +632,7 @@ CREATE INDEX idx_clients_company_id ON clients(company_id);
 CREATE INDEX idx_clients_company_name ON clients(company_name);
 CREATE INDEX idx_jobs_company_id ON jobs(company_id);
 CREATE INDEX idx_jobs_client_id ON jobs(client_id);
+CREATE INDEX idx_jobs_subcontractor_id ON jobs(subcontractor_id);
 CREATE INDEX idx_jobs_status ON jobs(status);
 CREATE INDEX idx_quotes_company_id ON quotes(company_id);
 CREATE INDEX idx_quotes_client_id ON quotes(client_id);

@@ -28,6 +28,10 @@ export interface UpdateQuoteInput {
   notes?: string;
 }
 
+export interface DeleteQuoteInput {
+  quote_id: string;
+}
+
 export interface SendQuoteInput {
   quote_id: string;
 }
@@ -84,6 +88,19 @@ export async function updateQuote(
   supabase: SupabaseClient,
   companyId: string
 ): Promise<Record<string, unknown>> {
+  const { data: existing, error: fetchError } = await supabase
+    .from('quotes')
+    .select('status')
+    .eq('id', input.quote_id)
+    .eq('company_id', companyId)
+    .single();
+  if (fetchError || !existing) throw new Error('Quote not found.');
+  // Accepted/rejected quotes are decided outcomes that feed the rate book's
+  // win/loss data — editing them would rewrite pricing history.
+  if (existing.status === 'accepted' || existing.status === 'rejected') {
+    throw new Error('A decided quote cannot be edited. Create a new quote instead.');
+  }
+
   const updates: Record<string, unknown> = {};
   if (input.notes !== undefined) updates.notes = input.notes;
   if (input.line_items) {
@@ -97,6 +114,9 @@ export async function updateQuote(
     updates.vat_amount = totals.vat_amount;
     updates.total_amount = totals.total_amount;
   }
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No fields to update were provided.');
+  }
   const { data, error } = await supabase
     .from('quotes')
     .update(updates)
@@ -106,6 +126,34 @@ export async function updateQuote(
     .single();
   if (error) throw new Error(error.message);
   return data as Record<string, unknown>;
+}
+
+export async function deleteQuote(
+  input: DeleteQuoteInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.quote_id) throw new Error('quote_id is required.');
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('quotes')
+    .select('status, quote_number')
+    .eq('id', input.quote_id)
+    .eq('company_id', companyId)
+    .single();
+  if (fetchError || !existing) throw new Error('Quote not found.');
+  if (existing.status !== 'draft') {
+    throw new Error('Only draft quotes can be deleted. Sent and decided quotes are kept for history.');
+  }
+
+  const { error } = await supabase
+    .from('quotes')
+    .delete()
+    .eq('id', input.quote_id)
+    .eq('company_id', companyId);
+  if (error) throw new Error(error.message);
+
+  return { deleted: true, quote_id: input.quote_id, quote_number: existing.quote_number };
 }
 
 export async function sendQuote(
@@ -163,7 +211,6 @@ export async function convertQuoteToJob(
       company_id: companyId,
       job_number: jobNumData as string,
       client_id: quote.client_id,
-      quote_id: quote.id,
       title: quote.title || 'New Job from Quote',
       description: `Created from quote ${quote.quote_number as string}`,
       value: quote.total_amount,
