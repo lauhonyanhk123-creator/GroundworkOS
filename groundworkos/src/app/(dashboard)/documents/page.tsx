@@ -8,7 +8,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Upload, FileText, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 import { cn, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
-import type { Document, DocumentType, DocumentStatus, Job, Subcontractor } from '@/types';
+import { callTool } from '@/lib/call-tool';
+import { getActiveCompanyId } from '@/lib/active-company-client';
+import type { Document, DocumentType, Job, Subcontractor } from '@/types';
 
 type DocumentRow = Document & { related_name: string };
 
@@ -29,16 +31,6 @@ interface UploadForm {
   related_to: '' | 'job' | 'subcontractor' | 'company';
   related_id: string;
   expiry_date: string;
-}
-
-function deriveDocumentStatus(expiryDate: string | null): DocumentStatus {
-  if (!expiryDate) return 'active';
-  const expiry = new Date(expiryDate);
-  const now = new Date();
-  if (expiry < now) return 'expired';
-  const thirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-  if (expiry < thirtyDays) return 'expiring_soon';
-  return 'active';
 }
 
 export default function DocumentsPage() {
@@ -120,39 +112,32 @@ export default function DocumentsPage() {
     setUploadSubmitting(true);
     setUploadError(null);
     try {
-      const { data: uc } = await supabase.current
-        .from('user_companies')
-        .select('company_id')
-        .single();
-      if (!uc?.company_id) throw new Error('No company associated with this account.');
+      const { data: { user } } = await supabase.current.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+      const companyId = await getActiveCompanyId(supabase.current, user.id);
+      if (!companyId) throw new Error('No company associated with this account.');
 
-      let filePath: string | null = null;
+      let filePath: string | undefined;
       if (uploadFile) {
         const ext = uploadFile.name.split('.').pop() ?? 'bin';
-        const path = `${uc.company_id}/${Date.now()}_${uploadForm.name.trim().replace(/\s+/g, '-')}.${ext}`;
+        const path = `${companyId}/${Date.now()}_${uploadForm.name.trim().replace(/\s+/g, '-')}.${ext}`;
         const { data: storageData, error: storageError } = await supabase.current.storage
           .from('groundworkos-documents')
           .upload(path, uploadFile);
         if (storageError) {
-          console.warn('[Documents] Storage upload failed, continuing without file:', storageError.message);
-        } else {
-          filePath = storageData?.path ?? null;
+          throw new Error('The file could not be uploaded. Please try again.');
         }
+        filePath = storageData?.path ?? undefined;
       }
 
-      const status = deriveDocumentStatus(uploadForm.expiry_date || null);
-
-      const { error } = await supabase.current.from('documents').insert({
-        company_id: uc.company_id,
+      await callTool('add_document', {
         name: uploadForm.name.trim(),
         type: uploadForm.type,
-        related_to: uploadForm.related_to || null,
-        related_id: (uploadForm.related_to && uploadForm.related_id) ? uploadForm.related_id : null,
-        expiry_date: uploadForm.expiry_date || null,
+        related_to: uploadForm.related_to || undefined,
+        related_id: (uploadForm.related_to && uploadForm.related_id) ? uploadForm.related_id : undefined,
+        expiry_date: uploadForm.expiry_date || undefined,
         file_path: filePath,
-        status,
       });
-      if (error) throw error;
 
       setShowUploadModal(false);
       setUploadForm({ name: '', type: 'other', related_to: '', related_id: '', expiry_date: '' });

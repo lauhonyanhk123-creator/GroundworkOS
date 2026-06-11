@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Download } from 'lucide-react';
 import { cn, formatCurrency, formatDate } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { callTool } from '@/lib/call-tool';
 import type { Invoice, Client, Job } from '@/types';
 
 type InvoiceRow = Invoice & {
@@ -140,32 +141,14 @@ export default function InvoicesPage() {
     setInvoiceSubmitting(true);
     setInvoiceFormError(null);
     try {
-      const { data: uc } = await supabase.current
-        .from('user_companies')
-        .select('company_id')
-        .single();
-      if (!uc?.company_id) throw new Error('No company associated with this account.');
-
-      const { data: invoiceNumData, error: invoiceNumError } = await supabase.current.rpc('generate_invoice_number');
-      if (invoiceNumError || !invoiceNumData) throw new Error('Failed to generate invoice number.');
-
-      const vatAmount = Math.round(subtotalNum * 0.2 * 100) / 100;
-      const totalAmount = Math.round(subtotalNum * 1.2 * 100) / 100;
-
-      const { error } = await supabase.current.from('invoices').insert({
-        company_id: uc.company_id,
-        invoice_number: invoiceNumData as string,
+      await callTool('create_invoice', {
         client_id: invoiceForm.client_id,
-        job_id: invoiceForm.job_id || null,
-        quote_id: invoiceForm.quote_id || null,
+        job_id: invoiceForm.job_id || undefined,
+        quote_id: invoiceForm.quote_id || undefined,
         subtotal: subtotalNum,
-        vat_amount: vatAmount,
-        total_amount: totalAmount,
         due_date: invoiceForm.due_date,
-        notes: invoiceForm.notes || null,
-        status: 'draft',
+        notes: invoiceForm.notes || undefined,
       });
-      if (error) throw error;
 
       setShowNewInvoiceModal(false);
       setInvoiceForm({ client_id: '', job_id: '', quote_id: '', subtotal: '', due_date: '', notes: '' });
@@ -179,7 +162,7 @@ export default function InvoicesPage() {
 
   const totalInvoiced = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
   const totalPaid = invoices.filter(inv => inv.status === 'paid').reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-  const totalOutstanding = invoices.filter(inv => inv.status !== 'paid' && inv.status !== 'draft').reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+  const totalOutstanding = invoices.filter(inv => inv.status !== 'paid' && inv.status !== 'draft' && inv.status !== 'void').reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
 
   const subtotalNum = parseFloat(invoiceForm.subtotal) || 0;
   const computedVat = Math.round(subtotalNum * 0.2 * 100) / 100;

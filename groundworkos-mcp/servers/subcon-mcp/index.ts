@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { createSubcontractor, verifyCISStatus, listSubcontractors, getSubcontractorDetails, flagCISIssues } from './tools.js';
+import { createSubcontractor, updateSubcontractor, verifyCISStatus, listSubcontractors, getSubcontractorDetails, flagCISIssues } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -29,6 +29,17 @@ server.tool('create_subcontractor', 'Create a new subcontractor', {
   utr_number: z.string().optional(),
   notes: z.string().optional(),
 }, async (args) => wrap(() => createSubcontractor(args, supabase, COMPANY_ID)));
+
+server.tool('update_subcontractor', 'Edit a subcontractor\'s details (company name, contact, email, phone, trade, UTR, notes). Changing the UTR resets CIS status to unverified.', {
+  subcontractor_id: z.string(),
+  company_name: z.string().optional(),
+  contact_name: z.string().nullable().optional(),
+  email: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  trade: z.string().nullable().optional(),
+  utr_number: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+}, async (args) => wrap(() => updateSubcontractor(args, supabase, COMPANY_ID)));
 
 server.tool('verify_cis_status', 'Verify a subcontractor\'s CIS status with HMRC', {
   subcontractor_id: z.string(),

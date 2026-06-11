@@ -7,6 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { callTool } from '@/lib/call-tool';
 import type { ScheduleEntry } from '@/types';
 
 type ScheduleEntryWithJob = ScheduleEntry & {
@@ -152,23 +153,15 @@ export default function SchedulePage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const { data: { user } } = await supabase.current.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      const { data: uc } = await supabase.current
-        .from('user_companies').select('company_id').eq('user_id', user.id).single();
-      if (!uc?.company_id) throw new Error('No company found');
-
-      const { error: insertError } = await supabase.current.from('schedule_entries').insert({
-        company_id: uc.company_id,
-        job_id: form.job_id || null,
+      await callTool('create_schedule_entry', {
+        job_id: form.job_id || undefined,
         title: form.title.trim(),
         start_datetime: form.start_datetime,
         end_datetime: form.end_datetime,
         crew_count: form.crew_count ? parseInt(form.crew_count, 10) : 1,
-        plant_assigned: form.plant_assigned || null,
-        notes: form.notes || null,
+        plant_assigned: form.plant_assigned || undefined,
+        notes: form.notes || undefined,
       });
-      if (insertError) throw insertError;
       setShowNewEntryModal(false);
       setForm(EMPTY_FORM);
       await loadSchedule(currentDate, view);

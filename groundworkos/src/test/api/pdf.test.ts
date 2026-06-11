@@ -29,11 +29,28 @@ function makeMockSupabase({
   user = { id: 'user-1' },
   data = null as unknown,
   error = null as null | { message: string },
+  memberships = [{ company_id: 'c-1', role: 'admin' }] as Array<{ company_id: string; role: string }>,
 } = {}) {
-  const single = vi.fn().mockResolvedValue({ data, error });
-  const eq = vi.fn().mockReturnValue({ single });
-  const select = vi.fn().mockReturnValue({ eq });
-  const from = vi.fn().mockReturnValue({ select });
+  // Record fetches chain .select().eq('id').eq('company_id').single();
+  // the membership lookup in resolveActiveCompany awaits .select().eq()
+  // directly, so eq() must be thenable as well as chainable.
+  const from = vi.fn().mockImplementation((table: string) => {
+    if (table === 'user_companies') {
+      const builder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (resolve: (v: unknown) => unknown) => resolve({ data: memberships, error: null }),
+      };
+      return builder;
+    }
+    const single = vi.fn().mockResolvedValue({ data, error });
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single,
+    };
+    return builder;
+  });
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) },
     from,

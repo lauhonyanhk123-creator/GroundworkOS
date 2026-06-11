@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Building, Bell, Shield, Database, Key, Save, AlertTriangle, CheckCircle, Link2, Link2Off } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { getActiveCompanyId } from '@/lib/active-company-client';
 
 interface XeroConnection {
   tenant_name: string | null;
@@ -92,13 +93,12 @@ export default function SettingsPage() {
           compliance_alerts: meta.notifications?.compliance_alerts ?? true,
         });
 
-        const { data: uc } = await supabase.current
-          .from('user_companies').select('company_id').eq('user_id', user.id).single();
-        if (!uc?.company_id) return;
-        setCompanyId(uc.company_id);
+        const activeCompanyId = await getActiveCompanyId(supabase.current, user.id);
+        if (!activeCompanyId) return;
+        setCompanyId(activeCompanyId);
 
         const { data: company } = await supabase.current
-          .from('companies').select('*').eq('id', uc.company_id).single();
+          .from('companies').select('*').eq('id', activeCompanyId).single();
         if (company) {
           const cs = meta.company_settings ?? {};
           setCompanyForm({
@@ -116,7 +116,7 @@ export default function SettingsPage() {
         const { data: xeroConn } = await supabase.current
           .from('xero_connections')
           .select('tenant_name, connected_at')
-          .eq('company_id', uc.company_id)
+          .eq('company_id', activeCompanyId)
           .maybeSingle();
         if (xeroConn) {
           setXeroConnection({ tenant_name: xeroConn.tenant_name, connected_at: xeroConn.connected_at });

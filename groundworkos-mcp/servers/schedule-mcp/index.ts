@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { createScheduleEntry, getWeeklySchedule, checkAvailability, getWeatherRisk, getScheduleOverview } from './tools.js';
+import { createScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getWeeklySchedule, checkAvailability, getWeatherRisk, getScheduleOverview } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -30,6 +30,21 @@ server.tool('create_schedule_entry', 'Create a new schedule entry', {
   plant_assigned: z.string().optional(),
   notes: z.string().optional(),
 }, async (args) => wrap(() => createScheduleEntry(args, supabase, COMPANY_ID)));
+
+server.tool('update_schedule_entry', 'Edit an existing schedule entry (title, times, crew count, plant, linked job, notes).', {
+  entry_id: z.string(),
+  job_id: z.string().nullable().optional(),
+  title: z.string().optional(),
+  description: z.string().nullable().optional(),
+  start_datetime: z.string().optional(),
+  end_datetime: z.string().optional(),
+  crew_count: z.number().optional(),
+  plant_assigned: z.string().nullable().optional(),
+  notes: z.string().nullable().optional(),
+}, async (args) => wrap(() => updateScheduleEntry(args, supabase, COMPANY_ID)));
+
+server.tool('delete_schedule_entry', 'Delete a schedule entry, for example a cancelled or duplicated booking.', { entry_id: z.string() },
+  async (args) => wrap(() => deleteScheduleEntry(args, supabase, COMPANY_ID)));
 
 server.tool('get_weekly_schedule', 'Get schedule for a week starting on Monday', { week_start_date: z.string() },
   async (args) => wrap(() => getWeeklySchedule(args, supabase, COMPANY_ID)));

@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { createJob, updateJobStatus, updateJobProgress, getJobDetails, listJobs, getJobSummaryStats, getEntityHistory } from './tools.js';
+import { createJob, updateJob, updateJobStatus, updateJobProgress, getJobDetails, listJobs, getJobSummaryStats, getEntityHistory } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -21,7 +21,7 @@ function wrap(fn: () => Promise<unknown>) {
 }
 
 server.tool('create_job', 'Create a new job/project', {
-  client_id: z.string(),
+  client_id: z.string().optional(),
   title: z.string(),
   description: z.string().optional(),
   site_address: z.string().optional(),
@@ -29,7 +29,21 @@ server.tool('create_job', 'Create a new job/project', {
   value: z.number().optional(),
   start_date: z.string().optional(),
   end_date: z.string().optional(),
+  subcontractor_id: z.string().optional(),
 }, async (args) => wrap(() => createJob(args, supabase, COMPANY_ID)));
+
+server.tool('update_job', 'Edit the details of an existing job (title, client, subcontractor, site address, type, value, dates). Use update_job_status for status changes.', {
+  job_id: z.string(),
+  client_id: z.string().nullable().optional(),
+  subcontractor_id: z.string().nullable().optional(),
+  title: z.string().optional(),
+  description: z.string().nullable().optional(),
+  site_address: z.string().nullable().optional(),
+  type: z.enum(['drainage', 'foundations', 'excavation', 'kerbing', 'sewers', 'reinstatement']).nullable().optional(),
+  value: z.number().nullable().optional(),
+  start_date: z.string().nullable().optional(),
+  end_date: z.string().nullable().optional(),
+}, async (args) => wrap(() => updateJob(args, supabase, COMPANY_ID)));
 
 server.tool('update_job_status', 'Update a job status', {
   job_id: z.string(),

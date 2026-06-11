@@ -76,8 +76,28 @@ const toolDefinitions = [
       name: 'create_job',
       description: 'Create a new job/project',
       parameters: z.object({
-        client_id: z.string(),
+        client_id: z.string().optional(),
         title: z.string(),
+        description: z.string().optional(),
+        site_address: z.string().optional(),
+        type: z.string().optional(),
+        value: z.number().optional(),
+        start_date: z.string().optional(),
+        end_date: z.string().optional(),
+        subcontractor_id: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'update_job',
+      description: 'Edit the details of an existing job: title, description, site address, type, value, dates, client, or the subcontractor working the job. Use when the user asks to change, correct, or assign something on a job. For status changes use update_job_status instead.',
+      parameters: z.object({
+        job_id: z.string(),
+        client_id: z.string().optional(),
+        subcontractor_id: z.string().optional(),
+        title: z.string().optional(),
         description: z.string().optional(),
         site_address: z.string().optional(),
         type: z.string().optional(),
@@ -159,7 +179,7 @@ const toolDefinitions = [
       name: 'create_quote',
       description: 'Create a new quote for a client',
       parameters: z.object({
-        client_id: z.string(),
+        client_id: z.string().optional(),
         title: z.string(),
         line_items: z.array(z.object({
           description: z.string(),
@@ -167,6 +187,7 @@ const toolDefinitions = [
           unit_price: z.number(),
         })),
         notes: z.string().optional(),
+        job_id: z.string().optional(),
       }).strict(),
     },
   },
@@ -174,7 +195,7 @@ const toolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'update_quote',
-      description: 'Update quote line items or notes',
+      description: 'Update the line items or notes of a draft or sent quote and recalculate totals. Accepted and rejected quotes cannot be edited.',
       parameters: z.object({
         quote_id: z.string(),
         line_items: z.array(z.object({
@@ -183,6 +204,16 @@ const toolDefinitions = [
           unit_price: z.number(),
         })).optional(),
         notes: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'delete_quote',
+      description: 'Permanently delete a draft quote, for example a duplicate or abandoned one. Sent, accepted, and rejected quotes cannot be deleted — they are kept for pricing history.',
+      parameters: z.object({
+        quote_id: z.string(),
       }).strict(),
     },
   },
@@ -256,6 +287,33 @@ const toolDefinitions = [
   {
     type: 'function' as const,
     function: {
+      name: 'update_invoice',
+      description: 'Edit a draft invoice: client, linked job or quote, subtotal (VAT and total are recalculated), due date, or notes. Sent invoices cannot be edited — void and re-issue instead.',
+      parameters: z.object({
+        invoice_id: z.string(),
+        client_id: z.string().optional(),
+        job_id: z.string().optional(),
+        quote_id: z.string().optional(),
+        subtotal: z.number().optional(),
+        due_date: z.string().optional(),
+        notes: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'void_invoice',
+      description: 'Void a mistaken or cancelled invoice. The invoice stays on record for the audit trail but is excluded from outstanding totals. Paid invoices cannot be voided. Use when the user asks to cancel, void, or write off an invoice.',
+      parameters: z.object({
+        invoice_id: z.string(),
+        notes: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
       name: 'mark_invoice_paid',
       description: 'Mark an invoice as paid',
       parameters: z.object({
@@ -299,6 +357,23 @@ const toolDefinitions = [
       description: 'Create a new subcontractor',
       parameters: z.object({
         company_name: z.string(),
+        contact_name: z.string().optional(),
+        email: z.string().optional(),
+        phone: z.string().optional(),
+        trade: z.string().optional(),
+        utr_number: z.string().optional(),
+        notes: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'update_subcontractor',
+      description: 'Edit a subcontractor\'s details: company name, contact, email, phone, trade, UTR number, or notes. Changing the UTR resets their CIS status to unverified. Use when the user asks to change or correct subcontractor information.',
+      parameters: z.object({
+        subcontractor_id: z.string(),
+        company_name: z.string().optional(),
         contact_name: z.string().optional(),
         email: z.string().optional(),
         phone: z.string().optional(),
@@ -366,6 +441,34 @@ const toolDefinitions = [
   {
     type: 'function' as const,
     function: {
+      name: 'update_schedule_entry',
+      description: 'Edit an existing schedule entry: title, start/end times, crew count, plant, linked job, or notes. Use when the user asks to move, reschedule, or change a booking.',
+      parameters: z.object({
+        entry_id: z.string(),
+        job_id: z.string().optional(),
+        title: z.string().optional(),
+        description: z.string().optional(),
+        start_datetime: z.string().optional(),
+        end_datetime: z.string().optional(),
+        crew_count: z.number().optional(),
+        plant_assigned: z.string().optional(),
+        notes: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'delete_schedule_entry',
+      description: 'Delete a schedule entry, for example a cancelled or duplicated booking. Use when the user asks to remove or cancel something from the schedule.',
+      parameters: z.object({
+        entry_id: z.string(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
       name: 'get_weekly_schedule',
       description: 'Get schedule for a week starting on Monday',
       parameters: z.object({
@@ -420,6 +523,31 @@ const toolDefinitions = [
         file_path: z.string().optional(),
         expiry_date: z.string().optional(),
         notes: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'update_document',
+      description: 'Edit a document record: name, type, expiry date, or the job/subcontractor it relates to. Status is re-derived when the expiry date changes. Use when the user asks to correct or renew a document.',
+      parameters: z.object({
+        document_id: z.string(),
+        name: z.string().optional(),
+        type: z.string().optional(),
+        related_to: z.string().optional(),
+        related_id: z.string().optional(),
+        expiry_date: z.string().optional(),
+      }).strict(),
+    },
+  },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'delete_document',
+      description: 'Delete a document record and its stored file, for example a duplicate or superseded upload. Use when the user asks to remove a document.',
+      parameters: z.object({
+        document_id: z.string(),
       }).strict(),
     },
   },
@@ -518,7 +646,7 @@ const toolDefinitions = [
     type: 'function' as const,
     function: {
       name: 'get_cis_monthly_return',
-      description: 'Get a CIS monthly return showing all subcontractor payments with gross amount, 20% CIS deduction, and net payment for a given month and year. Use when the user asks about CIS returns, monthly CIS submissions, or subcontractor deductions.',
+      description: 'Get a CIS monthly return showing all subcontractor payments with gross amount, CIS deduction at the HMRC rate for their status (0% gross, 20% net/verified, 30% unverified), and net payment for a given month and year. Use when the user asks about CIS returns, monthly CIS submissions, or subcontractor deductions.',
       parameters: z.object({
         month: z.number().min(1).max(12),
         year: z.number(),

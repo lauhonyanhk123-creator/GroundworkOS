@@ -48,6 +48,7 @@ export function mockJob(overrides?: Partial<Job>): Job {
     company_id: 'company-1',
     job_number: 'GW-0001',
     client_id: 'client-1',
+    subcontractor_id: null,
     title: 'Drainage Installation — High Street',
     description: 'Install new drainage system',
     site_address: '20 High Street, London, W1A 1AA',

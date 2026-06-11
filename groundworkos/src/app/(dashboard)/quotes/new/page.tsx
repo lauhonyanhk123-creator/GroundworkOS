@@ -7,6 +7,7 @@ import { Panel } from '@/components/ui/panel';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { callTool } from '@/lib/call-tool';
 import type { LineItem } from '@/types';
 import {
   buildRateBook,
@@ -99,39 +100,19 @@ export default function NewQuotePage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const { data: { user } } = await supabase.current.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      const { data: uc } = await supabase.current
-        .from('user_companies').select('company_id').eq('user_id', user.id).single();
-      if (!uc?.company_id) throw new Error('No company found');
-
-      const { data: quoteNumber } = await supabase.current.rpc('generate_quote_number');
-
-      const items = lineItems.filter(i => i.description.trim()).map(({ _id, ...rest }) => ({
-        description: rest.description,
-        quantity: rest.quantity,
-        unit_price: rest.unit_price,
-        total: rest.quantity * rest.unit_price,
+      const items = lineItems.filter(i => i.description.trim()).map(item => ({
+        description: item.description,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
       }));
 
-      const { data: inserted, error: insertError } = await supabase.current
-        .from('quotes')
-        .insert({
-          company_id: uc.company_id,
-          quote_number: quoteNumber,
-          client_id: clientId || null,
-          title: title.trim(),
-          line_items: items,
-          subtotal,
-          vat_amount: vatAmount,
-          total_amount: total,
-          status: 'draft',
-          notes: notes || null,
-        })
-        .select('id')
-        .single();
+      const inserted = await callTool<{ id: string }>('create_quote', {
+        client_id: clientId || undefined,
+        title: title.trim(),
+        line_items: items,
+        notes: notes || undefined,
+      });
 
-      if (insertError) throw insertError;
       router.push(`/quotes/${inserted.id}`);
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Failed to create quote. Please try again.');

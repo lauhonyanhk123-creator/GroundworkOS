@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { createInvoice, markInvoicePaid, getOutstandingInvoices, getInvoiceSummary, sendInvoice } from './tools.js';
+import { createInvoice, updateInvoice, voidInvoice, markInvoicePaid, getOutstandingInvoices, getInvoiceSummary, sendInvoice } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -28,6 +28,21 @@ server.tool('create_invoice', 'Create an invoice for a completed job', {
   due_date: z.string(),
   notes: z.string().optional(),
 }, async (args) => wrap(() => createInvoice(args, supabase, COMPANY_ID)));
+
+server.tool('update_invoice', 'Edit a draft invoice (client, job, quote link, subtotal, due date, notes). VAT and total are recalculated from the subtotal. Sent invoices cannot be edited — void and re-issue instead.', {
+  invoice_id: z.string(),
+  client_id: z.string().optional(),
+  job_id: z.string().nullable().optional(),
+  quote_id: z.string().nullable().optional(),
+  subtotal: z.number().positive().optional(),
+  due_date: z.string().optional(),
+  notes: z.string().nullable().optional(),
+}, async (args) => wrap(() => updateInvoice(args, supabase, COMPANY_ID)));
+
+server.tool('void_invoice', 'Void a mistaken or cancelled invoice. The invoice is kept for the audit trail but excluded from outstanding totals. Paid invoices cannot be voided.', {
+  invoice_id: z.string(),
+  notes: z.string().optional(),
+}, async (args) => wrap(() => voidInvoice(args, supabase, COMPANY_ID)));
 
 server.tool('mark_invoice_paid', 'Mark an invoice as paid', { invoice_id: z.string() },
   async (args) => wrap(() => markInvoicePaid(args, supabase, COMPANY_ID)));

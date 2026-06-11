@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Filter, Download } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { callTool } from '@/lib/call-tool';
 import type { Job } from '@/types';
 
 type JobRow = Job & { client: { company_name: string } | null };
@@ -81,30 +82,23 @@ export default function JobsPage() {
 
   async function handleCreateJob() {
     if (!form.title.trim()) { setFormError('Job title is required.'); return; }
+    const valueNum = form.value ? parseFloat(form.value) : null;
+    if (valueNum !== null && (Number.isNaN(valueNum) || valueNum < 0)) {
+      setFormError('Value must be a positive number.');
+      return;
+    }
     setSubmitting(true);
     setFormError(null);
     try {
-      const { data: { user } } = await supabase.current.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      const { data: uc } = await supabase.current
-        .from('user_companies').select('company_id').eq('user_id', user.id).single();
-      if (!uc?.company_id) throw new Error('No company found');
-
-      const { data: jobNumber } = await supabase.current.rpc('generate_job_number');
-
-      const { error } = await supabase.current.from('jobs').insert({
-        company_id: uc.company_id,
-        job_number: jobNumber,
-        client_id: form.client_id || null,
+      await callTool('create_job', {
+        client_id: form.client_id || undefined,
         title: form.title.trim(),
-        type: form.type || null,
-        site_address: form.site_address || null,
-        value: form.value ? parseFloat(form.value) : null,
-        start_date: form.start_date || null,
-        description: form.description || null,
-        status: 'enquiry',
+        type: form.type || undefined,
+        site_address: form.site_address || undefined,
+        value: valueNum ?? undefined,
+        start_date: form.start_date || undefined,
+        description: form.description || undefined,
       });
-      if (error) throw error;
       setShowNewJobModal(false);
       setForm(EMPTY_FORM);
       await loadJobs();

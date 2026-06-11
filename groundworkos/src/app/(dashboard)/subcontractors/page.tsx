@@ -7,6 +7,7 @@ import { Panel } from '@/components/ui/panel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { callTool } from '@/lib/call-tool';
 import type { Subcontractor } from '@/types';
 
 type SubcontractorRow = Subcontractor & {
@@ -76,24 +77,15 @@ export default function SubcontractorsPage() {
     setAddSubmitting(true);
     setAddFormError(null);
     try {
-      const { data: uc } = await supabase.current
-        .from('user_companies')
-        .select('company_id')
-        .single();
-      if (!uc?.company_id) throw new Error('No company associated with this account.');
-
-      const { error } = await supabase.current.from('subcontractors').insert({
+      await callTool('create_subcontractor', {
         company_name: addForm.company_name.trim(),
-        contact_name: addForm.contact_name || null,
-        trade: addForm.trade || null,
-        utr_number: addForm.utr_number || null,
-        email: addForm.email || null,
-        phone: addForm.phone || null,
-        notes: addForm.notes || null,
-        company_id: uc.company_id,
-        cis_status: 'unverified',
+        contact_name: addForm.contact_name || undefined,
+        trade: addForm.trade || undefined,
+        utr_number: addForm.utr_number || undefined,
+        email: addForm.email || undefined,
+        phone: addForm.phone || undefined,
+        notes: addForm.notes || undefined,
       });
-      if (error) throw error;
       setShowAddModal(false);
       setAddForm({ company_name: '', contact_name: '', trade: '', utr_number: '', email: '', phone: '', notes: '' });
       await loadSubcontractors();

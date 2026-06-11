@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { createQuote, updateQuote, sendQuote, acceptQuote, convertQuoteToJob, listQuotes, getRateBook } from './tools.js';
+import { createQuote, updateQuote, deleteQuote, sendQuote, acceptQuote, convertQuoteToJob, listQuotes, getRateBook } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -21,7 +21,7 @@ function wrap(fn: () => Promise<unknown>) {
 }
 
 server.tool('create_quote', 'Create a new quote for a client', {
-  client_id: z.string(),
+  client_id: z.string().optional(),
   title: z.string(),
   line_items: z.array(z.object({ description: z.string(), quantity: z.number(), unit_price: z.number() })),
   notes: z.string().optional(),
@@ -33,6 +33,9 @@ server.tool('update_quote', 'Update quote line items or notes and recalculate to
   line_items: z.array(z.object({ description: z.string(), quantity: z.number(), unit_price: z.number() })).optional(),
   notes: z.string().optional(),
 }, async (args) => wrap(() => updateQuote(args, supabase, COMPANY_ID)));
+
+server.tool('delete_quote', 'Permanently delete a draft quote. Sent, accepted, and rejected quotes cannot be deleted — they are kept for pricing history.', { quote_id: z.string() },
+  async (args) => wrap(() => deleteQuote(args, supabase, COMPANY_ID)));
 
 server.tool('send_quote', 'Mark a quote as sent to the client', { quote_id: z.string() },
   async (args) => wrap(() => sendQuote(args, supabase, COMPANY_ID)));

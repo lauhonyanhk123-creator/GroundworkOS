@@ -30,8 +30,16 @@ export async function resolveActiveCompany(
       return { companyId: null, role: null }
     }
 
-    const cookieStore = await cookies()
-    const selected = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value
+    // An unreadable cookie store must not discard valid memberships — fall
+    // back to the first membership instead.
+    let selected: string | undefined
+    try {
+      const cookieStore = await cookies()
+      selected = cookieStore.get(ACTIVE_COMPANY_COOKIE)?.value
+    } catch {
+      selected = undefined
+    }
+
     const match = selected
       ? memberships.find((m) => m.company_id === selected)
       : undefined

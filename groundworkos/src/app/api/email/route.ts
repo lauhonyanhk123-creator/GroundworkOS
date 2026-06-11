@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { resolveActiveCompany } from '@/lib/active-company';
 import { buildQuoteHTML, buildInvoiceHTML, formatDate as formatDateLong } from '@/lib/pdf-templates';
 import type { LineItem, QuoteWithClient, InvoiceWithDetails } from '@/types';
 import puppeteer from 'puppeteer';
@@ -118,6 +119,13 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
 
+    // RLS already restricts reads to the user's companies; the explicit
+    // company filter keeps a multi-company user inside their active company.
+    const { companyId } = await resolveActiveCompany(supabase, user.id);
+    if (!companyId) {
+      return NextResponse.json({ error: 'No company associated with this account.' }, { status: 403 });
+    }
+
     const body = await request.json() as { type?: string; id?: string };
     const { type, id } = body;
 
@@ -130,6 +138,7 @@ export async function POST(request: NextRequest) {
         .from('invoices')
         .select('*, client:clients(company_name, contact_name, email), job:jobs(title)')
         .eq('id', id)
+        .eq('company_id', companyId)
         .single();
 
       if (fetchError || !invoice) {
@@ -204,6 +213,7 @@ export async function POST(request: NextRequest) {
       .from('quotes')
       .select('*, client:clients(company_name, contact_name, email)')
       .eq('id', id)
+      .eq('company_id', companyId)
       .single();
 
     if (fetchError || !quote) {

@@ -18,6 +18,7 @@ vi.mock('@/lib/supabase/server', () => ({
 
 import { POST } from '@/app/api/ai/route';
 import { createClient } from '@/lib/supabase/server';
+import { resetRateLimits } from '@/lib/rate-limit';
 
 function makeRequest(body: unknown) {
   return new NextRequest('http://localhost/api/ai', {
@@ -28,10 +29,17 @@ function makeRequest(body: unknown) {
 }
 
 function makeAuthSupabase(user: { id: string } | null = { id: 'u-1' }) {
-  const single = vi.fn().mockResolvedValue({ data: null, error: null });
-  const eq = vi.fn().mockReturnValue({ single });
-  const select = vi.fn().mockReturnValue({ eq });
-  const from = vi.fn().mockReturnValue({ select });
+  // resolveActiveCompany awaits .select().eq() directly, so the builder must
+  // be thenable as well as chainable.
+  const from = vi.fn().mockImplementation((table: string) => {
+    const memberships = table === 'user_companies' ? [{ company_id: 'c-1', role: 'admin' }] : null;
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      then: (resolve: (v: unknown) => unknown) => resolve({ data: memberships, error: null }),
+    };
+  });
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user } }) },
     from,
@@ -40,6 +48,7 @@ function makeAuthSupabase(user: { id: string } | null = { id: 'u-1' }) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  resetRateLimits();
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

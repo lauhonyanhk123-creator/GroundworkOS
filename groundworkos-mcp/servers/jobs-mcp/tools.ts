@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 export interface CreateJobInput {
-  client_id: string;
+  client_id?: string | null;
   title: string;
   description?: string;
   site_address?: string;
@@ -66,7 +66,7 @@ export async function createJob(
     .insert({
       company_id: companyId,
       job_number: jobNumData as string,
-      client_id: input.client_id,
+      client_id: input.client_id ?? null,
       subcontractor_id: input.subcontractor_id ?? null,
       title: input.title,
       description: input.description ?? null,

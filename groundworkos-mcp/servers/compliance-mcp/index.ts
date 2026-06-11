@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { addDocument, checkComplianceStatus, flagExpiringDocuments, getJobDocuments, getSubcontractorDocuments } from './tools.js';
+import { addDocument, updateDocument, deleteDocument, checkComplianceStatus, flagExpiringDocuments, getJobDocuments, getSubcontractorDocuments } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -29,6 +29,18 @@ server.tool('add_document', 'Add a new document to the system', {
   expiry_date: z.string().optional(),
   notes: z.string().optional(),
 }, async (args) => wrap(() => addDocument(args, supabase, COMPANY_ID)));
+
+server.tool('update_document', 'Edit a document record (name, type, expiry date, related job/subcontractor). Status is re-derived when the expiry date changes.', {
+  document_id: z.string(),
+  name: z.string().optional(),
+  type: z.enum(['insurance', 'rams', 'permit', 'cscs', 'other']).optional(),
+  related_to: z.enum(['job', 'subcontractor', 'company']).nullable().optional(),
+  related_id: z.string().nullable().optional(),
+  expiry_date: z.string().nullable().optional(),
+}, async (args) => wrap(() => updateDocument(args, supabase, COMPANY_ID)));
+
+server.tool('delete_document', 'Delete a document record and its stored file, for example a duplicate or superseded upload.', { document_id: z.string() },
+  async (args) => wrap(() => deleteDocument(args, supabase, COMPANY_ID)));
 
 server.tool('check_compliance_status', 'Full compliance health check - find expired and expiring documents', {},
   async () => wrap(() => checkComplianceStatus(supabase, COMPANY_ID)));

@@ -15,7 +15,7 @@ function calcTotals(lineItems: LineItem[]): { subtotal: number; vat_amount: numb
 }
 
 export interface CreateQuoteInput {
-  client_id: string;
+  client_id?: string | null;
   title: string;
   line_items: LineItem[];
   notes?: string;
@@ -67,7 +67,7 @@ export async function createQuote(
     .insert({
       company_id: companyId,
       quote_number: quoteNumData as string,
-      client_id: input.client_id,
+      client_id: input.client_id ?? null,
       job_id: input.job_id ?? null,
       title: input.title,
       line_items: lineItemsWithTotals,

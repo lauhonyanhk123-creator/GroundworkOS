@@ -30,10 +30,23 @@ function makePuppeteerMock() {
 }
 
 function makeSupabaseMock(data: unknown, error: unknown = null) {
-  const single = vi.fn().mockResolvedValue({ data, error });
-  const eq = vi.fn().mockReturnValue({ single });
-  const select = vi.fn().mockReturnValue({ eq });
-  const from = vi.fn().mockReturnValue({ select });
+  // resolveActiveCompany awaits .select().eq() directly, so the builder must
+  // be thenable as well as chainable; record fetches end in .single().
+  const from = vi.fn().mockImplementation((table: string) => {
+    if (table === 'user_companies') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        then: (resolve: (v: unknown) => unknown) =>
+          resolve({ data: [{ company_id: 'c-1', role: 'admin' }], error: null }),
+      };
+    }
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({ data, error }),
+    };
+  });
   return {
     auth: { getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'u-1' } } }) },
     from,

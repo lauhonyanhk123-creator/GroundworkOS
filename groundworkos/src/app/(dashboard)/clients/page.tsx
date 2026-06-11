@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Building2, Mail, Phone, MapPin } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
+import { callTool } from '@/lib/call-tool';
 import type { Client } from '@/types';
 
 type ClientRow = Client & { job_count: number };
@@ -62,22 +63,14 @@ export default function ClientsPage() {
     setSubmitting(true);
     setFormError(null);
     try {
-      const { data: { user } } = await supabase.current.auth.getUser();
-      if (!user) throw new Error('Not authenticated');
-      const { data: uc } = await supabase.current
-        .from('user_companies').select('company_id').eq('user_id', user.id).single();
-      if (!uc?.company_id) throw new Error('No company found');
-
-      const { error } = await supabase.current.from('clients').insert({
-        company_id: uc.company_id,
+      await callTool('create_client', {
         company_name: form.company_name.trim(),
-        contact_name: form.contact_name || null,
-        email: form.email || null,
-        phone: form.phone || null,
-        address: form.address || null,
-        companies_house_number: form.companies_house_number || null,
+        contact_name: form.contact_name || undefined,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        address: form.address || undefined,
+        companies_house_number: form.companies_house_number || undefined,
       });
-      if (error) throw error;
       setShowNewClientModal(false);
       setForm(EMPTY_FORM);
       await loadClients();

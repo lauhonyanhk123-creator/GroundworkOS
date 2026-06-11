@@ -30,6 +30,7 @@ export interface Job {
   company_id: string;
   job_number: string;
   client_id: string | null;
+  subcontractor_id: string | null;
   title: string;
   description: string | null;
   site_address: string | null;
@@ -84,7 +85,7 @@ export interface Invoice {
   created_at: string;
 }
 
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue';
+export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'void';
 
 export interface Subcontractor {
   id: string;
