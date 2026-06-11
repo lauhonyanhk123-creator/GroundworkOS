@@ -2,7 +2,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { supabase } from '../../shared/db.js';
-import { createQuote, updateQuote, sendQuote, acceptQuote, convertQuoteToJob, listQuotes } from './tools.js';
+import { createQuote, updateQuote, sendQuote, acceptQuote, convertQuoteToJob, listQuotes, getRateBook } from './tools.js';
 import 'dotenv/config';
 
 // This stdio server has no authenticated user, so the company scope must be
@@ -46,6 +46,11 @@ server.tool('convert_quote_to_job', 'Convert an accepted quote into an active jo
 server.tool('list_quotes', 'List all quotes with optional status filter', {
   status: z.enum(['draft', 'sent', 'accepted', 'rejected']).optional(),
 }, async (args) => wrap(() => listQuotes(args, supabase, COMPANY_ID)));
+
+server.tool('get_rate_book', 'Get the company rate book built from historical quote line items: suggested unit rate, price range, win rate and last-used date per work item. Use when asked what to charge, usual rates, or past pricing for an item of work.', {
+  search: z.string().optional(),
+  limit: z.number().optional(),
+}, async (args) => wrap(() => getRateBook(args, supabase, COMPANY_ID)));
 
 async function main() {
   const transport = new StdioServerTransport();

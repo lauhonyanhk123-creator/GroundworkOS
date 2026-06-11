@@ -226,6 +226,17 @@ const toolDefinitions = [
       }).strict(),
     },
   },
+  {
+    type: 'function' as const,
+    function: {
+      name: 'get_rate_book',
+      description: 'Get the company rate book built from historical quote line items: suggested unit rate, price range, win rate and last-used date per work item. Use when the user asks what to charge for something, what was charged before, usual or going rates, or pricing history for an item of work.',
+      parameters: z.object({
+        search: z.string().optional(),
+        limit: z.number().optional(),
+      }).strict(),
+    },
+  },
   // Invoices MCP tools
   {
     type: 'function' as const,
