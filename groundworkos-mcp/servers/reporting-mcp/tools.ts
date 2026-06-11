@@ -275,6 +275,14 @@ export async function getAgedDebtorReport(supabase: SupabaseClient, companyId: s
   };
 }
 
+// HMRC CIS deduction rates: 0% for gross payment status, 20% for verified
+// (net) subcontractors, 30% when unverified or unmatched with HMRC records.
+export function cisRateFor(cisStatus: string | null | undefined): number {
+  if (cisStatus === 'gross') return 0;
+  if (cisStatus === 'net') return 0.2;
+  return 0.3;
+}
+
 export async function getCISMonthlyReturn(
   input: GetCISMonthlyReturnInput,
   supabase: SupabaseClient,
@@ -287,14 +295,14 @@ export async function getCISMonthlyReturn(
 
   const [{ data: invoices, error }, { data: subcontractors }] = await Promise.all([
     supabase.from('invoices').select('id, invoice_number, total_amount, subtotal, paid_at, jobs:job_id (id, title, subcontractor_id)').eq('company_id', companyId).eq('status', 'paid').gte('paid_at', monthStart).lte('paid_at', monthEnd),
-    supabase.from('subcontractors').select('id, company_name, utr_number').eq('company_id', companyId),
+    supabase.from('subcontractors').select('id, company_name, utr_number, cis_status').eq('company_id', companyId),
   ]);
   if (error) throw new Error(error.message);
 
-  const subMap = new Map<string, { company_name: string; utr_number: string | null }>();
-  for (const s of subcontractors ?? []) subMap.set(s.id, { company_name: s.company_name, utr_number: s.utr_number });
+  const subMap = new Map<string, { company_name: string; utr_number: string | null; cis_status: string | null }>();
+  for (const s of subcontractors ?? []) subMap.set(s.id, { company_name: s.company_name, utr_number: s.utr_number, cis_status: s.cis_status });
 
-  interface CISEntry { subcontractor_id: string; subcontractor_name: string; utr_number: string | null; invoice_id: string; invoice_number: string; gross_payment: number; cis_deduction: number; net_payment: number }
+  interface CISEntry { subcontractor_id: string; subcontractor_name: string; utr_number: string | null; cis_status: string | null; cis_rate: number; invoice_id: string; invoice_number: string; gross_payment: number; cis_deduction: number; net_payment: number }
   const entries: CISEntry[] = [];
 
   for (const inv of invoices ?? []) {
@@ -303,8 +311,9 @@ export async function getCISMonthlyReturn(
     const sub = subMap.get(typedInv.jobs.subcontractor_id);
     if (!sub) continue;
     const gross = typedInv.subtotal ?? typedInv.total_amount ?? 0;
-    const deduction = Math.round(gross * 0.2 * 100) / 100;
-    entries.push({ subcontractor_id: typedInv.jobs.subcontractor_id, subcontractor_name: sub.company_name, utr_number: sub.utr_number, invoice_id: typedInv.id, invoice_number: typedInv.invoice_number, gross_payment: gross, cis_deduction: deduction, net_payment: Math.round((gross - deduction) * 100) / 100 });
+    const rate = cisRateFor(sub.cis_status);
+    const deduction = Math.round(gross * rate * 100) / 100;
+    entries.push({ subcontractor_id: typedInv.jobs.subcontractor_id, subcontractor_name: sub.company_name, utr_number: sub.utr_number, cis_status: sub.cis_status, cis_rate: rate, invoice_id: typedInv.id, invoice_number: typedInv.invoice_number, gross_payment: gross, cis_deduction: deduction, net_payment: Math.round((gross - deduction) * 100) / 100 });
   }
 
   const monthLabel = new Date(input.year, input.month - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
@@ -335,14 +344,14 @@ export async function getSubcontractorPaymentSchedule(
   const { data: invoices, error } = await query;
   if (error) throw new Error(error.message);
 
-  let subQuery = supabase.from('subcontractors').select('id, company_name, utr_number').eq('company_id', companyId);
+  let subQuery = supabase.from('subcontractors').select('id, company_name, utr_number, cis_status').eq('company_id', companyId);
   if (input.subcontractor_id) subQuery = subQuery.eq('id', input.subcontractor_id);
   const { data: subcontractors } = await subQuery;
 
-  const subMap = new Map<string, { company_name: string; utr_number: string | null }>();
-  for (const s of subcontractors ?? []) subMap.set(s.id, { company_name: s.company_name, utr_number: s.utr_number });
+  const subMap = new Map<string, { company_name: string; utr_number: string | null; cis_status: string | null }>();
+  for (const s of subcontractors ?? []) subMap.set(s.id, { company_name: s.company_name, utr_number: s.utr_number, cis_status: s.cis_status });
 
-  interface SubPayments { subcontractor_id: string; subcontractor_name: string; utr_number: string | null; payments: Record<string, unknown>[]; total_gross: number; total_deductions: number; total_net: number }
+  interface SubPayments { subcontractor_id: string; subcontractor_name: string; utr_number: string | null; cis_status: string | null; cis_rate: number; payments: Record<string, unknown>[]; total_gross: number; total_deductions: number; total_net: number }
   const grouped = new Map<string, SubPayments>();
 
   for (const inv of invoices ?? []) {
@@ -353,11 +362,11 @@ export async function getSubcontractorPaymentSchedule(
     if (input.subcontractor_id && typedInv.jobs.subcontractor_id !== input.subcontractor_id) continue;
 
     if (!grouped.has(typedInv.jobs.subcontractor_id)) {
-      grouped.set(typedInv.jobs.subcontractor_id, { subcontractor_id: typedInv.jobs.subcontractor_id, subcontractor_name: sub.company_name, utr_number: sub.utr_number, payments: [], total_gross: 0, total_deductions: 0, total_net: 0 });
+      grouped.set(typedInv.jobs.subcontractor_id, { subcontractor_id: typedInv.jobs.subcontractor_id, subcontractor_name: sub.company_name, utr_number: sub.utr_number, cis_status: sub.cis_status, cis_rate: cisRateFor(sub.cis_status), payments: [], total_gross: 0, total_deductions: 0, total_net: 0 });
     }
     const group = grouped.get(typedInv.jobs.subcontractor_id)!;
     const gross = typedInv.subtotal ?? typedInv.total_amount ?? 0;
-    const deduction = Math.round(gross * 0.2 * 100) / 100;
+    const deduction = Math.round(gross * cisRateFor(sub.cis_status) * 100) / 100;
     const net = Math.round((gross - deduction) * 100) / 100;
     group.total_gross = Math.round((group.total_gross + gross) * 100) / 100;
     group.total_deductions = Math.round((group.total_deductions + deduction) * 100) / 100;

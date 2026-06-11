@@ -9,6 +9,21 @@ export interface CreateInvoiceInput {
   notes?: string;
 }
 
+export interface UpdateInvoiceInput {
+  invoice_id: string;
+  client_id?: string;
+  job_id?: string | null;
+  quote_id?: string | null;
+  subtotal?: number;
+  due_date?: string;
+  notes?: string | null;
+}
+
+export interface VoidInvoiceInput {
+  invoice_id: string;
+  notes?: string;
+}
+
 export interface MarkInvoicePaidInput {
   invoice_id: string;
 }
@@ -53,6 +68,92 @@ export async function createInvoice(
   return data as Record<string, unknown>;
 }
 
+export async function updateInvoice(
+  input: UpdateInvoiceInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.invoice_id) throw new Error('invoice_id is required.');
+  if (input.subtotal !== undefined && input.subtotal <= 0) {
+    throw new Error('Subtotal must be greater than zero.');
+  }
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('invoices')
+    .select('status')
+    .eq('id', input.invoice_id)
+    .eq('company_id', companyId)
+    .single();
+  if (fetchError || !existing) throw new Error('Invoice not found.');
+  if (existing.status !== 'draft') {
+    throw new Error('Only draft invoices can be edited. Sent invoices must be voided and re-issued.');
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.client_id !== undefined) updates.client_id = input.client_id;
+  if (input.job_id !== undefined) updates.job_id = input.job_id;
+  if (input.quote_id !== undefined) updates.quote_id = input.quote_id;
+  if (input.due_date !== undefined) updates.due_date = input.due_date;
+  if (input.notes !== undefined) updates.notes = input.notes;
+  if (input.subtotal !== undefined) {
+    const vatAmount = Math.round(input.subtotal * 0.2 * 100) / 100;
+    updates.subtotal = input.subtotal;
+    updates.vat_amount = vatAmount;
+    updates.total_amount = Math.round((input.subtotal + vatAmount) * 100) / 100;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No fields to update were provided.');
+  }
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .update(updates)
+    .eq('id', input.invoice_id)
+    .eq('company_id', companyId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
+
+export async function voidInvoice(
+  input: VoidInvoiceInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.invoice_id) throw new Error('invoice_id is required.');
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('invoices')
+    .select('status, notes')
+    .eq('id', input.invoice_id)
+    .eq('company_id', companyId)
+    .single();
+  if (fetchError || !existing) throw new Error('Invoice not found.');
+  if (existing.status === 'paid') {
+    throw new Error('A paid invoice cannot be voided. Issue a credit note instead.');
+  }
+  if (existing.status === 'void') {
+    throw new Error('This invoice is already void.');
+  }
+
+  let updatedNotes = (existing.notes as string) || '';
+  if (input.notes) {
+    updatedNotes += `\n[${new Date().toISOString()}] Voided: ${input.notes}`;
+  }
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .update({ status: 'void', notes: updatedNotes.trim() || null })
+    .eq('id', input.invoice_id)
+    .eq('company_id', companyId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
+
 export async function markInvoicePaid(
   input: MarkInvoicePaidInput,
   supabase: SupabaseClient,
@@ -79,6 +180,7 @@ export async function getOutstandingInvoices(
     .select('*, clients:client_id (id, company_name, contact_name)')
     .eq('company_id', companyId)
     .neq('status', 'paid')
+    .neq('status', 'void')
     .order('due_date', { ascending: true });
   if (error) throw new Error(error.message);
 
@@ -100,7 +202,7 @@ export async function getInvoiceSummary(
 
   const [paidResult, outstandingResult] = await Promise.all([
     supabase.from('invoices').select('total_amount, paid_at').eq('company_id', companyId).eq('status', 'paid'),
-    supabase.from('invoices').select('total_amount, status, due_date').eq('company_id', companyId).neq('status', 'paid'),
+    supabase.from('invoices').select('total_amount, status, due_date').eq('company_id', companyId).neq('status', 'paid').neq('status', 'void'),
   ]);
   if (paidResult.error || outstandingResult.error) throw new Error('Failed to load invoice summary.');
 

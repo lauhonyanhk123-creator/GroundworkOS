@@ -327,10 +327,11 @@ sudo certbot renew --dry-run
    https://yourdomain.com/*
    ```
 
-4. Run database schema:
+4. Run database schema (skip if already done in Step 1):
    - Go to **SQL Editor**
-   - Paste contents of `src/lib/database/sql/schema.sql`
+   - Paste contents of `database/schema.sql`
    - Execute
+   - For an existing database, run the scripts in `database/migrations/` instead
 
 ## Step 8: Set Up Custom Domain (Optional)
 

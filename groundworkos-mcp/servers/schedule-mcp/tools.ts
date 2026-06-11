@@ -11,6 +11,22 @@ export interface CreateScheduleEntryInput {
   notes?: string;
 }
 
+export interface UpdateScheduleEntryInput {
+  entry_id: string;
+  job_id?: string | null;
+  title?: string;
+  description?: string | null;
+  start_datetime?: string;
+  end_datetime?: string;
+  crew_count?: number;
+  plant_assigned?: string | null;
+  notes?: string | null;
+}
+
+export interface DeleteScheduleEntryInput {
+  entry_id: string;
+}
+
 export interface GetWeeklyScheduleInput {
   week_start_date: string;
 }
@@ -52,6 +68,66 @@ export async function createScheduleEntry(
     .single();
   if (error) throw new Error(error.message);
   return data as Record<string, unknown>;
+}
+
+export async function updateScheduleEntry(
+  input: UpdateScheduleEntryInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.entry_id) throw new Error('entry_id is required.');
+  if (input.title !== undefined && !input.title.trim()) {
+    throw new Error('Schedule entry title cannot be empty.');
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.job_id !== undefined) updates.job_id = input.job_id;
+  if (input.title !== undefined) updates.title = input.title.trim();
+  if (input.description !== undefined) updates.description = input.description;
+  if (input.start_datetime !== undefined) updates.start_datetime = input.start_datetime;
+  if (input.end_datetime !== undefined) updates.end_datetime = input.end_datetime;
+  if (input.crew_count !== undefined) updates.crew_count = input.crew_count;
+  if (input.plant_assigned !== undefined) updates.plant_assigned = input.plant_assigned;
+  if (input.notes !== undefined) updates.notes = input.notes;
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No fields to update were provided.');
+  }
+
+  const { data, error } = await supabase
+    .from('schedule_entries')
+    .update(updates)
+    .eq('id', input.entry_id)
+    .eq('company_id', companyId)
+    .select('*, jobs:job_id (id, job_number, title, client_id, clients:client_id (id, company_name))')
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
+
+export async function deleteScheduleEntry(
+  input: DeleteScheduleEntryInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.entry_id) throw new Error('entry_id is required.');
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('schedule_entries')
+    .select('id, title')
+    .eq('id', input.entry_id)
+    .eq('company_id', companyId)
+    .single();
+  if (fetchError || !existing) throw new Error('Schedule entry not found.');
+
+  const { error } = await supabase
+    .from('schedule_entries')
+    .delete()
+    .eq('id', input.entry_id)
+    .eq('company_id', companyId);
+  if (error) throw new Error(error.message);
+
+  return { deleted: true, entry_id: input.entry_id, title: existing.title };
 }
 
 export async function getWeeklySchedule(

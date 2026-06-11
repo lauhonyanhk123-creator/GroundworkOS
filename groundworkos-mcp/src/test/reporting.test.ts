@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { cisRateFor } from '../../servers/reporting-mcp/tools';
 
 // Pipeline summary aggregation logic from reporting-mcp
 
@@ -144,12 +145,12 @@ describe('Reporting: aged debtor bucketing', () => {
 
 // ─── CIS deduction logic ─────────────────────────────────────────────────────
 
-function calculateCisDeduction(grossPayment: number): number {
-  return Math.round(grossPayment * 0.20 * 100) / 100;
+function calculateCisDeduction(grossPayment: number, cisStatus: string): number {
+  return Math.round(grossPayment * cisRateFor(cisStatus) * 100) / 100;
 }
 
-function calculateNetPayment(grossPayment: number): number {
-  const deduction = calculateCisDeduction(grossPayment);
+function calculateNetPayment(grossPayment: number, cisStatus: string): number {
+  const deduction = calculateCisDeduction(grossPayment, cisStatus);
   return Math.round((grossPayment - deduction) * 100) / 100;
 }
 
@@ -158,28 +159,47 @@ function buildMonthLabel(month: number, year: number): string {
 }
 
 describe('Reporting: CIS deduction calculations', () => {
-  it('calculates 20% CIS deduction', () => {
-    expect(calculateCisDeduction(1000)).toBe(200);
+  it('applies HMRC rates per CIS status', () => {
+    expect(cisRateFor('gross')).toBe(0);
+    expect(cisRateFor('net')).toBe(0.2);
+    expect(cisRateFor('unverified')).toBe(0.3);
+    expect(cisRateFor('unmatched')).toBe(0.3);
+    expect(cisRateFor(null)).toBe(0.3);
+    expect(cisRateFor(undefined)).toBe(0.3);
+  });
+
+  it('calculates 20% CIS deduction for verified (net) subcontractors', () => {
+    expect(calculateCisDeduction(1000, 'net')).toBe(200);
+  });
+
+  it('deducts nothing for gross payment status', () => {
+    expect(calculateCisDeduction(1000, 'gross')).toBe(0);
+    expect(calculateNetPayment(1000, 'gross')).toBe(1000);
+  });
+
+  it('deducts 30% for unverified subcontractors', () => {
+    expect(calculateCisDeduction(1000, 'unverified')).toBe(300);
+    expect(calculateNetPayment(1000, 'unverified')).toBe(700);
   });
 
   it('deduction on zero is zero', () => {
-    expect(calculateCisDeduction(0)).toBe(0);
+    expect(calculateCisDeduction(0, 'net')).toBe(0);
   });
 
   it('net payment is gross minus deduction', () => {
-    expect(calculateNetPayment(1000)).toBe(800);
+    expect(calculateNetPayment(1000, 'net')).toBe(800);
   });
 
   it('rounds to 2 decimal places', () => {
-    expect(calculateCisDeduction(333.33)).toBe(66.67);
-    expect(calculateNetPayment(333.33)).toBe(266.66);
+    expect(calculateCisDeduction(333.33, 'net')).toBe(66.67);
+    expect(calculateNetPayment(333.33, 'net')).toBe(266.66);
   });
 
   it('totals sum correctly across multiple entries', () => {
     const payments = [1000, 2500, 750];
     const totalGross = payments.reduce((s, p) => s + p, 0);
-    const totalDeductions = payments.reduce((s, p) => s + calculateCisDeduction(p), 0);
-    const totalNet = payments.reduce((s, p) => s + calculateNetPayment(p), 0);
+    const totalDeductions = payments.reduce((s, p) => s + calculateCisDeduction(p, 'net'), 0);
+    const totalNet = payments.reduce((s, p) => s + calculateNetPayment(p, 'net'), 0);
     expect(totalGross).toBe(4250);
     expect(totalDeductions).toBe(850);
     expect(totalNet).toBe(3400);

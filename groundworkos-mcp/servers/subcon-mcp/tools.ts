@@ -10,6 +10,17 @@ export interface CreateSubcontractorInput {
   notes?: string;
 }
 
+export interface UpdateSubcontractorInput {
+  subcontractor_id: string;
+  company_name?: string;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  trade?: string | null;
+  utr_number?: string | null;
+  notes?: string | null;
+}
+
 export interface VerifyCISStatusInput {
   subcontractor_id: string;
   utr_number: string;
@@ -37,6 +48,45 @@ export async function createSubcontractor(
       notes: input.notes ?? null,
       cis_status: 'unverified',
     })
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
+
+export async function updateSubcontractor(
+  input: UpdateSubcontractorInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.subcontractor_id) throw new Error('subcontractor_id is required.');
+  if (input.company_name !== undefined && !input.company_name.trim()) {
+    throw new Error('Company name cannot be empty.');
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.company_name !== undefined) updates.company_name = input.company_name.trim();
+  if (input.contact_name !== undefined) updates.contact_name = input.contact_name;
+  if (input.email !== undefined) updates.email = input.email;
+  if (input.phone !== undefined) updates.phone = input.phone;
+  if (input.trade !== undefined) updates.trade = input.trade;
+  if (input.notes !== undefined) updates.notes = input.notes;
+  if (input.utr_number !== undefined) {
+    updates.utr_number = input.utr_number;
+    // A changed UTR invalidates any previous HMRC verification.
+    updates.cis_status = 'unverified';
+    updates.cis_verified_at = null;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No fields to update were provided.');
+  }
+
+  const { data, error } = await supabase
+    .from('subcontractors')
+    .update(updates)
+    .eq('id', input.subcontractor_id)
+    .eq('company_id', companyId)
     .select()
     .single();
   if (error) throw new Error(error.message);

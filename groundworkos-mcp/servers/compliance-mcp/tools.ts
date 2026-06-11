@@ -10,6 +10,19 @@ export interface AddDocumentInput {
   notes?: string;
 }
 
+export interface UpdateDocumentInput {
+  document_id: string;
+  name?: string;
+  type?: string;
+  related_to?: string | null;
+  related_id?: string | null;
+  expiry_date?: string | null;
+}
+
+export interface DeleteDocumentInput {
+  document_id: string;
+}
+
 export interface FlagExpiringDocumentsInput {
   days_ahead?: number;
 }
@@ -105,6 +118,77 @@ export async function checkComplianceStatus(
       valid_count: validDocs.length,
     },
   };
+}
+
+export async function updateDocument(
+  input: UpdateDocumentInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.document_id) throw new Error('document_id is required.');
+  if (input.name !== undefined && !input.name.trim()) {
+    throw new Error('Document name cannot be empty.');
+  }
+
+  const updates: Record<string, unknown> = {};
+  if (input.name !== undefined) updates.name = input.name.trim();
+  if (input.type !== undefined) updates.type = input.type;
+  if (input.related_to !== undefined) updates.related_to = input.related_to;
+  if (input.related_id !== undefined) updates.related_id = input.related_id;
+  if (input.expiry_date !== undefined) {
+    updates.expiry_date = input.expiry_date;
+    updates.status = deriveDocumentStatus(input.expiry_date);
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No fields to update were provided.');
+  }
+
+  const { data, error } = await supabase
+    .from('documents')
+    .update(updates)
+    .eq('id', input.document_id)
+    .eq('company_id', companyId)
+    .select()
+    .single();
+  if (error) throw new Error(error.message);
+  return data as Record<string, unknown>;
+}
+
+export async function deleteDocument(
+  input: DeleteDocumentInput,
+  supabase: SupabaseClient,
+  companyId: string
+): Promise<Record<string, unknown>> {
+  if (!input.document_id) throw new Error('document_id is required.');
+
+  const { data: existing, error: fetchError } = await supabase
+    .from('documents')
+    .select('id, name, file_path')
+    .eq('id', input.document_id)
+    .eq('company_id', companyId)
+    .single();
+  if (fetchError || !existing) throw new Error('Document not found.');
+
+  const { error } = await supabase
+    .from('documents')
+    .delete()
+    .eq('id', input.document_id)
+    .eq('company_id', companyId);
+  if (error) throw new Error(error.message);
+
+  // The DB row is the source of truth; a failed storage removal just leaves
+  // an orphaned file, so it is logged rather than failing the delete.
+  if (existing.file_path) {
+    const { error: storageError } = await supabase.storage
+      .from('groundworkos-documents')
+      .remove([existing.file_path as string]);
+    if (storageError) {
+      console.error('[compliance.deleteDocument] Failed to remove stored file:', storageError);
+    }
+  }
+
+  return { deleted: true, document_id: input.document_id, name: existing.name };
 }
 
 export async function flagExpiringDocuments(

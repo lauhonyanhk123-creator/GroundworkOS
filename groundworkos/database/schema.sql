@@ -45,6 +45,10 @@ CREATE TABLE jobs (
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     job_number TEXT UNIQUE NOT NULL,
     client_id UUID REFERENCES clients(id) ON DELETE SET NULL,
+    -- Principal subcontractor on the job; CIS reporting attributes paid
+    -- invoices on the job to this subcontractor. The FK is added after the
+    -- subcontractors table is created (see below).
+    subcontractor_id UUID,
     title TEXT NOT NULL,
     description TEXT,
     site_address TEXT,
@@ -93,7 +97,7 @@ CREATE TABLE invoices (
     subtotal DECIMAL(12, 2) DEFAULT 0,
     vat_amount DECIMAL(12, 2) DEFAULT 0,
     total_amount DECIMAL(12, 2) DEFAULT 0,
-    status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue')),
+    status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'void')),
     due_date DATE,
     paid_at TIMESTAMPTZ,
     notes TEXT,
@@ -117,6 +121,10 @@ CREATE TABLE subcontractors (
     notes TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- jobs.subcontractor_id is declared above, before this table exists
+ALTER TABLE jobs ADD CONSTRAINT jobs_subcontractor_id_fkey
+    FOREIGN KEY (subcontractor_id) REFERENCES subcontractors(id) ON DELETE SET NULL;
 
 -- ============================================
 -- DOCUMENTS TABLE
@@ -262,28 +270,6 @@ ALTER TABLE documents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE schedule_entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE status_history ENABLE ROW LEVEL SECURITY;
 
--- Helper function to get current user's company_id
-CREATE OR REPLACE FUNCTION get_user_company_id()
-RETURNS UUID AS $$
-DECLARE
-    user_id UUID;
-    company_id UUID;
-BEGIN
-    user_id := current_setting('request.jwt.claim.sub', true)::UUID;
-    
-    IF user_id IS NULL THEN
-        RETURN NULL;
-    END IF;
-    
-    SELECT company_id INTO company_id
-    FROM user_companies
-    WHERE user_id = get_user_company_id.user_id
-    LIMIT 1;
-    
-    RETURN company_id;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
 -- ============================================
 -- USER_COMPANIES TABLE (links auth.users to companies)
 -- ============================================
@@ -300,16 +286,15 @@ CREATE TABLE user_companies (
 ALTER TABLE user_companies ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for user_companies
+-- SELECT only: users may see their own memberships. All writes (creating a
+-- company's first admin, inviting/removing members, changing roles) go through
+-- server-side API routes using the service-role key, which validate that the
+-- requester is an admin of the target company. A client-side INSERT policy
+-- here would let any authenticated user grant themselves membership of an
+-- arbitrary company, so none is defined.
 CREATE POLICY "Users can view their own company memberships"
     ON user_companies FOR SELECT
     USING (auth.uid() = user_id);
-
-CREATE POLICY "Admins can manage company memberships"
-    ON user_companies FOR ALL
-    USING (
-        auth.uid() = user_id AND
-        role = 'admin'
-    );
 
 -- ============================================
 -- RLS POLICIES FOR COMPANIES
@@ -324,9 +309,9 @@ CREATE POLICY "Users can view their own companies"
         )
     );
 
-CREATE POLICY "Admins can insert companies"
-    ON companies FOR INSERT
-    WITH CHECK (auth.uid() IS NOT NULL);
+-- Companies are created only by the server-side onboarding route (service-role
+-- key), which also creates the founding admin membership atomically. No
+-- client-side INSERT policy is defined.
 
 CREATE POLICY "Admins can update companies"
     ON companies FOR UPDATE
@@ -647,6 +632,7 @@ CREATE INDEX idx_clients_company_id ON clients(company_id);
 CREATE INDEX idx_clients_company_name ON clients(company_name);
 CREATE INDEX idx_jobs_company_id ON jobs(company_id);
 CREATE INDEX idx_jobs_client_id ON jobs(client_id);
+CREATE INDEX idx_jobs_subcontractor_id ON jobs(subcontractor_id);
 CREATE INDEX idx_jobs_status ON jobs(status);
 CREATE INDEX idx_quotes_company_id ON quotes(company_id);
 CREATE INDEX idx_quotes_client_id ON quotes(client_id);
