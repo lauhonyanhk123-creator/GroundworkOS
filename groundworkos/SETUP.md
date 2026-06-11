@@ -54,6 +54,15 @@ This guide walks you through setting up GroundworkOS from scratch on a fresh ser
 2. Click **Invite user**
 3. Enter the client's email address
 4. They will receive an email to set their password
+5. On first sign-in they are taken to **/onboarding** to create their company
+   (or an existing company admin can add them from **Settings → Team**)
+
+### 1.7 (Optional) Seed demo data
+1. Add `SEED_USER_EMAIL=you@example.com` to `.env.local` (an already-registered user)
+2. Run `npm run seed` from the `groundworkos/` directory
+3. This creates a **Demo Groundworks Ltd** company with clients, jobs, quotes,
+   invoices, documents, and schedule entries, and links the seed user as its admin.
+   Re-running the seed wipes and recreates only this demo company.
 
 ---
 

@@ -80,7 +80,8 @@ export default function SignupPage() {
                 <p className="font-semibold mb-1">Account created</p>
                 <p className="text-success/80">
                   Check your email at <span className="font-mono">{email}</span> to confirm your
-                  address. Your administrator will then activate your account.
+                  address, then sign in to set up your company — or ask your administrator to
+                  add you to an existing one.
                 </p>
               </div>
             </div>

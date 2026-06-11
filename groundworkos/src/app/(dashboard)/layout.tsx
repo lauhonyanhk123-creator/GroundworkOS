@@ -65,12 +65,21 @@ export default function DashboardLayout({
       if (!data.user) return;
 
       try {
-        const { data: userCompanies } = await supabase
+        const { data: userCompanies, error: companiesError } = await supabase
           .from('user_companies')
           .select('company_id, companies:company_id(id, name)')
           .eq('user_id', data.user.id);
 
+        if (companiesError) throw companiesError;
         if (!userCompanies) return;
+
+        // A signed-in user with no company cannot use any page — send them to
+        // company set-up instead of letting every page error with "No company
+        // found". (Only on a confirmed empty list, never on a fetch failure.)
+        if (userCompanies.length === 0) {
+          router.replace('/onboarding');
+          return;
+        }
 
         const options: CompanyOption[] = (userCompanies as Array<{ company_id: string; companies: unknown }>)
           .map((uc) => {
@@ -89,7 +98,7 @@ export default function DashboardLayout({
         console.error('[DashboardLayout] Failed to load companies:', err);
       }
     });
-  }, []);
+  }, [router]);
 
   const handleSignOut = useCallback(async () => {
     const supabase = createClient();
