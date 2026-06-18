@@ -5,25 +5,28 @@ import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
 import { formatCurrency, formatDate, getMonday } from '../lib/utils';
-import { JOBS, INVOICES, DOCUMENTS, SCHEDULE } from '../data/mock';
+import { useApp } from '../store/AppContext';
 
 export function DashboardPage() {
+  const { state } = useApp();
+  const { jobs, invoices, documents, schedule, subcontractors, plant } = state;
+
   const today = new Date().toISOString().split('T')[0];
-  const activeJobs = JOBS.filter(j => j.status === 'active');
-  const quotedJobs = JOBS.filter(j => j.status === 'quoted');
-  const outstandingInvoices = INVOICES.filter(i => i.status === 'sent' || i.status === 'overdue');
-  const overdueInvoices = INVOICES.filter(i => i.status === 'overdue');
+  const activeJobs = jobs.filter(j => j.status === 'active');
+  const quotedJobs = jobs.filter(j => j.status === 'quoted');
+  const outstandingInvoices = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
+  const overdueInvoices = invoices.filter(i => i.status === 'overdue');
   const totalOutstanding = outstandingInvoices.reduce((s, i) => s + i.total_amount, 0);
-  const expiringDocs = DOCUMENTS.filter(d => d.status === 'expiring_soon');
-  const expiredDocs = DOCUMENTS.filter(d => d.status === 'expired');
-  const todaySchedule = SCHEDULE.filter(e => e.start_datetime.startsWith(today));
+  const expiringDocs = documents.filter(d => d.status === 'expiring_soon');
+  const expiredDocs = documents.filter(d => d.status === 'expired');
+  const todaySchedule = schedule.filter(e => e.start_datetime.startsWith(today));
 
   const monday = getMonday(new Date());
   const weekDays = ['Mon','Tue','Wed','Thu','Fri'].map((day, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
     const dateStr = d.toISOString().split('T')[0];
-    const entries = SCHEDULE.filter(e => e.start_datetime.startsWith(dateStr));
+    const entries = schedule.filter(e => e.start_datetime.startsWith(dateStr));
     return { day, date: d.getDate(), isToday: dateStr === today, entries };
   });
 
@@ -55,7 +58,7 @@ export function DashboardPage() {
       )}
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Active Jobs" value={activeJobs.length} barPercent={Math.round((activeJobs.length / JOBS.length) * 100)} />
+        <StatCard label="Active Jobs" value={activeJobs.length} barPercent={Math.round((activeJobs.length / Math.max(jobs.length, 1)) * 100)} />
         <StatCard label="Outstanding" value={formatCurrency(totalOutstanding)} sub={overdueInvoices.length ? `${overdueInvoices.length} overdue` : undefined} barPercent={45} />
         <StatCard label="Pending Quotes" value={quotedJobs.length} barPercent={30} />
         <StatCard label="Doc Alerts" value={expiringDocs.length + expiredDocs.length} sub={expiredDocs.length ? `${expiredDocs.length} expired` : undefined} barPercent={expiringDocs.length > 0 ? 70 : 0} />
@@ -129,19 +132,19 @@ export function DashboardPage() {
         <div className="space-y-5">
           <Panel title="Pipeline">
             {[
-              { label: 'Active', jobs: JOBS.filter(j => j.status === 'active'), color: '#FFD600' },
-              { label: 'Quoted', jobs: JOBS.filter(j => j.status === 'quoted'), color: '#fb923c' },
-              { label: 'Enquiry', jobs: JOBS.filter(j => j.status === 'enquiry'), color: '#60a5fa' },
-            ].map(({ label, jobs, color }) => {
-              const val = jobs.reduce((s, j) => s + (j.value ?? 0), 0);
+              { label: 'Active', jobs: jobs.filter(j => j.status === 'active'), color: '#FFD600' },
+              { label: 'Quoted', jobs: jobs.filter(j => j.status === 'quoted'), color: '#fb923c' },
+              { label: 'Enquiry', jobs: jobs.filter(j => j.status === 'enquiry'), color: '#60a5fa' },
+            ].map(({ label, jobs: pJobs, color }) => {
+              const val = pJobs.reduce((s, j) => s + (j.value ?? 0), 0);
               return (
                 <div key={label} className="mb-3">
                   <div className="flex justify-between items-baseline mb-1">
-                    <span className="text-xs font-mono uppercase" style={{ color: '#666666' }}>{label} ({jobs.length})</span>
+                    <span className="text-xs font-mono uppercase" style={{ color: '#666666' }}>{label} ({pJobs.length})</span>
                     <span className="text-sm font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color }}>{formatCurrency(val)}</span>
                   </div>
                   <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#242424' }}>
-                    <div className="h-full rounded-full" style={{ width: `${Math.min(100, jobs.length * 20)}%`, backgroundColor: color }} />
+                    <div className="h-full rounded-full" style={{ width: `${Math.min(100, pJobs.length * 20)}%`, backgroundColor: color }} />
                   </div>
                 </div>
               );
@@ -176,10 +179,10 @@ export function DashboardPage() {
 
           <Panel title="Quick Stats">
             {[
-              { label: 'Total Job Value', value: formatCurrency(JOBS.filter(j => j.status !== 'cancelled').reduce((s,j) => s + (j.value ?? 0), 0)) },
-              { label: 'Revenue (Paid)', value: formatCurrency(INVOICES.filter(i => i.status === 'paid').reduce((s,i) => s + i.total_amount, 0)) },
-              { label: 'Active Subcons', value: '5' },
-              { label: 'Plant Items', value: '7' },
+              { label: 'Total Job Value', value: formatCurrency(jobs.filter(j => j.status !== 'cancelled').reduce((s,j) => s + (j.value ?? 0), 0)) },
+              { label: 'Revenue (Paid)', value: formatCurrency(invoices.filter(i => i.status === 'paid').reduce((s,i) => s + i.total_amount, 0)) },
+              { label: 'Active Subcons', value: String(subcontractors.filter(s => s.active).length) },
+              { label: 'Plant Items', value: String(plant.length) },
             ].map(({ label, value }) => (
               <div key={label} className="flex justify-between items-baseline py-2" style={{ borderBottom: '1px solid #1c1c1c' }}>
                 <span className="text-xs" style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{label}</span>

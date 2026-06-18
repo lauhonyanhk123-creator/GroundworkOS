@@ -1,22 +1,25 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
-import { cn, formatCurrency, formatDate } from '../lib/utils';
-import { INVOICES, JOBS, CIS_RETURNS, RATE_BOOK } from '../data/mock';
+import { formatCurrency, formatDate } from '../lib/utils';
+import { RATE_BOOK } from '../data/mock';
+import { useApp } from '../store/AppContext';
 
 type ReportTab = 'overview' | 'cis' | 'ratebook';
 
 export function ReportsPage() {
+  const { state, dispatch } = useApp();
+  const { invoices, jobs, cisReturns } = state;
+
   const [tab, setTab] = useState<ReportTab>('overview');
   const [rateCategory, setRateCategory] = useState('all');
 
-  const paidInvoices = INVOICES.filter(i => i.status === 'paid');
+  const paidInvoices = invoices.filter(i => i.status === 'paid');
   const totalRevenue = paidInvoices.reduce((s, i) => s + i.total_amount, 0);
-  const totalOutstanding = INVOICES.filter(i => i.status !== 'paid' && i.status !== 'credited').reduce((s, i) => s + i.total_amount, 0);
-  const totalPipeline = JOBS.filter(j => j.status !== 'cancelled').reduce((s, j) => s + (j.value ?? 0), 0);
-  const totalJobs = JOBS.length;
+  const totalOutstanding = invoices.filter(i => i.status !== 'paid' && i.status !== 'credited').reduce((s, i) => s + i.total_amount, 0);
+  const totalPipeline = jobs.filter(j => j.status !== 'cancelled').reduce((s, j) => s + (j.value ?? 0), 0);
+  const totalJobs = jobs.length;
 
   const monthMap = new Map<string, number>();
   for (let i = 5; i >= 0; i--) {
@@ -39,15 +42,29 @@ export function ReportsPage() {
     { label: 'Quoted', status: 'quoted', color: '#fb923c' },
     { label: 'Complete', status: 'complete', color: '#4ade80' },
   ].map(({ label, status, color }) => {
-    const jobs = JOBS.filter(j => j.status === status);
-    return { label, color, count: jobs.length, value: jobs.reduce((s, j) => s + (j.value ?? 0), 0) };
+    const pJobs = jobs.filter(j => j.status === status);
+    return { label, color, count: pJobs.length, value: pJobs.reduce((s, j) => s + (j.value ?? 0), 0) };
   });
 
-  const cisPending = CIS_RETURNS.filter(r => !r.submitted);
-  const cisTotalDeductions = CIS_RETURNS.filter(r => r.submitted).reduce((s, r) => s + r.deduction_amount, 0);
+  const cisPending = cisReturns.filter(r => !r.submitted);
+  const cisTotalDeductions = cisReturns.filter(r => r.submitted).reduce((s, r) => s + r.deduction_amount, 0);
 
   const rateCategories = ['all', ...Array.from(new Set(RATE_BOOK.map(r => r.category)))];
   const filteredRates = RATE_BOOK.filter(r => rateCategory === 'all' || r.category === rateCategory);
+
+  function submitReturn(taxMonth: string) {
+    cisReturns
+      .filter(r => r.tax_month === taxMonth && !r.submitted)
+      .forEach(r => {
+        dispatch({
+          type: 'UPDATE_INVOICE',
+          id: r.id,
+          updates: {},
+        });
+      });
+  }
+
+  const taxMonths = [...new Set(cisReturns.map(r => r.tax_month))].sort().reverse();
 
   return (
     <div className="space-y-4">
@@ -56,9 +73,7 @@ export function ReportsPage() {
           <h1 className="text-2xl font-bold uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Reports</h1>
           <p className="text-sm mt-0.5" style={{ color: '#666666' }}>Financial reports, CIS returns & rate book</p>
         </div>
-        <div className="flex gap-2">
-          <Btn variant="outline" size="sm">Export</Btn>
-        </div>
+        <Btn variant="outline" size="sm">Export</Btn>
       </div>
 
       <div className="flex items-center gap-1 p-0.5 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
@@ -125,7 +140,7 @@ export function ReportsPage() {
           </div>
 
           <Panel title="Aged Debtors">
-            {INVOICES.filter(i => i.status === 'overdue' || i.status === 'sent').length === 0 ? (
+            {invoices.filter(i => i.status === 'overdue' || i.status === 'sent').length === 0 ? (
               <p className="text-sm text-center py-8" style={{ color: '#444444' }}>No outstanding invoices</p>
             ) : (
               <div className="overflow-x-auto">
@@ -138,7 +153,7 @@ export function ReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {INVOICES.filter(i => i.status === 'overdue' || i.status === 'sent').map(inv => (
+                    {invoices.filter(i => i.status === 'overdue' || i.status === 'sent').map(inv => (
                       <tr key={inv.id} style={{ borderBottom: '1px solid #1c1c1c' }} className="hover:bg-[#1c1c1c] transition-colors">
                         <td className="py-2 px-3 text-sm" style={{ color: '#e8e8e8' }}>{inv.client?.company_name}</td>
                         <td className="py-2 px-3 text-sm font-mono" style={{ color: '#666666' }}>{inv.invoice_number}</td>
@@ -178,15 +193,15 @@ export function ReportsPage() {
             ))}
           </div>
 
-          {['2024-10', '2024-09'].map(month => {
-            const monthReturns = CIS_RETURNS.filter(r => r.tax_month === month);
+          {taxMonths.map(month => {
+            const monthReturns = cisReturns.filter(r => r.tax_month === month);
             if (monthReturns.length === 0) return null;
-            const submitted = monthReturns[0].submitted;
+            const submitted = monthReturns.every(r => r.submitted);
             return (
               <Panel key={month} title={`Tax Month: ${new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`} actions={
                 submitted
                   ? <span className="text-xs font-mono px-2 py-1 rounded" style={{ backgroundColor: '#0d1f0d', color: '#4ade80', border: '1px solid rgba(74,222,128,0.3)' }}>SUBMITTED</span>
-                  : <Btn size="sm">Submit Return</Btn>
+                  : <Btn size="sm" onClick={() => submitReturn(month)}>Submit Return</Btn>
               }>
                 <div className="overflow-x-auto">
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>

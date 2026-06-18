@@ -2,22 +2,68 @@ import { useState } from 'react';
 import { Plus, Search, Mail, Phone } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Btn } from '../components/ui/Btn';
+import { Modal, Field, Input, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency } from '../lib/utils';
-import { CLIENTS } from '../data/mock';
+import { useApp } from '../store/AppContext';
+
+const emptyForm = {
+  company_name: '', contact_name: '', email: '',
+  phone: '', address: '', vat_number: '', notes: '',
+};
 
 export function ClientsPage() {
+  const { state, dispatch } = useApp();
+  const { clients } = state;
+
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const filtered = CLIENTS.filter(c => {
+  const filtered = clients.filter(c => {
     if (!search) return true;
     const q = search.toLowerCase();
     return c.company_name.toLowerCase().includes(q) || (c.contact_name ?? '').toLowerCase().includes(q) || (c.email ?? '').toLowerCase().includes(q);
   });
 
-  const selectedClient = selected ? CLIENTS.find(c => c.id === selected) : null;
-  const totalValue = CLIENTS.reduce((s, c) => s + c.total_value, 0);
-  const totalJobs = CLIENTS.reduce((s, c) => s + c.total_jobs, 0);
+  const selectedClient = selected ? clients.find(c => c.id === selected) : null;
+  const totalValue = clients.reduce((s, c) => s + c.total_value, 0);
+  const totalJobs = clients.reduce((s, c) => s + c.total_jobs, 0);
+
+  function openNew() {
+    setForm(emptyForm);
+    setErrors({});
+    setShowModal(true);
+  }
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.company_name.trim()) e.company_name = 'Company name is required';
+    return e;
+  }
+
+  function handleSubmit() {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    dispatch({
+      type: 'ADD_CLIENT',
+      client: {
+        id: crypto.randomUUID(),
+        company_name: form.company_name.trim(),
+        contact_name: form.contact_name || null,
+        email: form.email || null,
+        phone: form.phone || null,
+        address: form.address || null,
+        vat_number: form.vat_number || null,
+        notes: form.notes || null,
+        total_jobs: 0,
+        total_value: 0,
+        created_at: new Date().toISOString(),
+      },
+    });
+    setShowModal(false);
+  }
 
   return (
     <div className="space-y-4">
@@ -26,12 +72,12 @@ export function ClientsPage() {
           <h1 className="text-2xl font-bold uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Clients</h1>
           <p className="text-sm mt-0.5" style={{ color: '#666666' }}>Manage your client relationships</p>
         </div>
-        <Btn><Plus className="w-4 h-4" /> New Client</Btn>
+        <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Client</Btn>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'Total Clients', value: CLIENTS.length },
+          { label: 'Total Clients', value: clients.length },
           { label: 'Total Jobs', value: totalJobs },
           { label: 'Total Value', value: formatCurrency(totalValue) },
         ].map(({ label, value }) => (
@@ -50,29 +96,33 @@ export function ClientsPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className={selectedClient ? 'xl:col-span-2' : 'xl:col-span-3'}>
           <Panel>
-            <div className="space-y-2">
-              {filtered.map(client => (
-                <div key={client.id} onClick={() => setSelected(selected === client.id ? null : client.id)} className={cn('flex items-center gap-4 p-3 rounded cursor-pointer transition-colors', selected === client.id ? 'ring-1 ring-[#FFD600]' : 'hover:bg-[#1c1c1c]')} style={{ backgroundColor: '#1c1c1c' }}>
-                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#242424', color: '#FFD600', fontFamily: "'Barlow Condensed', sans-serif" }}>
-                    {client.company_name[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium" style={{ color: '#e8e8e8' }}>{client.company_name}</div>
-                    <div className="text-xs" style={{ color: '#666666' }}>{client.contact_name ?? '—'}</div>
-                  </div>
-                  <div className="text-right hidden sm:block">
-                    <div className="text-sm font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e8e8e8' }}>{client.total_jobs} jobs</div>
-                    <div className="text-xs" style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
-                  </div>
-                  {client.email && (
-                    <div className="flex items-center gap-1 hidden md:flex text-xs" style={{ color: '#444444' }}>
-                      <Mail className="w-3 h-3" />
-                      <span style={{ fontFamily: "'DM Mono', monospace" }}>{client.email}</span>
+            {filtered.length === 0 ? (
+              <p className="text-center py-12 text-sm" style={{ color: '#444444' }}>No clients found</p>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map(client => (
+                  <div key={client.id} onClick={() => setSelected(selected === client.id ? null : client.id)} className={cn('flex items-center gap-4 p-3 rounded cursor-pointer transition-colors', selected === client.id ? 'ring-1 ring-[#FFD600]' : 'hover:bg-[#242424]')} style={{ backgroundColor: '#1c1c1c' }}>
+                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#242424', color: '#FFD600', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                      {client.company_name[0]}
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium" style={{ color: '#e8e8e8' }}>{client.company_name}</div>
+                      <div className="text-xs" style={{ color: '#666666' }}>{client.contact_name ?? '—'}</div>
+                    </div>
+                    <div className="text-right hidden sm:block">
+                      <div className="text-sm font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e8e8e8' }}>{client.total_jobs} jobs</div>
+                      <div className="text-xs" style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
+                    </div>
+                    {client.email && (
+                      <div className="items-center gap-1 hidden md:flex text-xs" style={{ color: '#444444' }}>
+                        <Mail className="w-3 h-3" />
+                        <span style={{ fontFamily: "'DM Mono', monospace" }}>{client.email}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </Panel>
         </div>
 
@@ -122,16 +172,51 @@ export function ClientsPage() {
                     <p className="text-xs leading-relaxed" style={{ color: '#888888' }}>{selectedClient.notes}</p>
                   </div>
                 )}
-
-                <div className="flex gap-2 pt-2">
-                  <Btn size="sm" className="flex-1 justify-center">Edit</Btn>
-                  <Btn variant="outline" size="sm">New Invoice</Btn>
-                </div>
               </div>
             </Panel>
           </div>
         )}
       </div>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Client">
+        <div className="space-y-4">
+          <Field label="Company Name" required>
+            <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Midlands Groundworks Ltd" />
+            {errors.company_name && <p className="mt-1 text-xs" style={{ color: '#ff4444' }}>{errors.company_name}</p>}
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Contact Name">
+              <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. John Smith" />
+            </Field>
+            <Field label="VAT Number">
+              <Input value={form.vat_number} onChange={e => setForm(f => ({ ...f, vat_number: e.target.value }))} placeholder="e.g. GB123456789" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Email">
+              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@company.co.uk" />
+            </Field>
+            <Field label="Phone">
+              <Input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="07700 900000" />
+            </Field>
+          </div>
+
+          <Field label="Address">
+            <Textarea value={form.address} onChange={e => setForm(f => ({ ...f, address: e.target.value }))} placeholder="123 Business Park, Birmingham, B1 1AA" rows={2} />
+          </Field>
+
+          <Field label="Notes">
+            <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes about this client..." rows={2} />
+          </Field>
+
+          <div className="flex gap-3 pt-2">
+            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add Client</Btn>
+            <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

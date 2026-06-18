@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Btn } from '../components/ui/Btn';
-import { cn } from '../lib/utils';
-import { SCHEDULE } from '../data/mock';
+import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
+import { useApp } from '../store/AppContext';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -15,9 +15,29 @@ const TYPE_COLORS: Record<string, string> = {
   other: '#888888',
 };
 
+type EntryType = 'site_work' | 'delivery' | 'inspection' | 'meeting' | 'other';
+
+const emptyForm = {
+  title: '',
+  job_id: '',
+  type: 'site_work' as EntryType,
+  date: new Date().toISOString().split('T')[0],
+  time: '07:00',
+  end_time: '17:00',
+  crew_count: '1',
+  foreman: '',
+  plant_assigned: '',
+  notes: '',
+};
+
 export function SchedulePage() {
+  const { state, dispatch } = useApp();
+  const { schedule, jobs } = state;
+
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [view, setView] = useState<'week' | 'month'>('week');
+  const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   function getWeekBounds(date: Date) {
     const mon = new Date(date);
@@ -43,7 +63,7 @@ export function SchedulePage() {
   const today = new Date().toISOString().split('T')[0];
   const { start, end } = getWeekBounds(currentDate);
 
-  const weekEntries = SCHEDULE.filter(e => {
+  const weekEntries = schedule.filter(e => {
     const d = new Date(e.start_datetime);
     return d >= start && d <= end;
   });
@@ -62,6 +82,41 @@ export function SchedulePage() {
 
   const weekLabel = `${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
+  function openNew() {
+    setForm(emptyForm);
+    setErrors({});
+    setShowModal(true);
+  }
+
+  function validate() {
+    const e: Record<string, string> = {};
+    if (!form.title.trim()) e.title = 'Title is required';
+    return e;
+  }
+
+  function handleSubmit() {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    const job = jobs.find(j => j.id === form.job_id);
+    dispatch({
+      type: 'ADD_SCHEDULE',
+      entry: {
+        id: crypto.randomUUID(),
+        job_id: form.job_id || null,
+        job: job ? { job_number: job.job_number, title: job.title, client: job.client ?? null } : null,
+        title: form.title.trim(),
+        start_datetime: `${form.date}T${form.time}:00`,
+        end_datetime: `${form.date}T${form.end_time}:00`,
+        crew_count: parseInt(form.crew_count) || 1,
+        foreman: form.foreman || null,
+        plant_assigned: form.plant_assigned || null,
+        notes: form.notes || null,
+        type: form.type,
+      },
+    });
+    setShowModal(false);
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -69,7 +124,7 @@ export function SchedulePage() {
           <h1 className="text-2xl font-bold uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Schedule</h1>
           <p className="text-sm mt-0.5" style={{ color: '#666666' }}>Crew & plant allocation</p>
         </div>
-        <Btn><Plus className="w-4 h-4" /> Add Entry</Btn>
+        <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Entry</Btn>
       </div>
 
       <div className="flex items-center justify-between">
@@ -78,11 +133,6 @@ export function SchedulePage() {
           <span className="text-sm font-mono" style={{ color: '#e8e8e8' }}>{weekLabel}</span>
           <button onClick={nextWeek} className="p-1.5 rounded hover:bg-[#1c1c1c] transition-colors" style={{ color: '#666666' }}><ChevronRight className="w-4 h-4" /></button>
           <button onClick={() => setCurrentDate(new Date())} className="px-2 py-1 text-xs font-mono rounded" style={{ backgroundColor: '#1c1c1c', color: '#666666', border: '1px solid #2a2a2a' }}>Today</button>
-        </div>
-        <div className="flex items-center gap-1 p-0.5 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
-          {(['week', 'month'] as const).map(v => (
-            <button key={v} onClick={() => setView(v)} className="px-3 py-1 rounded text-xs font-mono uppercase transition-colors" style={view === v ? { backgroundColor: '#FFD600', color: '#0c0c0c' } : { color: '#666666' }}>{v}</button>
-          ))}
         </div>
       </div>
 
@@ -110,13 +160,13 @@ export function SchedulePage() {
         {weekDays.map((day, dayIdx) => {
           const dateStr = day.toISOString().split('T')[0];
           const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
-          if (dayEntries.length === 0 && dayIdx !== weekDays.findIndex(d => d.toISOString().split('T')[0] === today)) return null;
+          if (dayEntries.length === 0 && dateStr !== today) return null;
 
           return (
             <div key={dayIdx} className="grid" style={{ gridTemplateColumns: '80px 1fr', borderBottom: '1px solid #1c1c1c' }}>
               <div className="p-3 flex items-start justify-end" style={{ borderRight: '1px solid #2a2a2a' }}>
-                <span className="text-xs font-mono" style={{ color: day.toISOString().split('T')[0] === today ? '#FFD600' : '#444444' }}>
-                  {DAY_LABELS[(dayIdx + 6) % 7 < 5 ? (dayIdx + 6) % 7 : dayIdx]}
+                <span className="text-xs font-mono" style={{ color: dateStr === today ? '#FFD600' : '#444444' }}>
+                  {DAY_LABELS[dayIdx % 7]}
                 </span>
               </div>
               <div className="p-2 space-y-1.5">
@@ -154,6 +204,67 @@ export function SchedulePage() {
           </div>
         ))}
       </div>
+
+      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Schedule Entry">
+        <div className="space-y-4">
+          <Field label="Title" required>
+            <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage excavation — Phase 1" />
+            {errors.title && <p className="mt-1 text-xs" style={{ color: '#ff4444' }}>{errors.title}</p>}
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Type">
+              <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as EntryType }))}>
+                {Object.keys(TYPE_COLORS).map(t => (
+                  <option key={t} value={t}>{t.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}</option>
+                ))}
+              </Select>
+            </Field>
+            <Field label="Related Job">
+              <Select value={form.job_id} onChange={e => setForm(f => ({ ...f, job_id: e.target.value }))}>
+                <option value="">None</option>
+                {jobs.filter(j => j.status === 'active' || j.status === 'quoted').map(j => (
+                  <option key={j.id} value={j.id}>{j.job_number} — {j.title}</option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <Field label="Date">
+              <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+            </Field>
+            <Field label="Start Time">
+              <Input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} />
+            </Field>
+            <Field label="End Time">
+              <Input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Crew Count">
+              <Input type="number" value={form.crew_count} onChange={e => setForm(f => ({ ...f, crew_count: e.target.value }))} min="1" />
+            </Field>
+            <Field label="Foreman">
+              <Input value={form.foreman} onChange={e => setForm(f => ({ ...f, foreman: e.target.value }))} placeholder="e.g. Dave Walters" />
+            </Field>
+          </div>
+
+          <Field label="Plant Assigned">
+            <Input value={form.plant_assigned} onChange={e => setForm(f => ({ ...f, plant_assigned: e.target.value }))} placeholder="e.g. Cat 313 Excavator" />
+          </Field>
+
+          <Field label="Notes">
+            <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={2} />
+          </Field>
+
+          <div className="flex gap-3 pt-2">
+            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add to Schedule</Btn>
+            <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
