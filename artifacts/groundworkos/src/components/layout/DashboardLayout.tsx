@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'wouter';
 import { cn } from '../../lib/utils';
 import {
   LayoutDashboard, Briefcase, FileText, Receipt, Calendar,
   Users, HardHat, FolderOpen, BarChart3, Settings,
-  Menu, Bell, X, Truck, ChevronRight,
+  Menu, Bell, X, Truck, Search,
 } from 'lucide-react';
+import { GlobalSearch } from '../ui/GlobalSearch';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -32,11 +33,23 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const currentPage = navigation.find(
     item => 'href' in item && (location === item.href || (item.href !== '/' && location.startsWith(item.href)))
   );
   const pageTitle = currentPage && 'name' in currentPage ? currentPage.name : 'Dashboard';
+
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, []);
 
   return (
     <div className="min-h-screen flex" style={{ backgroundColor: '#0c0c0c', color: '#e8e8e8' }}>
@@ -120,10 +133,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded text-xs" style={{ backgroundColor: '#1c1c1c', border: '1px solid #2a2a2a', color: '#444444', fontFamily: "'DM Mono', monospace" }}>
-              <span style={{ color: '#FFD600' }}>AI</span>
-              <span>Ask anything...</span>
-            </div>
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors hover:border-[#FFD600]/40"
+              style={{ backgroundColor: '#1c1c1c', border: '1px solid #2a2a2a', color: '#444444', fontFamily: "'DM Mono', monospace" }}
+            >
+              <Search className="w-3 h-3" />
+              <span>Search...</span>
+              <kbd className="flex items-center gap-0.5 px-1 py-0.5 rounded text-xs" style={{ backgroundColor: '#0c0c0c', color: '#2a2a2a', border: '1px solid #2a2a2a', fontSize: '10px' }}>⌘K</kbd>
+            </button>
             <button className="relative p-2 rounded hover:bg-[#1c1c1c]" style={{ color: '#666666' }}>
               <Bell className="w-4 h-4" />
               <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: '#ff4444' }} />
@@ -135,6 +153,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+
+      <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
   );
 }
