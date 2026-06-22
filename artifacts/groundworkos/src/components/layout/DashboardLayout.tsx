@@ -92,7 +92,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                   'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 relative no-underline mb-0.5',
                   isActive ? 'text-[#e2e2e2]' : 'text-[#5a5a5a] hover:text-[#a0a0a0] hover:bg-[#161616]'
                 )}
-                style={isActive ? { backgroundColor: '#1a1a1a' } : undefined}
               >
                 {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full" style={{ backgroundColor: '#FFD600' }} />}
                 <Icon className="w-[15px] h-[15px] flex-shrink-0" />

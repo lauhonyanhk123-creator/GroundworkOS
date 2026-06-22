@@ -2,9 +2,8 @@ import { AlertTriangle, ArrowRight } from 'lucide-react';
 import { Link } from 'wouter';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Panel } from '../components/ui/Panel';
-import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
-import { formatCurrency, formatDate, getMonday } from '../lib/utils';
+import { formatCurrency, formatDate } from '../lib/utils';
 import { useApp } from '../store/AppContext';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -25,9 +24,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function DashboardPage() {
   const { state } = useApp();
-  const { jobs, invoices, documents, schedule, quotes } = state;
+  const { jobs, invoices, documents } = state;
 
-  const today = new Date().toISOString().split('T')[0];
   const activeJobs = jobs.filter(j => j.status === 'active');
   const outstandingInvoices = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
   const overdueInvoices = invoices.filter(i => i.status === 'overdue');
@@ -38,17 +36,6 @@ export function DashboardPage() {
   const totalPipeline = jobs.filter(j => j.status !== 'cancelled').reduce((s, j) => s + (j.value ?? 0), 0);
   const expiringDocs = documents.filter(d => d.status === 'expiring_soon');
   const expiredDocs = documents.filter(d => d.status === 'expired');
-  const todaySchedule = schedule.filter(e => e.start_datetime.startsWith(today));
-  const avgProgress = activeJobs.length ? Math.round(activeJobs.reduce((s, j) => s + (j.progress_percent ?? 0), 0) / activeJobs.length) : 0;
-  const quotePipelineValue = jobs.filter(j => j.status === 'quoted').reduce((s, j) => s + (j.value ?? 0), 0);
-
-  const monday = getMonday(new Date());
-  const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split('T')[0];
-    return { day, date: d.getDate(), isToday: dateStr === today, entries: schedule.filter(e => e.start_datetime.startsWith(dateStr)) };
-  });
 
   const monthMap = new Map<string, { invoiced: number; collected: number; month: string }>();
   for (let i = 5; i >= 0; i--) {
@@ -89,11 +76,9 @@ export function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2">
-          <Panel title="Revenue vs Collected — Last 6 Months" actions={
-            <Link href="/reports"><Btn variant="ghost" size="sm">Reports <ArrowRight className="w-3 h-3" /></Btn></Link>
-          }>
+      <Panel title="Revenue vs Collected — Last 6 Months" actions={
+        <Link href="/reports"><Btn variant="ghost" size="sm">Reports <ArrowRight className="w-3 h-3" /></Btn></Link>
+      }>
             <div style={{ height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData} barGap={4} barCategoryGap="32%">
@@ -115,43 +100,6 @@ export function DashboardPage() {
               </div>
             </div>
           </Panel>
-        </div>
-
-        <div className="space-y-4">
-          <Panel title="This Week">
-            <div className="grid grid-cols-5 gap-1 mb-4 pb-4" style={{ borderBottom: '1px solid #1a1a1a' }}>
-              {weekDays.map(d => (
-                <div key={d.day} className="text-center">
-                  <div className="text-xs mb-1" style={{ color: d.isToday ? '#e2e2e2' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{d.day}</div>
-                  <div className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: d.isToday ? '#e2e2e2' : '#3a3a3a' }}>{d.date}</div>
-                  {d.entries.length > 0 && (
-                    <div className="flex justify-center mt-1">
-                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: d.isToday ? '#e2e2e2' : '#5a5a5a' }} />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            {todaySchedule.length === 0 ? (
-              <p className="text-xs text-center py-2" style={{ color: '#3a3a3a' }}>Nothing scheduled today</p>
-            ) : todaySchedule.slice(0, 3).map(entry => (
-              <div key={entry.id} className="flex items-start gap-3 mb-3 last:mb-0">
-                <span className="text-xs flex-shrink-0 mt-0.5" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>
-                  {new Date(entry.start_datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <div>
-                  <div className="text-sm font-medium leading-snug" style={{ color: '#e2e2e2' }}>{entry.title}</div>
-                  {(entry.crew_count || entry.job) && (
-                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>
-                      {entry.crew_count ? `${entry.crew_count} crew` : ''}{entry.job ? ` · ${entry.job.job_number}` : ''}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </Panel>
-        </div>
-      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
@@ -182,63 +130,37 @@ export function DashboardPage() {
           </Panel>
         </div>
 
-        {hasAlerts && (
-          <Panel title="Alerts">
-            <div className="space-y-3">
-              {overdueInvoices.slice(0, 3).map(inv => (
-                <Link key={inv.id} href="/invoices">
-                  <div className="flex items-start gap-2.5 cursor-pointer group">
-                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#e03a3a' }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium group-hover:text-white transition-colors" style={{ color: '#e2e2e2' }}>{inv.invoice_number}</div>
-                      <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{formatCurrency(inv.total_amount)} overdue</div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-              {[...expiredDocs, ...expiringDocs].slice(0, 3).map(doc => (
-                <Link key={doc.id} href="/documents">
-                  <div className="flex items-start gap-2.5 cursor-pointer group">
-                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: doc.status === 'expired' ? '#e03a3a' : '#e07b39' }} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium group-hover:text-white transition-colors truncate" style={{ color: '#e2e2e2' }}>{doc.name}</div>
-                      <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>
-                        {doc.status === 'expired' ? 'Expired' : 'Expiring'} {formatDate(doc.expiry_date)}
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </Panel>
-        )}
-
-        {!hasAlerts && (
-          <Panel title="Quote Pipeline">
-            <div className="space-y-3">
-              {[
-                { label: 'Active', count: activeJobs.length, value: activeJobs.reduce((s, j) => s + (j.value ?? 0), 0), color: '#3db56d' },
-                { label: 'Quoted', count: jobs.filter(j => j.status === 'quoted').length, value: quotePipelineValue, color: '#c4a800' },
-                { label: 'Enquiry', count: jobs.filter(j => j.status === 'enquiry').length, value: jobs.filter(j => j.status === 'enquiry').reduce((s, j) => s + (j.value ?? 0), 0), color: '#4d90d4' },
-              ].map(({ label, count, value, color }) => (
-                <div key={label} className="flex items-center justify-between py-2" style={{ borderBottom: '1px solid #1a1a1a' }}>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
-                    <span className="text-sm" style={{ color: '#a0a0a0' }}>{label}</span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-sm font-medium" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(value)}</span>
-                    <span className="text-xs ml-2" style={{ color: '#5a5a5a' }}>{count}</span>
+        <Panel title="Alerts">
+          <div className="space-y-3">
+            {!hasAlerts && (
+              <p className="text-xs text-center py-2" style={{ color: '#3a3a3a' }}>All clear</p>
+            )}
+            {overdueInvoices.slice(0, 3).map(inv => (
+              <Link key={inv.id} href="/invoices">
+                <div className="flex items-start gap-2.5 cursor-pointer group">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#e03a3a' }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium group-hover:text-white transition-colors" style={{ color: '#e2e2e2' }}>{inv.invoice_number}</div>
+                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{formatCurrency(inv.total_amount)} overdue</div>
                   </div>
                 </div>
-              ))}
-              <div className="flex items-center justify-between pt-1">
-                <span className="text-xs" style={{ color: '#5a5a5a' }}>Avg progress</span>
-                <span className="text-sm font-medium" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{avgProgress}%</span>
-              </div>
-            </div>
-          </Panel>
-        )}
+              </Link>
+            ))}
+            {[...expiredDocs, ...expiringDocs].slice(0, 3).map(doc => (
+              <Link key={doc.id} href="/documents">
+                <div className="flex items-start gap-2.5 cursor-pointer group">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: doc.status === 'expired' ? '#e03a3a' : '#e07b39' }} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium group-hover:text-white transition-colors truncate" style={{ color: '#e2e2e2' }}>{doc.name}</div>
+                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>
+                      {doc.status === 'expired' ? 'Expired' : 'Expiring'} {formatDate(doc.expiry_date)}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </Panel>
       </div>
     </div>
   );

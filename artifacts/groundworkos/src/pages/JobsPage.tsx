@@ -176,7 +176,7 @@ export function JobsPage() {
           <div className="flex flex-wrap gap-3">
             {JOB_TYPES.map(t => (
               <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={filterTypes.includes(t)} onChange={e => setFilterTypes(prev => e.target.checked ? [...prev, t] : prev.filter(v => v !== t))} className="accent-yellow-400" />
+                <input type="checkbox" checked={filterTypes.includes(t)} onChange={e => setFilterTypes(prev => e.target.checked ? [...prev, t] : prev.filter(v => v !== t))} className="accent-neutral-400" />
                 <span style={{ color: '#7a7a7a' }} className="capitalize">{t}</span>
               </label>
             ))}
@@ -257,7 +257,7 @@ export function JobsPage() {
                 {selectedJob.status === 'active' && (
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Progress — {selectedJob.progress_percent}%</p>
-                    <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-yellow-400 cursor-pointer" />
+                    <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-neutral-400 cursor-pointer" />
                     <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#1f1f1f' }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: '#3db56d' }} />
                     </div>
@@ -349,7 +349,7 @@ export function JobsPage() {
           </Field>
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2.5 cursor-pointer">
-              <input type="checkbox" checked={form.nrswa_required} onChange={e => setForm(f => ({ ...f, nrswa_required: e.target.checked }))} className="w-4 h-4 accent-yellow-400" />
+              <input type="checkbox" checked={form.nrswa_required} onChange={e => setForm(f => ({ ...f, nrswa_required: e.target.checked }))} className="w-4 h-4 accent-neutral-400" />
               <span className="text-sm" style={{ color: '#7a7a7a' }}>NRSWA Street Works required</span>
             </label>
           </div>

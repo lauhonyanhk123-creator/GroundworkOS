@@ -110,7 +110,6 @@ export function InvoicesPage() {
           { label: 'Outstanding', value: formatCurrency(totalOutstanding), sub: `${invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length} invoices` },
           { label: 'Overdue', value: formatCurrency(overdueTotal), sub: `${invoices.filter(i => i.status === 'overdue').length} overdue`, danger: overdueTotal > 0 },
           { label: 'Collected', value: formatCurrency(totalPaid), sub: `${invoices.filter(i => i.status === 'paid').length} paid` },
-          { label: 'Collection Rate', value: `${collectionRate}%`, sub: 'of total invoiced' },
         ].map(({ label, value, sub, danger }, i) => (
           <div key={label} className={cn('flex-1', i > 0 ? 'pl-6' : '')} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
             <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
