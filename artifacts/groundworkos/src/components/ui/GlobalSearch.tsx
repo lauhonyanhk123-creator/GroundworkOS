@@ -62,7 +62,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${j.job_number} · ${j.client?.company_name ?? '—'}`,
         href: '/jobs',
         badge: j.status.toUpperCase(),
-        badgeColor: j.status === 'active' ? '#4ade80' : j.status === 'complete' ? '#60a5fa' : '#7a7a7a',
+        badgeColor: j.status === 'active' ? '#4ade80' : j.status === 'complete' ? '#60a5fa' : '#a8a099',
       })),
     ...state.invoices
       .filter(i => i.invoice_number.toLowerCase().includes(q) || i.client?.company_name.toLowerCase().includes(q) || i.job?.title.toLowerCase().includes(q))
@@ -73,7 +73,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${formatCurrency(i.total_amount)} · ${i.status.toUpperCase()}`,
         href: '/invoices',
         badge: i.status.toUpperCase(),
-        badgeColor: i.status === 'paid' ? '#4ade80' : i.status === 'overdue' ? '#ff4444' : '#7a7a7a',
+        badgeColor: i.status === 'paid' ? '#4ade80' : i.status === 'overdue' ? '#ff4444' : '#a8a099',
       })),
     ...state.quotes
       .filter(q2 => q2.quote_number.toLowerCase().includes(q) || q2.title?.toLowerCase().includes(q) || q2.client?.company_name.toLowerCase().includes(q))
@@ -84,7 +84,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${q2.client?.company_name ?? '—'} · ${formatCurrency(q2.total_amount)}`,
         href: '/quotes',
         badge: q2.status.toUpperCase(),
-        badgeColor: q2.status === 'accepted' ? '#4ade80' : q2.status === 'declined' ? '#ff4444' : '#7a7a7a',
+        badgeColor: q2.status === 'accepted' ? '#4ade80' : q2.status === 'declined' ? '#ff4444' : '#a8a099',
       })),
     ...state.clients
       .filter(c => c.company_name.toLowerCase().includes(q) || c.contact_name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
@@ -104,7 +104,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${s.trade ?? '—'} · ${s.contact_name ?? '—'}`,
         href: '/subcontractors',
         badge: s.cis_status.toUpperCase(),
-        badgeColor: s.cis_status === 'gross' ? '#4ade80' : s.cis_status === 'unverified' ? '#ff4444' : '#7a7a7a',
+        badgeColor: s.cis_status === 'gross' ? '#4ade80' : s.cis_status === 'unverified' ? '#ff4444' : '#a8a099',
       })),
   ];
 
@@ -124,11 +124,11 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
       <div className="absolute inset-0" style={{ backgroundColor: 'rgba(0,0,0,0.7)' }} />
       <div
         className="relative w-full max-w-xl mx-4 rounded-lg overflow-hidden shadow-2xl"
-        style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}
+        style={{ backgroundColor: '#eeeae4', border: '1px solid #2a2a2a' }}
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid #2a2a2a' }}>
-          <Search className="w-4 h-4 flex-shrink-0" style={{ color: '#7a7a7a' }} />
+          <Search className="w-4 h-4 flex-shrink-0" style={{ color: '#a8a099' }} />
           <input
             ref={inputRef}
             value={query}
@@ -136,7 +136,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
             onKeyDown={handleKey}
             placeholder="Search jobs, invoices, clients, quotes..."
             className="flex-1 bg-transparent text-sm focus:outline-none"
-            style={{ color: '#e8e8e8', fontFamily: "'Barlow', sans-serif" }}
+            style={{ color: '#181410', fontFamily: "'Barlow', sans-serif" }}
           />
           {query && (
             <button onClick={() => setQuery('')} style={{ color: '#444444' }}>
@@ -155,15 +155,15 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   key={r.id}
                   onClick={() => { navigate(r.href); onClose(); }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors"
-                  style={{ backgroundColor: i === selected ? '#1c1c1c' : 'transparent', borderBottom: '1px solid #1c1c1c' }}
+                  style={{ backgroundColor: i === selected ? '#eeeae4' : 'transparent', borderBottom: '1px solid #1c1c1c' }}
                   onMouseEnter={() => setSelected(i)}
                 >
                   <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#0c0c0c' }}>
-                    <Icon className="w-3.5 h-3.5" style={{ color: '#7a7a7a' }} />
+                    <Icon className="w-3.5 h-3.5" style={{ color: '#a8a099' }} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: '#e8e8e8', fontFamily: "'Barlow', sans-serif" }}>{r.title}</p>
-                    <p className="text-xs truncate" style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{r.subtitle}</p>
+                    <p className="text-sm font-medium truncate" style={{ color: '#181410', fontFamily: "'Barlow', sans-serif" }}>{r.title}</p>
+                    <p className="text-xs truncate" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{r.subtitle}</p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {r.badge && (

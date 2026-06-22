@@ -24,8 +24,8 @@ const TYPE_COLORS: Record<DocumentType, string> = {
   certification: '#60a5fa',
   permit: '#a78bfa',
   compliance: '#fb923c',
-  contract: '#e8e8e8',
-  other: '#666666',
+  contract: '#181410',
+  other: '#7a7469',
 };
 
 function getDocumentStatus(expiry_date: string | null): 'valid' | 'expiring_soon' | 'expired' {
@@ -111,13 +111,13 @@ export function DocumentsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Documents</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>RAMS, compliance certs, permits & insurance</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Documents</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>RAMS, compliance certs, permits & insurance</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Document</Btn>
       </div>
 
-      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
         {[
           { label: 'Total', value: documents.length },
           { label: 'Valid', value: valid.length },
@@ -125,14 +125,14 @@ export function DocumentsPage() {
           { label: 'Expired', value: expired.length },
         ].map(({ label, value }, i) => (
           <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
-            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
-            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: i === 3 && expired.length > 0 ? '#e03a3a' : i === 2 && expiring.length > 0 ? '#e07b39' : '#e2e2e2' }}>{value}</p>
+            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
+            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: i === 3 && expired.length > 0 ? '#e03a3a' : i === 2 && expiring.length > 0 ? '#e07b39' : '#181410' }}>{value}</p>
           </div>
         ))}
       </div>
 
       {(expired.length > 0 || expiring.length > 0) && (
-        <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
+        <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
           <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#e07b39' }} />
           <div className="flex-1">
             <p className="text-sm font-medium mb-1.5" style={{ color: '#e07b39' }}>Attention Required</p>
@@ -149,23 +149,23 @@ export function DocumentsPage() {
 
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#3a3a3a' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
           <input
             type="text"
             placeholder="Search documents..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-4 py-1.5 rounded-md text-sm w-52 focus:outline-none"
-            style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#e2e2e2' }}
-            onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
-            onBlur={e => (e.target.style.borderColor = '#1a1a1a')}
+            style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#181410' }}
+            onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+            onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
           />
         </div>
-        <select value={filterType} onChange={e => setFilterType(e.target.value as DocumentType | 'all')} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#7a7a7a' }}>
+        <select value={filterType} onChange={e => setFilterType(e.target.value as DocumentType | 'all')} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#a8a099' }}>
           <option value="all">All Types</option>
           {Object.entries(TYPE_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
-        <select value={filterRelatedTo} onChange={e => setFilterRelatedTo(e.target.value as DocumentRelatedTo | 'all')} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#7a7a7a' }}>
+        <select value={filterRelatedTo} onChange={e => setFilterRelatedTo(e.target.value as DocumentRelatedTo | 'all')} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#a8a099' }}>
           <option value="all">All Categories</option>
           <option value="company">Company</option>
           <option value="job">Job</option>
@@ -178,7 +178,7 @@ export function DocumentsPage() {
         <div className={selectedDoc ? 'xl:col-span-2' : 'xl:col-span-3'}>
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No documents found</p>
+              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No documents found</p>
             ) : filtered.map((doc, i) => {
               const days = daysUntil(doc.expiry_date);
               const isExpiringSoon = days !== null && days <= 30 && days > 0;
@@ -187,28 +187,28 @@ export function DocumentsPage() {
                 <div
                   key={doc.id}
                   onClick={() => setSelected(selected === doc.id ? null : doc.id)}
-                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
-                    backgroundColor: selected === doc.id ? '#161616' : undefined,
+                    backgroundColor: selected === doc.id ? '#eeeae4' : undefined,
                     borderLeft: selected === doc.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
                   <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[doc.type] }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate" style={{ color: '#e2e2e2' }}>{doc.name}</span>
+                      <span className="text-sm font-medium truncate" style={{ color: '#181410' }}>{doc.name}</span>
                       {(isExpired || isExpiringSoon) && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: isExpired ? '#e03a3a' : '#e07b39' }} />}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>
+                    <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>
                       <span>{TYPE_LABELS[doc.type]}</span>
                       {doc.related_name && <span> · {doc.related_name}</span>}
                     </div>
                   </div>
                   <Badge status={doc.status} />
-                  <div className="text-right text-xs hidden md:block flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace", minWidth: '80px' }}>
+                  <div className="text-right text-xs hidden md:block flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace", minWidth: '80px' }}>
                     {doc.expiry_date ? (
-                      <span style={{ color: isExpired ? '#e03a3a' : isExpiringSoon ? '#e07b39' : '#5a5a5a' }}>{formatDate(doc.expiry_date)}</span>
+                      <span style={{ color: isExpired ? '#e03a3a' : isExpiringSoon ? '#e07b39' : '#7a7469' }}>{formatDate(doc.expiry_date)}</span>
                     ) : <span>No expiry</span>}
                   </div>
                 </div>
@@ -219,14 +219,14 @@ export function DocumentsPage() {
 
         {selectedDoc && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
                     <FolderOpen className="w-3.5 h-3.5" style={{ color: TYPE_COLORS[selectedDoc.type] }} />
                     <span className="text-xs" style={{ color: TYPE_COLORS[selectedDoc.type], fontFamily: "'DM Mono', monospace" }}>{TYPE_LABELS[selectedDoc.type]}</span>
                   </div>
-                  <h3 className="text-base font-semibold leading-snug mb-2" style={{ color: '#e2e2e2' }}>{selectedDoc.name}</h3>
+                  <h3 className="text-base font-semibold leading-snug mb-2" style={{ color: '#181410' }}>{selectedDoc.name}</h3>
                   <Badge status={selectedDoc.status} />
                 </div>
 
@@ -237,8 +237,8 @@ export function DocumentsPage() {
                     { label: 'Expiry', value: formatDate(selectedDoc.expiry_date) },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
-                      <span className="text-xs flex-shrink-0 capitalize" style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span className="text-sm text-right" style={{ color: '#e2e2e2' }}>{value}</span>
+                      <span className="text-xs flex-shrink-0 capitalize" style={{ color: '#7a7469' }}>{label}</span>
+                      <span className="text-sm text-right" style={{ color: '#181410' }}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -248,7 +248,7 @@ export function DocumentsPage() {
                   if (days === null) return null;
                   const color = days <= 0 ? '#e03a3a' : days <= 30 ? '#e07b39' : '#3db56d';
                   return (
-                    <div className="p-3 rounded-md text-xs" style={{ backgroundColor: '#161616', border: `1px solid ${color}30`, color }}>
+                    <div className="p-3 rounded-md text-xs" style={{ backgroundColor: '#eeeae4', border: `1px solid ${color}30`, color }}>
                       {days <= 0 ? `Expired ${Math.abs(days)} days ago` : days <= 30 ? `Expires in ${days} days — renew now` : `${days} days remaining`}
                     </div>
                   );
@@ -256,8 +256,8 @@ export function DocumentsPage() {
 
                 {selectedDoc.notes && (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Notes</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#7a7a7a' }}>{selectedDoc.notes}</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#a8a099' }}>{selectedDoc.notes}</p>
                   </div>
                 )}
               </div>

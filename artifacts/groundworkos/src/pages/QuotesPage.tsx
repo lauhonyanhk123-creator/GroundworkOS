@@ -135,22 +135,22 @@ export function QuotesPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Quotes</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>Create and manage quotations</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Quotes</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Create and manage quotations</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Quote</Btn>
       </div>
 
-      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
         {[
           { label: 'Total Quoted', value: formatCurrency(quotes.reduce((s, q) => s + q.total_amount, 0)), sub: `${quotes.length} quotes` },
           { label: 'Accepted Rate', value: `${acceptedRate}%`, sub: `${accepted.length} accepted` },
           { label: 'Accepted Value', value: formatCurrency(accepted.reduce((s, q) => s + q.total_amount, 0)), sub: 'converted' },
         ].map(({ label, value, sub }, i) => (
           <div key={label} className={cn('flex-1', i > 0 ? 'pl-6' : '')} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
-            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
-            <p className="text-2xl font-bold leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
-            <p className="text-xs" style={{ color: '#5a5a5a' }}>{sub}</p>
+            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
+            <p className="text-2xl font-bold leading-none mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{value}</p>
+            <p className="text-xs" style={{ color: '#7a7469' }}>{sub}</p>
           </div>
         ))}
       </div>
@@ -163,24 +163,24 @@ export function QuotesPage() {
               onClick={() => setTab(t.id)}
               className="px-4 py-2.5 text-sm transition-colors"
               style={tab === t.id
-                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
-                : { color: '#5a5a5a' }}
+                ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
+                : { color: '#7a7469' }}
             >
               {t.label}
             </button>
           ))}
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#3a3a3a' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
           <input
             type="text"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-4 py-1.5 rounded-md text-sm w-48 focus:outline-none"
-            style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#e2e2e2' }}
-            onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
-            onBlur={e => (e.target.style.borderColor = '#1a1a1a')}
+            style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#181410' }}
+            onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+            onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
           />
         </div>
       </div>
@@ -189,27 +189,27 @@ export function QuotesPage() {
         <div className={selectedQuote ? 'xl:col-span-2' : 'xl:col-span-3'}>
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No quotes found</p>
+              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No quotes found</p>
             ) : filtered.map((q, i) => (
               <div
                 key={q.id}
                 onClick={() => setSelected(selected === q.id ? null : q.id)}
-                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                 style={{
                   borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
-                  backgroundColor: selected === q.id ? '#161616' : undefined,
+                  backgroundColor: selected === q.id ? '#eeeae4' : undefined,
                   borderLeft: selected === q.id ? '2px solid #e2e2e2' : '2px solid transparent',
                 }}
               >
-                <span className="text-xs w-28 flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{q.quote_number}</span>
+                <span className="text-xs w-28 flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{q.quote_number}</span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate" style={{ color: '#e2e2e2' }}>{q.title ?? '—'}</div>
-                  <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{q.client?.company_name ?? '—'}</div>
+                  <div className="text-sm font-medium truncate" style={{ color: '#181410' }}>{q.title ?? '—'}</div>
+                  <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{q.client?.company_name ?? '—'}</div>
                 </div>
                 <Badge status={q.status} />
                 <div className="text-right flex-shrink-0">
-                  <div className="text-sm font-semibold" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(q.total_amount)}</div>
-                  {q.valid_until && <div className="text-xs" style={{ color: '#5a5a5a' }}>Until {formatDate(q.valid_until)}</div>}
+                  <div className="text-sm font-semibold" style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(q.total_amount)}</div>
+                  {q.valid_until && <div className="text-xs" style={{ color: '#7a7469' }}>Until {formatDate(q.valid_until)}</div>}
                 </div>
               </div>
             ))}
@@ -218,14 +218,14 @@ export function QuotesPage() {
 
         {selectedQuote && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{selectedQuote.quote_number}</span>
+                    <span className="text-xs" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{selectedQuote.quote_number}</span>
                     <Badge status={selectedQuote.status} />
                   </div>
-                  <h3 className="text-base font-semibold leading-snug" style={{ color: '#e2e2e2' }}>{selectedQuote.title}</h3>
+                  <h3 className="text-base font-semibold leading-snug" style={{ color: '#181410' }}>{selectedQuote.title}</h3>
                 </div>
 
                 <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1a1a1a' }}>
@@ -235,23 +235,23 @@ export function QuotesPage() {
                     { label: 'Valid Until', value: formatDate(selectedQuote.valid_until) },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
-                      <span className="text-xs flex-shrink-0" style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span className="text-sm text-right" style={{ color: '#e2e2e2' }}>{value}</span>
+                      <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>{label}</span>
+                      <span className="text-sm text-right" style={{ color: '#181410' }}>{value}</span>
                     </div>
                   ))}
                 </div>
 
                 {selectedQuote.line_items.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Line Items</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Line Items</p>
                     <div className="space-y-2">
                       {selectedQuote.line_items.map(li => (
                         <div key={li.id} className="flex items-start justify-between gap-3 text-xs pb-2" style={{ borderBottom: '1px solid #141414' }}>
                           <div className="flex-1">
-                            <div className="mb-0.5" style={{ color: '#e2e2e2' }}>{li.description}</div>
-                            <div style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{li.quantity} {li.unit} × {formatCurrency(li.unit_price)}</div>
+                            <div className="mb-0.5" style={{ color: '#181410' }}>{li.description}</div>
+                            <div style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{li.quantity} {li.unit} × {formatCurrency(li.unit_price)}</div>
                           </div>
-                          <div className="font-semibold flex-shrink-0" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(li.total)}</div>
+                          <div className="font-semibold flex-shrink-0" style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(li.total)}</div>
                         </div>
                       ))}
                     </div>
@@ -264,20 +264,20 @@ export function QuotesPage() {
                     { label: 'VAT (20%)', value: formatCurrency(selectedQuote.vat_amount) },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between text-sm">
-                      <span style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>{value}</span>
+                      <span style={{ color: '#7a7469' }}>{label}</span>
+                      <span style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>{value}</span>
                     </div>
                   ))}
                   <div className="flex justify-between font-bold pt-2" style={{ borderTop: '1px solid #1a1a1a' }}>
-                    <span style={{ color: '#e2e2e2' }}>Total</span>
-                    <span style={{ color: '#e2e2e2', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '1.2rem' }}>{formatCurrency(selectedQuote.total_amount)}</span>
+                    <span style={{ color: '#181410' }}>Total</span>
+                    <span style={{ color: '#181410', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '1.2rem' }}>{formatCurrency(selectedQuote.total_amount)}</span>
                   </div>
                 </div>
 
                 {selectedQuote.notes && (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Notes</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#7a7a7a' }}>{selectedQuote.notes}</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#a8a099' }}>{selectedQuote.notes}</p>
                   </div>
                 )}
 
@@ -316,18 +316,18 @@ export function QuotesPage() {
           </Field>
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Line Items</span>
-              <button onClick={addLineItem} className="text-xs flex items-center gap-1" style={{ color: '#7a7a7a' }}>
+              <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Line Items</span>
+              <button onClick={addLineItem} className="text-xs flex items-center gap-1" style={{ color: '#a8a099' }}>
                 <Plus className="w-3 h-3" /> Add Item
               </button>
             </div>
             <div className="space-y-2">
               {form.line_items.map((li, idx) => (
-                <div key={li.id} className="p-4 rounded-lg space-y-2.5" style={{ backgroundColor: '#161616', border: '1px solid #1a1a1a' }}>
+                <div key={li.id} className="p-4 rounded-lg space-y-2.5" style={{ backgroundColor: '#eeeae4', border: '1px solid #1a1a1a' }}>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs" style={{ color: '#5a5a5a' }}>Item {idx + 1}</span>
+                    <span className="text-xs" style={{ color: '#7a7469' }}>Item {idx + 1}</span>
                     {form.line_items.length > 1 && (
-                      <button onClick={() => removeLineItem(li.id)} style={{ color: '#5a5a5a' }}>
+                      <button onClick={() => removeLineItem(li.id)} style={{ color: '#7a7469' }}>
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     )}
@@ -337,7 +337,7 @@ export function QuotesPage() {
                     <Input type="number" value={li.quantity} onChange={e => updateLineItem(li.id, 'quantity', parseFloat(e.target.value) || 0)} placeholder="Qty" />
                     <Input value={li.unit} onChange={e => updateLineItem(li.id, 'unit', e.target.value)} placeholder="Unit" />
                     <Input type="number" value={li.unit_price || ''} onChange={e => updateLineItem(li.id, 'unit_price', parseFloat(e.target.value) || 0)} placeholder="£/unit" />
-                    <div className="py-2 px-3 rounded-md text-sm text-right" style={{ backgroundColor: '#111111', color: '#e2e2e2', fontFamily: "'DM Mono', monospace", border: '1px solid #1a1a1a' }}>
+                    <div className="py-2 px-3 rounded-md text-sm text-right" style={{ backgroundColor: '#fafaf8', color: '#181410', fontFamily: "'DM Mono', monospace", border: '1px solid #1a1a1a' }}>
                       {formatCurrency(li.total)}
                     </div>
                   </div>
@@ -346,15 +346,15 @@ export function QuotesPage() {
             </div>
           </div>
           {subtotal > 0 && (
-            <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: '#161616', border: '1px solid #1a1a1a' }}>
+            <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: '#eeeae4', border: '1px solid #1a1a1a' }}>
               {[
                 { label: 'Subtotal', value: formatCurrency(subtotal) },
                 { label: 'VAT (20%)', value: formatCurrency(vatAmount) },
                 { label: 'Total', value: formatCurrency(total) },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between text-sm">
-                  <span style={{ color: '#5a5a5a' }}>{label}</span>
-                  <span style={{ color: label === 'Total' ? '#e2e2e2' : '#7a7a7a', fontFamily: "'DM Mono', monospace", fontWeight: label === 'Total' ? 600 : 400 }}>{value}</span>
+                  <span style={{ color: '#7a7469' }}>{label}</span>
+                  <span style={{ color: label === 'Total' ? '#181410' : '#a8a099', fontFamily: "'DM Mono', monospace", fontWeight: label === 'Total' ? 600 : 400 }}>{value}</span>
                 </div>
               ))}
             </div>

@@ -93,13 +93,13 @@ export function PlantPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Plant & Machinery</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>Fleet tracking, service & LOLER compliance</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Plant & Machinery</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Fleet tracking, service & LOLER compliance</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Plant</Btn>
       </div>
 
-      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
         {[
           { label: 'On Site', value: plant.filter(p => p.status === 'on_site').length },
           { label: 'Available', value: plant.filter(p => p.status === 'available').length },
@@ -107,8 +107,8 @@ export function PlantPage() {
           { label: 'Owned', value: plant.filter(p => p.owned).length },
         ].map(({ label, value }, i) => (
           <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
-            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
-            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
+            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
+            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{value}</p>
           </div>
         ))}
       </div>
@@ -120,8 +120,8 @@ export function PlantPage() {
             onClick={() => setStatusFilter(opt.id)}
             className="px-4 py-2.5 text-sm transition-colors"
             style={statusFilter === opt.id
-              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
-              : { color: '#5a5a5a' }}
+              ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
+              : { color: '#7a7469' }}
           >
             {opt.label}
           </button>
@@ -132,36 +132,36 @@ export function PlantPage() {
         <div className={selectedPlant ? 'xl:col-span-2' : 'xl:col-span-3'}>
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No plant items found</p>
+              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No plant items found</p>
             ) : filtered.map((p, i) => {
               const alerts = getPlantAlerts(p);
               return (
                 <div
                   key={p.id}
                   onClick={() => setSelected(selected === p.id ? null : p.id)}
-                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
-                    backgroundColor: selected === p.id ? '#161616' : undefined,
+                    backgroundColor: selected === p.id ? '#eeeae4' : undefined,
                     borderLeft: selected === p.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
-                  <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#1f1f1f', border: '1px solid #222' }}>
-                    {p.status === 'maintenance' ? <Wrench className="w-3.5 h-3.5" style={{ color: '#e07b39' }} /> : <Truck className="w-3.5 h-3.5" style={{ color: '#7a7a7a' }} />}
+                  <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#e8e4dd', border: '1px solid #d9d4ce' }}>
+                    {p.status === 'maintenance' ? <Wrench className="w-3.5 h-3.5" style={{ color: '#e07b39' }} /> : <Truck className="w-3.5 h-3.5" style={{ color: '#a8a099' }} />}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium" style={{ color: '#e2e2e2' }}>{p.name}</span>
+                      <span className="text-sm font-medium" style={{ color: '#181410' }}>{p.name}</span>
                       {alerts.length > 0 && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#e07b39' }} />}
-                      {!p.owned && <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#4d90d4', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>Hire</span>}
+                      {!p.owned && <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#1b5e78', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>Hire</span>}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>
+                    <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>
                       {p.make} {p.model} {p.year && `(${p.year})`} · {p.registration ?? 'No Reg'}
                     </div>
                   </div>
                   <Badge status={p.status} />
                   {p.daily_rate && (
-                    <div className="text-sm flex-shrink-0 hidden lg:block" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>
+                    <div className="text-sm flex-shrink-0 hidden lg:block" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>
                       {formatCurrency(p.daily_rate)}/d
                     </div>
                   )}
@@ -173,18 +173,18 @@ export function PlantPage() {
 
         {selectedPlant && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Badge status={selectedPlant.status} />
-                    {!selectedPlant.owned && <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#4d90d4', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>Hired In</span>}
+                    {!selectedPlant.owned && <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#1b5e78', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>Hired In</span>}
                   </div>
-                  <p className="text-base font-semibold" style={{ color: '#e2e2e2' }}>{selectedPlant.name}</p>
+                  <p className="text-base font-semibold" style={{ color: '#181410' }}>{selectedPlant.name}</p>
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Status</p>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Status</p>
                   <div className="flex flex-wrap gap-1.5">
                     {PLANT_STATUSES.filter(s => s !== 'decommissioned').map(s => (
                       <button
@@ -192,8 +192,8 @@ export function PlantPage() {
                         onClick={() => updateStatus(selectedPlant.id, s)}
                         className="px-2.5 py-1 rounded text-xs transition-colors capitalize"
                         style={selectedPlant.status === s
-                          ? { backgroundColor: '#e2e2e2', color: '#0a0a0a', fontWeight: 600 }
-                          : { backgroundColor: '#181818', color: '#5a5a5a', border: '1px solid #222' }}
+                          ? { backgroundColor: '#1b5e78', color: '#ffffff', fontWeight: 600 }
+                          : { backgroundColor: '#f5f1ec', color: '#7a7469', border: '1px solid #d9d4ce' }}
                       >
                         {s.replace('_', ' ')}
                       </button>
@@ -211,14 +211,14 @@ export function PlantPage() {
                     { label: 'Current Job', value: selectedPlant.current_job?.title ?? '—' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
-                      <span className="text-xs flex-shrink-0" style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span className="text-sm text-right" style={{ color: '#e2e2e2' }}>{value}</span>
+                      <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>{label}</span>
+                      <span className="text-sm text-right" style={{ color: '#181410' }}>{value}</span>
                     </div>
                   ))}
                 </div>
 
                 <div className="pt-3" style={{ borderTop: '1px solid #1a1a1a' }}>
-                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Compliance</p>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Compliance</p>
                   {[
                     { label: 'Service Due', value: selectedPlant.service_due },
                     { label: 'MOT Due', value: selectedPlant.mot_due },
@@ -229,8 +229,8 @@ export function PlantPage() {
                     const isDue = days !== null && days > 0 && days <= 30;
                     return (
                       <div key={label} className="flex justify-between items-center py-2 text-xs" style={{ borderBottom: '1px solid #141414' }}>
-                        <span style={{ color: '#5a5a5a' }}>{label}</span>
-                        <span style={{ color: isOverdue ? '#e03a3a' : isDue ? '#e07b39' : value ? '#3db56d' : '#3a3a3a', fontFamily: "'DM Mono', monospace" }}>
+                        <span style={{ color: '#7a7469' }}>{label}</span>
+                        <span style={{ color: isOverdue ? '#e03a3a' : isDue ? '#e07b39' : value ? '#3db56d' : '#c0bab4', fontFamily: "'DM Mono', monospace" }}>
                           {value ? formatDate(value) : 'N/A'}
                         </span>
                       </div>
@@ -250,8 +250,8 @@ export function PlantPage() {
 
                 {selectedPlant.notes && (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Notes</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#7a7a7a' }}>{selectedPlant.notes}</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#a8a099' }}>{selectedPlant.notes}</p>
                   </div>
                 )}
               </div>

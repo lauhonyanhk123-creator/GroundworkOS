@@ -12,8 +12,8 @@ import { useApp } from '../store/AppContext';
 
 type ReportTab = 'overview' | 'cis' | 'ratebook';
 
-const CHART_INVOICED = '#4d90d4';
-const YELLOW = '#4d90d4';
+const CHART_INVOICED = '#1b5e78';
+const YELLOW = '#1b5e78';
 const RED = '#ff4444';
 const GREEN = '#4ade80';
 const ORANGE = '#fb923c';
@@ -22,13 +22,13 @@ const BLUE = '#60a5fa';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-3 py-2 rounded text-xs" style={{ backgroundColor: '#1c1c1c', border: '1px solid #3a3a3a', fontFamily: "'DM Mono', monospace" }}>
-      <div className="font-bold mb-1" style={{ color: '#e8e8e8' }}>{label}</div>
+    <div className="px-3 py-2 rounded text-xs" style={{ backgroundColor: '#eeeae4', border: '1px solid #3a3a3a', fontFamily: "'DM Mono', monospace" }}>
+      <div className="font-bold mb-1" style={{ color: '#181410' }}>{label}</div>
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
           <span style={{ color: '#888888' }}>{p.name}: </span>
-          <span style={{ color: '#e8e8e8' }}>{typeof p.value === 'number' && p.value > 100 ? formatCurrency(p.value) : p.value}</span>
+          <span style={{ color: '#181410' }}>{typeof p.value === 'number' && p.value > 100 ? formatCurrency(p.value) : p.value}</span>
         </div>
       ))}
     </div>
@@ -112,8 +112,8 @@ export function ReportsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Reports</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>Financial reports, CIS returns & rate book</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Reports</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Financial reports, CIS returns & rate book</p>
         </div>
         <Btn variant="outline" size="sm"><Download className="w-3.5 h-3.5" /> Export</Btn>
       </div>
@@ -129,8 +129,8 @@ export function ReportsPage() {
             onClick={() => setTab(t.id)}
             className="px-4 py-2.5 text-sm transition-colors"
             style={tab === t.id
-              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
-              : { color: '#5a5a5a' }}
+              ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
+              : { color: '#7a7469' }}
           >
             {t.label}
           </button>
@@ -139,7 +139,7 @@ export function ReportsPage() {
 
       {tab === 'overview' && (
         <>
-          <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+          <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
             {[
               { label: 'Revenue Collected', value: formatCurrency(totalRevenue), sub: `${paidInvoices.length} paid` },
               { label: 'Outstanding', value: formatCurrency(totalOutstanding), sub: `${invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length} unpaid` },
@@ -147,9 +147,9 @@ export function ReportsPage() {
               { label: 'Collection Rate', value: `${collectionRate}%`, sub: 'of total invoiced' },
             ].map(({ label, value, sub }, i) => (
               <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
-                <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
-                <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
-                <p className="text-xs mt-1" style={{ color: '#3a3a3a' }}>{sub}</p>
+                <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
+                <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{value}</p>
+                <p className="text-xs mt-1" style={{ color: '#c0bab4' }}>{sub}</p>
               </div>
             ))}
           </div>
@@ -170,10 +170,10 @@ export function ReportsPage() {
                   </ResponsiveContainer>
                 </div>
                 <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: '#666666' }}>
+                  <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: '#7a7469' }}>
                     <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: YELLOW, opacity: 0.4 }} /> Invoiced
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: '#666666' }}>
+                  <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: '#7a7469' }}>
                     <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: GREEN }} /> Collected
                   </div>
                 </div>
@@ -195,7 +195,7 @@ export function ReportsPage() {
                 {jobTypeData.map((d, i) => (
                   <div key={d.name} className="flex items-center gap-1.5 text-xs font-mono">
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[i % TYPE_COLORS.length] }} />
-                    <span style={{ color: '#666666' }}>{d.name} ({d.value})</span>
+                    <span style={{ color: '#7a7469' }}>{d.name} ({d.value})</span>
                   </div>
                 ))}
               </div>
@@ -216,7 +216,7 @@ export function ReportsPage() {
                     <CartesianGrid vertical={false} stroke="#1e1e1e" />
                     <XAxis dataKey="month" tick={{ fill: '#555555', fontSize: 11, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} />
                     <YAxis tick={{ fill: '#555555', fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={42} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#3a3a3a' }} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#c0bab4' }} />
                     <Area type="monotone" dataKey="cumulative" name="Cumulative" stroke={GREEN} strokeWidth={2} fill="url(#revGrad)" dot={{ fill: GREEN, r: 3, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -257,11 +257,11 @@ export function ReportsPage() {
                   <div key={label}>
                     <div className="flex items-center gap-2 mb-2">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                      <span className="text-xs font-mono uppercase" style={{ color: '#666666' }}>{label}</span>
+                      <span className="text-xs font-mono uppercase" style={{ color: '#7a7469' }}>{label}</span>
                     </div>
                     <div className="text-3xl font-bold mb-1" style={{ fontFamily: "'Barlow Condensed', sans-serif", color }}>{formatCurrency(value)}</div>
                     <div className="text-xs font-mono mb-2" style={{ color: '#555555' }}>{count} jobs · {pct}% of pipeline</div>
-                    <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#1c1c1c' }}>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#eeeae4' }}>
                       <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
                     </div>
                   </div>
@@ -274,22 +274,22 @@ export function ReportsPage() {
 
       {tab === 'cis' && (
         <>
-          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
+          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
             <div className="flex-1">
-              <p className="text-xs font-medium mb-1" style={{ color: '#7a7a7a' }}>Construction Industry Scheme (CIS)</p>
-              <p className="text-xs leading-relaxed" style={{ color: '#5a5a5a' }}>Monthly returns must be filed with HMRC by the 19th of the following tax month. Deductions must be made from subcontractors verified as "net" or "unverified".</p>
+              <p className="text-xs font-medium mb-1" style={{ color: '#a8a099' }}>Construction Industry Scheme (CIS)</p>
+              <p className="text-xs leading-relaxed" style={{ color: '#7a7469' }}>Monthly returns must be filed with HMRC by the 19th of the following tax month. Deductions must be made from subcontractors verified as "net" or "unverified".</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+          <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
             {[
               { label: 'Deductions Filed', value: formatCurrency(cisTotalDeductions) },
               { label: 'Pending Submission', value: String(cisPending.length) },
               { label: 'Pending Deductions', value: formatCurrency(cisPending.reduce((s, r) => s + r.deduction_amount, 0)) },
             ].map(({ label, value }, i) => (
               <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
-                <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
-                <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
+                <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
+                <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{value}</p>
               </div>
             ))}
           </div>
@@ -309,28 +309,28 @@ export function ReportsPage() {
                     <thead>
                       <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
                         {['Subcontractor', 'UTR', 'Rate', 'Gross', 'Deduction', 'Net'].map(h => (
-                          <th key={h} className="text-left py-2 px-3 text-xs font-medium uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.07em' }}>{h}</th>
+                          <th key={h} className="text-left py-2 px-3 text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {monthReturns.map(r => (
                         <tr key={r.id} style={{ borderBottom: '1px solid #141414' }}>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#e2e2e2' }}>{r.subcontractor_name}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>—</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>{r.deduction_rate}%</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(r.gross_payment)}</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#181410' }}>{r.subcontractor_name}</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>—</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>{r.deduction_rate}%</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(r.gross_payment)}</td>
                           <td className="py-2.5 px-3 text-sm" style={{ color: '#e03a3a', fontFamily: "'DM Mono', monospace" }}>-{formatCurrency(r.deduction_amount)}</td>
-                          <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(r.net_payment)}</td>
+                          <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(r.net_payment)}</td>
                         </tr>
                       ))}
                     </tbody>
                     <tfoot>
                       <tr style={{ borderTop: '1px solid #1a1a1a' }}>
-                        <td colSpan={3} className="py-2.5 px-3 text-xs uppercase" style={{ color: '#5a5a5a' }}>Total</td>
-                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.gross_payment, 0))}</td>
+                        <td colSpan={3} className="py-2.5 px-3 text-xs uppercase" style={{ color: '#7a7469' }}>Total</td>
+                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.gross_payment, 0))}</td>
                         <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#e03a3a', fontFamily: "'DM Mono', monospace" }}>-{formatCurrency(monthReturns.reduce((s, r) => s + r.deduction_amount, 0))}</td>
-                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.net_payment, 0))}</td>
+                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.net_payment, 0))}</td>
                       </tr>
                     </tfoot>
                   </table>
@@ -344,10 +344,10 @@ export function ReportsPage() {
       {tab === 'ratebook' && (
         <>
           <div className="flex items-center gap-3">
-            <select value={rateCategory} onChange={e => setRateCategory(e.target.value)} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#7a7a7a' }}>
+            <select value={rateCategory} onChange={e => setRateCategory(e.target.value)} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#a8a099' }}>
               {rateCategories.map(c => <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>)}
             </select>
-            <span className="text-xs" style={{ color: '#3a3a3a' }}>{filteredRates.length} rates</span>
+            <span className="text-xs" style={{ color: '#c0bab4' }}>{filteredRates.length} rates</span>
           </div>
 
           {rateCategories.filter(c => c !== 'all').map(cat => {
@@ -355,28 +355,28 @@ export function ReportsPage() {
             if (catRates.length === 0) return null;
             const avgTotal = catRates.reduce((s, r) => s + r.total_rate, 0) / catRates.length;
             return (
-              <Panel key={cat} title={cat} actions={<span className="text-xs" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>avg £{avgTotal.toFixed(2)}/unit</span>}>
+              <Panel key={cat} title={cat} actions={<span className="text-xs" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>avg £{avgTotal.toFixed(2)}/unit</span>}>
                 <div className="overflow-x-auto">
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ borderBottom: '1px solid #1a1a1a' }}>
                         {['Description', 'Unit', 'Labour', 'Material', 'Plant', 'Total'].map(h => (
-                          <th key={h} className="text-left py-2 px-3 text-xs font-medium uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.07em' }}>{h}</th>
+                          <th key={h} className="text-left py-2 px-3 text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody>
                       {catRates.map(r => (
-                        <tr key={r.id} style={{ borderBottom: '1px solid #141414' }} className="hover:bg-[#161616] transition-colors">
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#e2e2e2' }}>
+                        <tr key={r.id} style={{ borderBottom: '1px solid #141414' }} className="hover:bg-[#eeeae4] transition-colors">
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#181410' }}>
                             {r.description}
-                            {r.notes && <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{r.notes}</div>}
+                            {r.notes && <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{r.notes}</div>}
                           </td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{r.unit}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>£{r.labour_rate.toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>£{r.material_rate.toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>£{r.plant_rate.toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>£{r.total_rate.toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{r.unit}</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>£{r.labour_rate.toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>£{r.material_rate.toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-sm" style={{ color: '#a8a099', fontFamily: "'DM Mono', monospace" }}>£{r.plant_rate.toFixed(2)}</td>
+                          <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>£{r.total_rate.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>

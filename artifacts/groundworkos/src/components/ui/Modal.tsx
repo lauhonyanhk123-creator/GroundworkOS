@@ -23,10 +23,10 @@ export function Modal({ open, onClose, title, children, wide }: ModalProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.8)' }} onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={cn('w-full max-h-[90vh] overflow-y-auto rounded-lg', wide ? 'max-w-2xl' : 'max-w-lg')} style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', boxShadow: '0 32px 80px rgba(0,0,0,0.9)' }}>
-        <div className="flex items-center justify-between px-5 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#111111' }}>
-          <h2 className="text-base font-semibold" style={{ color: '#e2e2e2' }}>{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-[#1a1a1a] transition-colors" style={{ color: '#5a5a5a' }}>
+      <div className={cn('w-full max-h-[90vh] overflow-y-auto rounded-lg', wide ? 'max-w-2xl' : 'max-w-lg')} style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', boxShadow: '0 32px 80px rgba(0,0,0,0.9)' }}>
+        <div className="flex items-center justify-between px-5 py-4 sticky top-0 z-10" style={{ borderBottom: '1px solid #1a1a1a', backgroundColor: '#fafaf8' }}>
+          <h2 className="text-base font-semibold" style={{ color: '#181410' }}>{title}</h2>
+          <button onClick={onClose} className="p-1.5 rounded-md hover:bg-[#1a1a1a] transition-colors" style={{ color: '#7a7469' }}>
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -46,17 +46,17 @@ interface FieldProps {
 export function Field({ label, required, children, hint }: FieldProps) {
   return (
     <div>
-      <label className="block text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.07em' }}>
+      <label className="block text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>
         {label}{required && <span style={{ color: '#e03a3a' }}> *</span>}
       </label>
       {children}
-      {hint && <p className="mt-1 text-xs" style={{ color: '#3a3a3a' }}>{hint}</p>}
+      {hint && <p className="mt-1 text-xs" style={{ color: '#c0bab4' }}>{hint}</p>}
     </div>
   );
 }
 
 const inputCls = 'w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors';
-const inputStyle = { backgroundColor: '#181818', border: '1px solid #1e1e1e', color: '#e2e2e2' };
+const inputStyle = { backgroundColor: '#f5f1ec', border: '1px solid #1e1e1e', color: '#181410' };
 const inputFocusBorder = '#2a2a2a';
 const inputBlurBorder = '#1e1e1e';
 

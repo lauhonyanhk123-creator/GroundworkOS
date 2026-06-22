@@ -68,23 +68,23 @@ export function ClientsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Clients</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>{clients.length} clients · {formatCurrency(totalValue)} total value</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Clients</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>{clients.length} clients · {formatCurrency(totalValue)} total value</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Client</Btn>
       </div>
 
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#3a3a3a' }} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
         <input
           type="text"
           placeholder="Search clients..."
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pl-9 pr-4 py-2 rounded-md text-sm w-64 focus:outline-none"
-          style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#e2e2e2' }}
-          onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
-          onBlur={e => (e.target.style.borderColor = '#1a1a1a')}
+          style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#181410' }}
+          onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+          onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
         />
       </div>
 
@@ -92,31 +92,31 @@ export function ClientsPage() {
         <div className={selectedClient ? 'xl:col-span-2' : 'xl:col-span-3'}>
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No clients found</p>
+              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No clients found</p>
             ) : filtered.map((client, i) => (
               <div
                 key={client.id}
                 onClick={() => setSelected(selected === client.id ? null : client.id)}
-                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                 style={{
                   borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
-                  backgroundColor: selected === client.id ? '#161616' : undefined,
+                  backgroundColor: selected === client.id ? '#eeeae4' : undefined,
                   borderLeft: selected === client.id ? '2px solid #e2e2e2' : '2px solid transparent',
                 }}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#7a7a7a', border: '1px solid #222' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#a8a099', border: '1px solid #d9d4ce' }}>
                   {client.company_name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium" style={{ color: '#e2e2e2' }}>{client.company_name}</div>
-                  <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{client.contact_name ?? '—'}</div>
+                  <div className="text-sm font-medium" style={{ color: '#181410' }}>{client.company_name}</div>
+                  <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{client.contact_name ?? '—'}</div>
                 </div>
                 <div className="text-right hidden sm:block flex-shrink-0">
-                  <div className="text-sm font-medium" style={{ color: '#e2e2e2' }}>{client.total_jobs} jobs</div>
-                  <div className="text-xs" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
+                  <div className="text-sm font-medium" style={{ color: '#181410' }}>{client.total_jobs} jobs</div>
+                  <div className="text-xs" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
                 </div>
                 {client.email && (
-                  <div className="hidden md:flex items-center gap-1.5 text-xs" style={{ color: '#5a5a5a' }}>
+                  <div className="hidden md:flex items-center gap-1.5 text-xs" style={{ color: '#7a7469' }}>
                     <Mail className="w-3 h-3" />
                     <span style={{ fontFamily: "'DM Mono', monospace" }}>{client.email}</span>
                   </div>
@@ -128,26 +128,26 @@ export function ClientsPage() {
 
         {selectedClient && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
               <div className="space-y-5">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#e2e2e2', border: '1px solid #222' }}>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#181410', border: '1px solid #d9d4ce' }}>
                     {selectedClient.company_name[0]}
                   </div>
                   <div>
-                    <div className="font-semibold leading-snug" style={{ color: '#e2e2e2' }}>{selectedClient.company_name}</div>
-                    <div className="text-sm" style={{ color: '#5a5a5a' }}>{selectedClient.contact_name ?? '—'}</div>
+                    <div className="font-semibold leading-snug" style={{ color: '#181410' }}>{selectedClient.company_name}</div>
+                    <div className="text-sm" style={{ color: '#7a7469' }}>{selectedClient.contact_name ?? '—'}</div>
                   </div>
                 </div>
 
                 <div className="flex gap-4 py-4" style={{ borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a' }}>
                   <div className="flex-1 text-center">
-                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{selectedClient.total_jobs}</div>
-                    <div className="text-xs" style={{ color: '#5a5a5a' }}>Jobs</div>
+                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{selectedClient.total_jobs}</div>
+                    <div className="text-xs" style={{ color: '#7a7469' }}>Jobs</div>
                   </div>
                   <div className="flex-1 text-center" style={{ borderLeft: '1px solid #1a1a1a' }}>
-                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{formatCurrency(selectedClient.total_value)}</div>
-                    <div className="text-xs" style={{ color: '#5a5a5a' }}>Value</div>
+                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{formatCurrency(selectedClient.total_value)}</div>
+                    <div className="text-xs" style={{ color: '#7a7469' }}>Value</div>
                   </div>
                 </div>
 
@@ -159,9 +159,9 @@ export function ClientsPage() {
                     { label: 'VAT No', value: selectedClient.vat_number, icon: null },
                   ].map(({ label, value, icon }) => (
                     <div key={label} className="flex justify-between items-start gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
-                      <span className="text-xs flex-shrink-0" style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span className="text-sm text-right flex items-center gap-1.5" style={{ color: value ? '#e2e2e2' : '#3a3a3a' }}>
-                        {icon && <span style={{ color: '#5a5a5a' }}>{icon}</span>}
+                      <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>{label}</span>
+                      <span className="text-sm text-right flex items-center gap-1.5" style={{ color: value ? '#181410' : '#c0bab4' }}>
+                        {icon && <span style={{ color: '#7a7469' }}>{icon}</span>}
                         {value ?? '—'}
                       </span>
                     </div>
@@ -170,8 +170,8 @@ export function ClientsPage() {
 
                 {selectedClient.notes && (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Notes</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#7a7a7a' }}>{selectedClient.notes}</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#a8a099' }}>{selectedClient.notes}</p>
                   </div>
                 )}
               </div>

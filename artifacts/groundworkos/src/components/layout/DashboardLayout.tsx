@@ -35,10 +35,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
-  const currentPage = navigation.find(
+  const currentItem = navigation.find(
     item => 'href' in item && (location === item.href || (item.href !== '/' && location.startsWith(item.href)))
   );
-  const pageTitle = currentPage && 'name' in currentPage ? currentPage.name : 'Dashboard';
+  const pageTitle = currentItem && 'name' in currentItem ? currentItem.name : 'Dashboard';
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -52,34 +52,49 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen flex" style={{ backgroundColor: '#0a0a0a', color: '#e2e2e2' }}>
+    <div className="min-h-screen flex" style={{ backgroundColor: '#f0ede8', color: '#181410' }}>
       {sidebarOpen && (
-        <div className="fixed inset-0 bg-black/70 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 lg:hidden" style={{ backgroundColor: 'rgba(24,20,16,0.4)' }} onClick={() => setSidebarOpen(false)} />
       )}
 
       <aside className={cn(
-        'fixed inset-y-0 left-0 z-50 w-60 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static',
+        'fixed inset-y-0 left-0 z-50 w-56 flex flex-col transition-transform duration-200 lg:translate-x-0 lg:static',
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      )} style={{ backgroundColor: '#0f0f0f', borderRight: '1px solid #1a1a1a' }}>
+      )} style={{ backgroundColor: '#fafaf8', borderRight: '1px solid #d9d4ce' }}>
 
-        <div className="h-14 flex items-center justify-between px-5" style={{ borderBottom: '1px solid #1a1a1a' }}>
+        <div className="h-13 flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #d9d4ce' }}>
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-6 h-6 rounded flex items-center justify-center flex-shrink-0" style={{ border: '1.5px solid #FFD600' }}>
-              <span className="text-xs font-bold" style={{ color: '#FFD600', fontFamily: "'Barlow Condensed', sans-serif", lineHeight: 1 }}>G</span>
+            <div className="w-7 h-7 flex items-center justify-center flex-shrink-0" style={{
+              border: '1.5px solid #1b5e78',
+              borderRadius: '4px',
+            }}>
+              <span style={{
+                fontFamily: "'Space Grotesk', sans-serif",
+                fontWeight: 700,
+                fontSize: '14px',
+                color: '#1b5e78',
+                lineHeight: 1,
+              }}>G</span>
             </div>
-            <span className="text-base font-bold tracking-tight" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2', letterSpacing: '0.02em' }}>
-              GROUNDWORK<span style={{ color: '#FFD600' }}>OS</span>
+            <span style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontWeight: 700,
+              fontSize: '13px',
+              color: '#181410',
+              letterSpacing: '0.04em',
+            }}>
+              GROUNDWORK<span style={{ color: '#1b5e78' }}>OS</span>
             </span>
           </Link>
-          <button className="lg:hidden p-1 rounded" onClick={() => setSidebarOpen(false)} style={{ color: '#5a5a5a' }}>
+          <button className="lg:hidden p-1 rounded" onClick={() => setSidebarOpen(false)} style={{ color: '#7a7469' }}>
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto py-4 px-3">
+        <nav className="flex-1 overflow-y-auto py-3 px-2">
           {navigation.map((item, index) => {
             if ('gap' in item) {
-              return <div key={`g-${index}`} className="h-4" />;
+              return <div key={`g-${index}`} className="my-1" style={{ borderBottom: '1px solid #ece8e3', margin: '6px 8px' }} />;
             }
             const isActive = item.href === '/' ? location === '/' : location === item.href || location.startsWith(item.href + '/');
             const Icon = item.icon;
@@ -88,51 +103,90 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 key={item.name}
                 href={item.href}
                 onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-all duration-150 relative no-underline mb-0.5',
-                  isActive ? 'text-[#e2e2e2]' : 'text-[#5a5a5a] hover:text-[#a0a0a0] hover:bg-[#161616]'
-                )}
+                className="flex items-center gap-2.5 relative no-underline mb-0.5"
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: '5px',
+                  fontSize: '13px',
+                  fontFamily: "'Space Grotesk', sans-serif",
+                  fontWeight: isActive ? 600 : 400,
+                  color: isActive ? '#1b5e78' : '#4a4540',
+                  backgroundColor: isActive ? '#e8f3f7' : 'transparent',
+                  transition: 'all 0.1s',
+                }}
+                onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = '#eeeae4'; }}
+                onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
               >
-                {isActive && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-r-full" style={{ backgroundColor: '#FFD600' }} />}
-                <Icon className="w-[15px] h-[15px] flex-shrink-0" />
-                <span style={{ fontFamily: "'Barlow', sans-serif", fontWeight: isActive ? 500 : 400 }}>{item.name}</span>
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r" style={{
+                    width: '3px', height: '16px', backgroundColor: '#1b5e78',
+                  }} />
+                )}
+                <Icon className="w-4 h-4 flex-shrink-0" style={{ opacity: isActive ? 1 : 0.65 }} />
+                <span>{item.name}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div className="px-3 py-4" style={{ borderTop: '1px solid #1a1a1a' }}>
-          <div className="flex items-center gap-3 px-3 py-2">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#e2e2e2', border: '1px solid #2a2a2a' }}>
+        <div className="px-2 py-3" style={{ borderTop: '1px solid #d9d4ce' }}>
+          <div className="flex items-center gap-2.5 px-2 py-2">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{
+              backgroundColor: '#1b5e78',
+              color: '#ffffff',
+              fontFamily: "'Space Grotesk', sans-serif",
+            }}>
               G
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm truncate font-medium" style={{ color: '#e2e2e2' }}>GroundworkOS Ltd</p>
-              <p className="text-xs" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>Admin</p>
+              <p className="text-xs font-semibold truncate" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>GroundworkOS Ltd</p>
+              <p className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>Admin</p>
             </div>
           </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 flex items-center justify-between px-6 flex-shrink-0" style={{ backgroundColor: '#0a0a0a', borderBottom: '1px solid #1a1a1a' }}>
+        <header className="h-12 flex items-center justify-between px-6 flex-shrink-0" style={{
+          backgroundColor: '#fafaf8',
+          borderBottom: '1px solid #d9d4ce',
+        }}>
           <div className="flex items-center gap-3">
-            <button className="lg:hidden p-2 rounded" onClick={() => setSidebarOpen(true)} style={{ color: '#5a5a5a' }}>
+            <button className="lg:hidden p-2 rounded" onClick={() => setSidebarOpen(true)} style={{ color: '#7a7469' }}>
               <Menu className="w-5 h-5" />
             </button>
-            <span className="text-sm font-semibold" style={{ color: '#e2e2e2', fontFamily: "'Barlow', sans-serif" }}>{pageTitle}</span>
+            <span style={{
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontWeight: 600,
+              fontSize: '15px',
+              color: '#181410',
+            }}>{pageTitle}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden md:flex items-center gap-2.5 px-3 py-1.5 rounded-md text-xs transition-colors"
-              style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors"
+              style={{
+                backgroundColor: '#eeeae4',
+                border: '1px solid #d9d4ce',
+                color: '#7a7469',
+                fontFamily: "'JetBrains Mono', monospace",
+                fontSize: '12px',
+              }}
             >
               <Search className="w-3 h-3" />
               <span>Search</span>
-              <kbd className="flex items-center px-1 py-0.5 rounded text-xs" style={{ backgroundColor: '#1a1a1a', color: '#3a3a3a', border: '1px solid #222', fontSize: '10px' }}>⌘K</kbd>
+              <kbd style={{
+                backgroundColor: '#fafaf8',
+                color: '#a8a099',
+                border: '1px solid #d9d4ce',
+                borderRadius: '3px',
+                padding: '1px 5px',
+                fontSize: '10px',
+                fontFamily: 'inherit',
+              }}>⌘K</kbd>
             </button>
-            <button className="relative p-2 rounded-md hover:bg-[#161616] transition-colors" style={{ color: '#5a5a5a' }}>
+            <button className="relative p-2 rounded transition-colors" style={{ color: '#7a7469' }}>
               <Bell className="w-4 h-4" />
             </button>
           </div>

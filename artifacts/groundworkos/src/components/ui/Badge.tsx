@@ -4,32 +4,32 @@ import type { JobStatus, QuoteStatus, InvoiceStatus, DocumentStatus, CISStatus, 
 type BadgeStatus = JobStatus | QuoteStatus | InvoiceStatus | DocumentStatus | CISStatus | PlantStatus | string;
 
 const statusConfig: Record<string, { label: string; color: string; bg: string }> = {
-  enquiry:      { label: 'Enquiry',   color: '#4d90d4', bg: 'rgba(77,144,212,0.08)' },
-  quoted:       { label: 'Quoted',    color: '#7a7a7a', bg: 'rgba(90,90,90,0.08)' },
-  active:       { label: 'Active',    color: '#3db56d', bg: 'rgba(61,181,109,0.08)' },
-  on_hold:      { label: 'On Hold',   color: '#e07b39', bg: 'rgba(224,123,57,0.08)' },
-  complete:     { label: 'Complete',  color: '#5a5a5a', bg: 'rgba(90,90,90,0.08)' },
-  cancelled:    { label: 'Cancelled', color: '#e03a3a', bg: 'rgba(224,58,58,0.07)' },
-  draft:        { label: 'Draft',     color: '#5a5a5a', bg: 'rgba(90,90,90,0.08)' },
-  sent:         { label: 'Sent',      color: '#7a7a7a', bg: 'rgba(90,90,90,0.08)' },
-  accepted:     { label: 'Accepted',  color: '#3db56d', bg: 'rgba(61,181,109,0.08)' },
-  declined:     { label: 'Declined',  color: '#e03a3a', bg: 'rgba(224,58,58,0.07)' },
-  expired:      { label: 'Expired',   color: '#e03a3a', bg: 'rgba(224,58,58,0.07)' },
-  paid:         { label: 'Paid',      color: '#3db56d', bg: 'rgba(61,181,109,0.08)' },
-  overdue:      { label: 'Overdue',   color: '#e03a3a', bg: 'rgba(224,58,58,0.07)' },
-  credited:     { label: 'Credited',  color: '#5a5a5a', bg: 'rgba(90,90,90,0.08)' },
-  valid:        { label: 'Valid',     color: '#3db56d', bg: 'rgba(61,181,109,0.08)' },
-  expiring_soon:{ label: 'Expiring', color: '#e07b39', bg: 'rgba(224,123,57,0.08)' },
-  pending:      { label: 'Pending',   color: '#5a5a5a', bg: 'rgba(90,90,90,0.08)' },
-  gross:        { label: 'Gross',     color: '#3db56d', bg: 'rgba(61,181,109,0.08)' },
-  net:          { label: 'Net 20%',   color: '#7a7a7a', bg: 'rgba(90,90,90,0.08)' },
-  unmatched:    { label: 'Unmatched', color: '#e07b39', bg: 'rgba(224,123,57,0.08)' },
-  unverified:   { label: 'Unverified',color: '#e03a3a', bg: 'rgba(224,58,58,0.07)' },
-  available:    { label: 'Available', color: '#3db56d', bg: 'rgba(61,181,109,0.08)' },
-  on_site:      { label: 'On Site',   color: '#4d90d4', bg: 'rgba(77,144,212,0.08)' },
-  maintenance:  { label: 'Workshop',  color: '#e07b39', bg: 'rgba(224,123,57,0.08)' },
-  hired_in:     { label: 'Hired In',  color: '#4d90d4', bg: 'rgba(77,144,212,0.08)' },
-  disposed:     { label: 'Disposed',  color: '#5a5a5a', bg: 'rgba(90,90,90,0.08)' },
+  enquiry:      { label: 'Enquiry',    color: '#1b5e78', bg: 'rgba(27,94,120,0.1)' },
+  quoted:       { label: 'Quoted',     color: '#5a544f', bg: 'rgba(90,84,79,0.1)' },
+  active:       { label: 'Active',     color: '#2a6e45', bg: 'rgba(42,110,69,0.1)' },
+  on_hold:      { label: 'On Hold',    color: '#b56918', bg: 'rgba(181,105,24,0.1)' },
+  complete:     { label: 'Complete',   color: '#4a4540', bg: 'rgba(74,69,64,0.08)' },
+  cancelled:    { label: 'Cancelled',  color: '#c13a2a', bg: 'rgba(193,58,42,0.08)' },
+  draft:        { label: 'Draft',      color: '#7a7469', bg: 'rgba(90,84,79,0.08)' },
+  sent:         { label: 'Sent',       color: '#5a544f', bg: 'rgba(90,84,79,0.1)' },
+  accepted:     { label: 'Accepted',   color: '#2a6e45', bg: 'rgba(42,110,69,0.1)' },
+  declined:     { label: 'Declined',   color: '#c13a2a', bg: 'rgba(193,58,42,0.08)' },
+  expired:      { label: 'Expired',    color: '#c13a2a', bg: 'rgba(193,58,42,0.08)' },
+  paid:         { label: 'Paid',       color: '#2a6e45', bg: 'rgba(42,110,69,0.1)' },
+  overdue:      { label: 'Overdue',    color: '#c13a2a', bg: 'rgba(193,58,42,0.08)' },
+  credited:     { label: 'Credited',   color: '#4a4540', bg: 'rgba(74,69,64,0.08)' },
+  valid:        { label: 'Valid',      color: '#2a6e45', bg: 'rgba(42,110,69,0.1)' },
+  expiring_soon:{ label: 'Expiring',  color: '#b56918', bg: 'rgba(181,105,24,0.1)' },
+  pending:      { label: 'Pending',    color: '#7a7469', bg: 'rgba(90,84,79,0.08)' },
+  gross:        { label: 'Gross',      color: '#2a6e45', bg: 'rgba(42,110,69,0.1)' },
+  net:          { label: 'Net 20%',    color: '#5a544f', bg: 'rgba(90,84,79,0.1)' },
+  unmatched:    { label: 'Unmatched',  color: '#b56918', bg: 'rgba(181,105,24,0.1)' },
+  unverified:   { label: 'Unverified', color: '#c13a2a', bg: 'rgba(193,58,42,0.08)' },
+  available:    { label: 'Available',  color: '#2a6e45', bg: 'rgba(42,110,69,0.1)' },
+  on_site:      { label: 'On Site',    color: '#1b5e78', bg: 'rgba(27,94,120,0.1)' },
+  maintenance:  { label: 'Workshop',   color: '#b56918', bg: 'rgba(181,105,24,0.1)' },
+  hired_in:     { label: 'Hired In',   color: '#1b5e78', bg: 'rgba(27,94,120,0.1)' },
+  disposed:     { label: 'Disposed',   color: '#4a4540', bg: 'rgba(74,69,64,0.08)' },
 };
 
 interface BadgeProps {
@@ -38,11 +38,16 @@ interface BadgeProps {
 }
 
 export function Badge({ status, className }: BadgeProps) {
-  const config = statusConfig[status] ?? { label: status, color: '#5a5a5a', bg: 'rgba(90,90,90,0.08)' };
+  const config = statusConfig[status] ?? { label: status, color: '#4a4540', bg: 'rgba(74,69,64,0.08)' };
   return (
     <span
-      className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-medium uppercase tracking-wider', className)}
-      style={{ color: config.color, backgroundColor: config.bg, fontFamily: "'DM Mono', monospace", letterSpacing: '0.06em' }}
+      className={cn('inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold uppercase', className)}
+      style={{
+        color: config.color,
+        backgroundColor: config.bg,
+        fontFamily: "'Space Grotesk', sans-serif",
+        letterSpacing: '0.05em',
+      }}
     >
       {config.label}
     </span>

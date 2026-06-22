@@ -93,13 +93,13 @@ export function SubcontractorsPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Subcontractors</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>CIS, compliance and document tracking</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Subcontractors</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>CIS, compliance and document tracking</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Subcontractor</Btn>
       </div>
 
-      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
         {[
           { label: 'Active', value: subcontractors.filter(s => s.active).length },
           { label: 'Gross', value: subcontractors.filter(s => s.cis_status === 'gross').length },
@@ -107,8 +107,8 @@ export function SubcontractorsPage() {
           { label: 'Unverified', value: subcontractors.filter(s => s.cis_status === 'unverified').length },
         ].map(({ label, value }, i) => (
           <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
-            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
-            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
+            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
+            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{value}</p>
           </div>
         ))}
       </div>
@@ -121,22 +121,22 @@ export function SubcontractorsPage() {
               onClick={() => setTab(t)}
               className="px-4 py-2.5 text-sm capitalize transition-colors"
               style={tab === t
-                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
-                : { color: '#5a5a5a' }}
+                ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
+                : { color: '#7a7469' }}
             >{t}</button>
           ))}
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#3a3a3a' }} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
           <input
             type="text"
             placeholder="Search..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-4 py-1.5 rounded-md text-sm w-48 focus:outline-none"
-            style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#e2e2e2' }}
-            onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
-            onBlur={e => (e.target.style.borderColor = '#1a1a1a')}
+            style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#181410' }}
+            onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+            onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
           />
         </div>
       </div>
@@ -145,35 +145,35 @@ export function SubcontractorsPage() {
         <div className={selectedSub ? 'xl:col-span-2' : 'xl:col-span-3'}>
           <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No subcontractors found</p>
+              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No subcontractors found</p>
             ) : filtered.map((sub, i) => {
               const warnings = getDocWarnings(sub);
               return (
                 <div
                   key={sub.id}
                   onClick={() => setSelected(selected === sub.id ? null : sub.id)}
-                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
-                    backgroundColor: selected === sub.id ? '#161616' : undefined,
+                    backgroundColor: selected === sub.id ? '#eeeae4' : undefined,
                     borderLeft: selected === sub.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
-                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#7a7a7a', border: '1px solid #222', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#a8a099', border: '1px solid #d9d4ce', fontFamily: "'Barlow Condensed', sans-serif" }}>
                     {sub.company_name[0]}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium" style={{ color: '#e2e2e2' }}>{sub.company_name}</span>
+                      <span className="text-sm font-medium" style={{ color: '#181410' }}>{sub.company_name}</span>
                       {warnings.length > 0 && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#e07b39' }} />}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{sub.trade ?? '—'} · {sub.contact_name ?? '—'}</div>
+                    <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{sub.trade ?? '—'} · {sub.contact_name ?? '—'}</div>
                   </div>
                   <Badge status={sub.cis_status} />
                   {sub.nrswa_card_number && (
-                    <span className="text-xs px-1.5 py-0.5 rounded hidden md:block" style={{ color: '#4d90d4', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>NRSWA</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded hidden md:block" style={{ color: '#1b5e78', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>NRSWA</span>
                   )}
-                  <div className="text-xs text-right hidden lg:block flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>
+                  <div className="text-xs text-right hidden lg:block flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>
                     {sub.utr_number ? sub.utr_number.slice(0, 7) + '...' : '—'}
                   </div>
                 </div>
@@ -184,15 +184,15 @@ export function SubcontractorsPage() {
 
         {selectedSub && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <Badge status={selectedSub.cis_status} />
-                    {!selectedSub.active && <span className="text-xs" style={{ color: '#5a5a5a' }}>Inactive</span>}
+                    {!selectedSub.active && <span className="text-xs" style={{ color: '#7a7469' }}>Inactive</span>}
                   </div>
-                  <h3 className="text-base font-semibold" style={{ color: '#e2e2e2' }}>{selectedSub.company_name}</h3>
-                  <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>{selectedSub.trade ?? '—'}</p>
+                  <h3 className="text-base font-semibold" style={{ color: '#181410' }}>{selectedSub.company_name}</h3>
+                  <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>{selectedSub.trade ?? '—'}</p>
                 </div>
 
                 <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1a1a1a' }}>
@@ -202,28 +202,28 @@ export function SubcontractorsPage() {
                     { label: 'Email', value: selectedSub.email ?? '—' },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
-                      <span className="text-xs flex-shrink-0" style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span className="text-sm text-right truncate" style={{ color: '#e2e2e2' }}>{value}</span>
+                      <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>{label}</span>
+                      <span className="text-sm text-right truncate" style={{ color: '#181410' }}>{value}</span>
                     </div>
                   ))}
                 </div>
 
-                <div className="p-4 rounded-lg" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
-                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>CIS Details</p>
+                <div className="p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>CIS Details</p>
                   {[
                     { label: 'UTR', value: selectedSub.utr_number ?? '—' },
                     { label: 'Status', value: selectedSub.cis_status.toUpperCase() },
                     { label: 'Deduction Rate', value: `${selectedSub.cis_deduction_rate}%` },
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between text-xs mb-2 last:mb-0">
-                      <span style={{ color: '#5a5a5a' }}>{label}</span>
-                      <span style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{value}</span>
+                      <span style={{ color: '#7a7469' }}>{label}</span>
+                      <span style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{value}</span>
                     </div>
                   ))}
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Compliance</p>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Compliance</p>
                   {[
                     { label: 'NRSWA Card', expiry: selectedSub.nrswa_expiry },
                     { label: 'Public Liability', expiry: selectedSub.public_liability_expiry },
@@ -234,8 +234,8 @@ export function SubcontractorsPage() {
                     const isExpired = days !== null && days <= 0;
                     return (
                       <div key={label} className="flex justify-between items-center py-2 text-xs" style={{ borderBottom: '1px solid #1a1a1a' }}>
-                        <span style={{ color: '#5a5a5a' }}>{label}</span>
-                        <span style={{ color: isExpired ? '#e03a3a' : isExpiring ? '#e07b39' : expiry ? '#3db56d' : '#3a3a3a', fontFamily: "'DM Mono', monospace" }}>
+                        <span style={{ color: '#7a7469' }}>{label}</span>
+                        <span style={{ color: isExpired ? '#e03a3a' : isExpiring ? '#e07b39' : expiry ? '#3db56d' : '#c0bab4', fontFamily: "'DM Mono', monospace" }}>
                           {expiry ? formatDate(expiry) : 'N/A'}
                         </span>
                       </div>
@@ -283,8 +283,8 @@ export function SubcontractorsPage() {
             </Field>
           </div>
 
-          <div className="p-3 rounded" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
-            <div className="text-xs font-mono uppercase font-bold mb-3" style={{ color: '#7a7a7a' }}>CIS Details</div>
+          <div className="p-3 rounded" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
+            <div className="text-xs font-mono uppercase font-bold mb-3" style={{ color: '#a8a099' }}>CIS Details</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="UTR Number">
                 <Input value={form.utr_number} onChange={e => setForm(f => ({ ...f, utr_number: e.target.value }))} placeholder="1234567890" />

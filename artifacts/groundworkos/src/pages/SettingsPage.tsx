@@ -2,7 +2,7 @@ import { Panel } from '../components/ui/Panel';
 import { Btn } from '../components/ui/Btn';
 
 const inputCls = 'w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors';
-const inputStyle = { backgroundColor: '#181818', border: '1px solid #1e1e1e', color: '#e2e2e2' };
+const inputStyle = { backgroundColor: '#f5f1ec', border: '1px solid #1e1e1e', color: '#181410' };
 
 function Inp({ defaultValue, placeholder, type = 'text' }: { defaultValue?: string; placeholder?: string; type?: string }) {
   return (
@@ -12,7 +12,7 @@ function Inp({ defaultValue, placeholder, type = 'text' }: { defaultValue?: stri
       placeholder={placeholder}
       className={inputCls}
       style={inputStyle}
-      onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
+      onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
       onBlur={e => (e.target.style.borderColor = '#1e1e1e')}
     />
   );
@@ -20,7 +20,7 @@ function Inp({ defaultValue, placeholder, type = 'text' }: { defaultValue?: stri
 
 function FieldRow({ label }: { label: string; children?: React.ReactNode }) {
   return (
-    <label className="block text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.07em' }}>{label}</label>
+    <label className="block text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>{label}</label>
   );
 }
 
@@ -28,8 +28,8 @@ export function SettingsPage() {
   return (
     <div className="space-y-5 max-w-2xl">
       <div>
-        <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Settings</h1>
-        <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>Company configuration and preferences</p>
+        <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Settings</h1>
+        <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Company configuration and preferences</p>
       </div>
 
       <Panel title="Company Details">
@@ -70,9 +70,9 @@ export function SettingsPage() {
 
       <Panel title="CIS Settings">
         <div className="space-y-4">
-          <div className="p-3 rounded-md text-xs leading-relaxed" style={{ backgroundColor: '#161616', border: '1px solid #222', color: '#5a5a5a' }}>
-            <span className="font-medium" style={{ color: '#7a7a7a' }}>Construction Industry Scheme — </span>
-            Configured as a <strong style={{ color: '#e2e2e2', fontWeight: 500 }}>CIS Contractor</strong>. Verify subcontractors with HMRC before payments; file monthly returns by the 19th.
+          <div className="p-3 rounded-md text-xs leading-relaxed" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce', color: '#7a7469' }}>
+            <span className="font-medium" style={{ color: '#a8a099' }}>Construction Industry Scheme — </span>
+            Configured as a <strong style={{ color: '#181410', fontWeight: 500 }}>CIS Contractor</strong>. Verify subcontractors with HMRC before payments; file monthly returns by the 19th.
           </div>
           {[
             { label: 'Tax Year Start', value: '6 April', placeholder: '' },
@@ -89,8 +89,8 @@ export function SettingsPage() {
 
       <Panel title="NRSWA / Street Works">
         <div className="space-y-4">
-          <div className="p-3 rounded-md text-xs leading-relaxed" style={{ backgroundColor: '#161616', border: '1px solid #222', color: '#5a5a5a' }}>
-            <span className="font-medium" style={{ color: '#7a7a7a' }}>New Roads and Street Works Act 1991 — </span>
+          <div className="p-3 rounded-md text-xs leading-relaxed" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce', color: '#7a7469' }}>
+            <span className="font-medium" style={{ color: '#a8a099' }}>New Roads and Street Works Act 1991 — </span>
             Company registered with relevant Highway Authority. Ensure all operatives carry valid NRSWA cards for works on the public highway.
           </div>
           {[
@@ -115,13 +115,13 @@ export function SettingsPage() {
             { label: 'LOLER exam reminder (days before)', value: '28' },
           ].map(({ label, value }) => (
             <div key={label} className="flex items-center justify-between gap-4">
-              <span className="text-sm" style={{ color: '#7a7a7a' }}>{label}</span>
+              <span className="text-sm" style={{ color: '#a8a099' }}>{label}</span>
               <input
                 type="number"
                 defaultValue={value}
                 className="w-20 py-1.5 px-2 rounded-md text-sm text-center focus:outline-none"
-                style={{ backgroundColor: '#181818', border: '1px solid #1e1e1e', color: '#e2e2e2' }}
-                onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
+                style={{ backgroundColor: '#f5f1ec', border: '1px solid #1e1e1e', color: '#181410' }}
+                onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
                 onBlur={e => (e.target.style.borderColor = '#1e1e1e')}
               />
             </div>

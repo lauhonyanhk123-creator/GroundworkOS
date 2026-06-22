@@ -1,2 +1,3 @@
 - [GroundworkOS API bridge](groundworkos-api-bridge.md) — DB/API returns camelCase; frontend types.ts uses snake_case; transform layer required
 - [API server seed pattern](api-server-seed.md) — no tsx available; seed via esbuild build then `node dist/seed.mjs`
+- [GroundworkOS design system](groundworkos-design-system.md) — "Technical Survey" light mode; Survey Blue #1b5e78 accent; Space Grotesk + Inter + JetBrains Mono
