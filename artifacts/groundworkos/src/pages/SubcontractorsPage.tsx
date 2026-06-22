@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, AlertTriangle } from 'lucide-react';
+import { Plus, Search, AlertTriangle, X } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -90,112 +90,140 @@ export function SubcontractorsPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Subcontractors</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#666666' }}>CIS, compliance and document tracking</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Subcontractors</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>CIS, compliance and document tracking</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Subcontractor</Btn>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
         {[
-          { label: 'Active Subcons', value: subcontractors.filter(s => s.active).length },
-          { label: 'Gross Status', value: subcontractors.filter(s => s.cis_status === 'gross').length },
-          { label: 'Net 20% Status', value: subcontractors.filter(s => s.cis_status === 'net').length },
+          { label: 'Active', value: subcontractors.filter(s => s.active).length },
+          { label: 'Gross', value: subcontractors.filter(s => s.cis_status === 'gross').length },
+          { label: 'Net 20%', value: subcontractors.filter(s => s.cis_status === 'net').length },
           { label: 'Unverified', value: subcontractors.filter(s => s.cis_status === 'unverified').length },
-        ].map(({ label, value }) => (
-          <div key={label} className="p-3 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
-            <div className="text-xs font-mono uppercase tracking-wider mb-1" style={{ color: '#444444' }}>{label}</div>
-            <div className="text-2xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#FFD600' }}>{value}</div>
+        ].map(({ label, value }, i) => (
+          <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
+            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
+            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-1 p-0.5 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #1a1a1a' }}>
           {(['all', 'active', 'inactive'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)} className="px-3 py-1.5 rounded text-sm capitalize transition-colors" style={tab === t ? { backgroundColor: '#FFD600', color: '#0c0c0c', fontWeight: 700 } : { color: '#666666' }}>{t}</button>
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className="px-4 py-2.5 text-sm capitalize transition-colors"
+              style={tab === t
+                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+                : { color: '#5a5a5a' }}
+            >{t}</button>
           ))}
         </div>
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#444444' }} />
-          <input type="text" placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 pr-4 py-1.5 rounded text-sm w-48 focus:outline-none" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a', color: '#e8e8e8', fontFamily: "'DM Mono', monospace" }} onFocus={e => (e.target.style.borderColor = '#FFD600')} onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#3a3a3a' }} />
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="pl-9 pr-4 py-1.5 rounded-md text-sm w-48 focus:outline-none"
+            style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#e2e2e2' }}
+            onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
+            onBlur={e => (e.target.style.borderColor = '#1a1a1a')}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className={selectedSub ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <Panel>
+          <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#444444' }}>No subcontractors found</p>
-            ) : (
-              <div className="space-y-2">
-                {filtered.map(sub => {
-                  const warnings = getDocWarnings(sub);
-                  return (
-                    <div key={sub.id} onClick={() => setSelected(selected === sub.id ? null : sub.id)} className={cn('flex items-center gap-3 p-3 rounded cursor-pointer transition-colors', selected === sub.id ? 'ring-1 ring-[#FFD600]' : 'hover:bg-[#242424]')} style={{ backgroundColor: '#1c1c1c' }}>
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#242424', color: '#FFD600', fontFamily: "'Barlow Condensed', sans-serif" }}>
-                        {sub.company_name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium" style={{ color: '#e8e8e8' }}>{sub.company_name}</span>
-                          {warnings.length > 0 && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#fb923c' }} />}
-                        </div>
-                        <div className="text-xs" style={{ color: '#666666' }}>{sub.trade ?? '—'} · {sub.contact_name ?? '—'}</div>
-                      </div>
-                      <Badge status={sub.cis_status} />
-                      {sub.nrswa_card_number && (
-                        <span className="text-xs px-1.5 py-0.5 rounded font-mono hidden md:block" style={{ backgroundColor: '#1a1a2e', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)' }}>NRSWA</span>
-                      )}
-                      <div className="text-xs text-right hidden md:block" style={{ color: '#444444', fontFamily: "'DM Mono', monospace" }}>
-                        <div>UTR</div>
-                        <div>{sub.utr_number ? sub.utr_number.slice(0, 7) + '...' : '—'}</div>
-                      </div>
+              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No subcontractors found</p>
+            ) : filtered.map((sub, i) => {
+              const warnings = getDocWarnings(sub);
+              return (
+                <div
+                  key={sub.id}
+                  onClick={() => setSelected(selected === sub.id ? null : sub.id)}
+                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                  style={{
+                    borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
+                    backgroundColor: selected === sub.id ? '#161616' : undefined,
+                    borderLeft: selected === sub.id ? '2px solid #FFD600' : '2px solid transparent',
+                  }}
+                >
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#7a7a7a', border: '1px solid #222', fontFamily: "'Barlow Condensed', sans-serif" }}>
+                    {sub.company_name[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium" style={{ color: '#e2e2e2' }}>{sub.company_name}</span>
+                      {warnings.length > 0 && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#e07b39' }} />}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{sub.trade ?? '—'} · {sub.contact_name ?? '—'}</div>
+                  </div>
+                  <Badge status={sub.cis_status} />
+                  {sub.nrswa_card_number && (
+                    <span className="text-xs px-1.5 py-0.5 rounded hidden md:block" style={{ color: '#4d90d4', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>NRSWA</span>
+                  )}
+                  <div className="text-xs text-right hidden lg:block flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>
+                    {sub.utr_number ? sub.utr_number.slice(0, 7) + '...' : '—'}
+                  </div>
+                </div>
+              );
+            })}
           </Panel>
         </div>
 
         {selectedSub && (
           <div>
-            <Panel title="Subcontractor" actions={<button onClick={() => setSelected(null)} className="text-xs font-mono" style={{ color: '#666666' }}>✕</button>}>
-              <div className="space-y-4">
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+              <div className="space-y-5">
                 <div>
-                  <div className="font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '1.1rem', color: '#e8e8e8' }}>{selectedSub.company_name}</div>
-                  <div className="text-sm mt-0.5" style={{ color: '#666666' }}>{selectedSub.trade ?? '—'}</div>
-                  <div className="mt-1"><Badge status={selectedSub.cis_status} /></div>
-                </div>
-                {[
-                  { label: 'Contact', value: selectedSub.contact_name ?? '—' },
-                  { label: 'Phone', value: selectedSub.phone ?? '—' },
-                  { label: 'Email', value: selectedSub.email ?? '—' },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <div className="text-xs font-mono uppercase tracking-wider" style={{ color: '#444444' }}>{label}</div>
-                    <div className="text-sm mt-0.5" style={{ color: '#e8e8e8' }}>{value}</div>
+                  <div className="flex items-center justify-between mb-1">
+                    <Badge status={selectedSub.cis_status} />
+                    {!selectedSub.active && <span className="text-xs" style={{ color: '#5a5a5a' }}>Inactive</span>}
                   </div>
-                ))}
-                <div className="p-3 rounded" style={{ backgroundColor: '#1a1400', border: '1px solid rgba(255,214,0,0.2)' }}>
-                  <div className="text-xs font-mono uppercase font-bold mb-2" style={{ color: '#FFD600' }}>CIS Details</div>
+                  <h3 className="text-base font-semibold" style={{ color: '#e2e2e2' }}>{selectedSub.company_name}</h3>
+                  <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>{selectedSub.trade ?? '—'}</p>
+                </div>
+
+                <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1a1a1a' }}>
+                  {[
+                    { label: 'Contact', value: selectedSub.contact_name ?? '—' },
+                    { label: 'Phone', value: selectedSub.phone ?? '—' },
+                    { label: 'Email', value: selectedSub.email ?? '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
+                      <span className="text-xs flex-shrink-0" style={{ color: '#5a5a5a' }}>{label}</span>
+                      <span className="text-sm text-right truncate" style={{ color: '#e2e2e2' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="p-4 rounded-lg" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>CIS Details</p>
                   {[
                     { label: 'UTR', value: selectedSub.utr_number ?? '—' },
                     { label: 'Status', value: selectedSub.cis_status.toUpperCase() },
                     { label: 'Deduction Rate', value: `${selectedSub.cis_deduction_rate}%` },
                   ].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between text-xs mb-1">
-                      <span style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{label}</span>
-                      <span style={{ color: '#e8e8e8', fontFamily: "'DM Mono', monospace" }}>{value}</span>
+                    <div key={label} className="flex justify-between text-xs mb-2 last:mb-0">
+                      <span style={{ color: '#5a5a5a' }}>{label}</span>
+                      <span style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace" }}>{value}</span>
                     </div>
                   ))}
                 </div>
+
                 <div>
-                  <div className="text-xs font-mono uppercase font-bold mb-2" style={{ color: '#444444' }}>Compliance</div>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Compliance</p>
                   {[
                     { label: 'NRSWA Card', expiry: selectedSub.nrswa_expiry },
                     { label: 'Public Liability', expiry: selectedSub.public_liability_expiry },
@@ -205,20 +233,21 @@ export function SubcontractorsPage() {
                     const isExpiring = days !== null && days <= 30 && days > 0;
                     const isExpired = days !== null && days <= 0;
                     return (
-                      <div key={label} className="flex justify-between items-center py-1.5 text-xs" style={{ borderBottom: '1px solid #1c1c1c' }}>
-                        <span style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{label}</span>
-                        <span style={{ color: isExpired ? '#ff4444' : isExpiring ? '#fb923c' : expiry ? '#4ade80' : '#444444', fontFamily: "'DM Mono', monospace" }}>
+                      <div key={label} className="flex justify-between items-center py-2 text-xs" style={{ borderBottom: '1px solid #1a1a1a' }}>
+                        <span style={{ color: '#5a5a5a' }}>{label}</span>
+                        <span style={{ color: isExpired ? '#e03a3a' : isExpiring ? '#e07b39' : expiry ? '#3db56d' : '#3a3a3a', fontFamily: "'DM Mono', monospace" }}>
                           {expiry ? formatDate(expiry) : 'N/A'}
                         </span>
                       </div>
                     );
                   })}
                 </div>
+
                 {getDocWarnings(selectedSub).length > 0 && (
-                  <div className="p-2.5 rounded" style={{ backgroundColor: '#1f1500', border: '1px solid rgba(251,146,60,0.3)' }}>
+                  <div className="space-y-1.5">
                     {getDocWarnings(selectedSub).map(w => (
-                      <div key={w} className="flex items-center gap-1.5 text-xs" style={{ color: '#fb923c' }}>
-                        <AlertTriangle className="w-3 h-3" />{w}
+                      <div key={w} className="flex items-center gap-1.5 text-xs" style={{ color: '#e07b39' }}>
+                        <AlertTriangle className="w-3 h-3 flex-shrink-0" />{w}
                       </div>
                     ))}
                   </div>
@@ -233,7 +262,7 @@ export function SubcontractorsPage() {
         <div className="space-y-4">
           <Field label="Company Name" required>
             <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Smith Groundworks Ltd" />
-            {errors.company_name && <p className="mt-1 text-xs" style={{ color: '#ff4444' }}>{errors.company_name}</p>}
+            {errors.company_name && <p className="mt-1 text-xs" style={{ color: '#e03a3a' }}>{errors.company_name}</p>}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">

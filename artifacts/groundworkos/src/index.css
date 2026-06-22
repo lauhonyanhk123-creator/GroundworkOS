@@ -2,19 +2,20 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0c0c0c;
-  --surface: #141414;
-  --surface-2: #1c1c1c;
-  --surface-3: #242424;
-  --border: #2a2a2a;
-  --yellow: #FFD600;
-  --text: #e8e8e8;
-  --muted: #666666;
-  --muted-2: #888888;
-  --success: #4ade80;
-  --warning: #fb923c;
-  --danger: #ff4444;
-  --info: #60a5fa;
+  --background: #0a0a0a;
+  --surface: #111111;
+  --surface-2: #181818;
+  --surface-3: #1f1f1f;
+  --border: #222222;
+  --border-subtle: #1a1a1a;
+  --accent: #FFD600;
+  --text: #e2e2e2;
+  --text-muted: #5a5a5a;
+  --text-muted-2: #7a7a7a;
+  --success: #3db56d;
+  --warning: #e07b39;
+  --danger: #e03a3a;
+  --info: #4d90d4;
 }
 
 @theme inline {
@@ -23,10 +24,10 @@
   --color-surface-2: var(--surface-2);
   --color-surface-3: var(--surface-3);
   --color-border: var(--border);
-  --color-yellow: var(--yellow);
+  --color-accent: var(--accent);
   --color-text: var(--text);
-  --color-muted: var(--muted);
-  --color-muted-2: var(--muted-2);
+  --color-muted: var(--text-muted);
+  --color-muted-2: var(--text-muted-2);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -42,6 +43,7 @@ body {
   color: var(--text);
   font-family: var(--font-sans);
   font-size: 14px;
+  line-height: 1.5;
 }
 
 * {
@@ -50,43 +52,23 @@ body {
   padding: 0;
 }
 
-.hazard-stripe-diagonal {
-  background-image: repeating-linear-gradient(
-    45deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.3) 2px,
-    rgba(0,0,0,0.3) 4px
-  );
-}
-
-.hazard-stripe-horizontal {
-  background: repeating-linear-gradient(
-    90deg,
-    #FFD600,
-    #FFD600 10px,
-    #0c0c0c 10px,
-    #0c0c0c 20px
-  );
-}
-
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: var(--surface);
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
   background: var(--border);
-  border-radius: 3px;
+  border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: #333;
 }
 
 input[type="date"]::-webkit-calendar-picker-indicator {
-  filter: invert(0.5);
+  filter: invert(0.4);
 }
 
 .font-condensed {

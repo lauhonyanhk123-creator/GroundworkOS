@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Truck, AlertTriangle, Wrench } from 'lucide-react';
+import { Plus, Truck, AlertTriangle, Wrench, X } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -90,32 +90,39 @@ export function PlantPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Plant & Machinery</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#666666' }}>Fleet tracking, service & LOLER compliance</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Plant & Machinery</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>Fleet tracking, service & LOLER compliance</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Plant</Btn>
       </div>
 
-      <div className="grid grid-cols-4 gap-3">
+      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
         {[
-          { label: 'On Site', value: plant.filter(p => p.status === 'on_site').length, color: '#FFD600' },
-          { label: 'Available', value: plant.filter(p => p.status === 'available').length, color: '#4ade80' },
-          { label: 'Workshop', value: plant.filter(p => p.status === 'maintenance').length, color: '#fb923c' },
-          { label: 'Owned Fleet', value: plant.filter(p => p.owned).length, color: '#60a5fa' },
-        ].map(({ label, value, color }) => (
-          <div key={label} className="p-3 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
-            <div className="text-xs font-mono uppercase tracking-wider mb-1" style={{ color: '#444444' }}>{label}</div>
-            <div className="text-2xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color }}>{value}</div>
+          { label: 'On Site', value: plant.filter(p => p.status === 'on_site').length },
+          { label: 'Available', value: plant.filter(p => p.status === 'available').length },
+          { label: 'Workshop', value: plant.filter(p => p.status === 'maintenance').length },
+          { label: 'Owned', value: plant.filter(p => p.owned).length },
+        ].map(({ label, value }, i) => (
+          <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #1a1a1a' } : undefined}>
+            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{label}</p>
+            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>{value}</p>
           </div>
         ))}
       </div>
 
-      <div className="flex items-center gap-1 p-0.5 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
+      <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #1a1a1a' }}>
         {STATUS_OPTIONS.map(opt => (
-          <button key={opt.id} onClick={() => setStatusFilter(opt.id)} className="px-3 py-1.5 rounded text-sm transition-colors" style={statusFilter === opt.id ? { backgroundColor: '#FFD600', color: '#0c0c0c', fontWeight: 700 } : { color: '#666666' }}>
+          <button
+            key={opt.id}
+            onClick={() => setStatusFilter(opt.id)}
+            className="px-4 py-2.5 text-sm transition-colors"
+            style={statusFilter === opt.id
+              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+              : { color: '#5a5a5a' }}
+          >
             {opt.label}
           </button>
         ))}
@@ -123,99 +130,107 @@ export function PlantPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className={selectedPlant ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <Panel>
+          <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#444444' }}>No plant items found</p>
-            ) : (
-              <div className="space-y-2">
-                {filtered.map(p => {
-                  const alerts = getPlantAlerts(p);
-                  return (
-                    <div key={p.id} onClick={() => setSelected(selected === p.id ? null : p.id)} className={cn('flex items-center gap-3 p-3 rounded cursor-pointer transition-colors', selected === p.id ? 'ring-1 ring-[#FFD600]' : 'hover:bg-[#242424]')} style={{ backgroundColor: '#1c1c1c' }}>
-                      <div className="w-9 h-9 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#242424' }}>
-                        {p.status === 'maintenance' ? <Wrench className="w-4 h-4" style={{ color: '#fb923c' }} /> : <Truck className="w-4 h-4" style={{ color: '#FFD600' }} />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium" style={{ color: '#e8e8e8' }}>{p.name}</span>
-                          {alerts.length > 0 && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#fb923c' }} />}
-                          {!p.owned && <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: '#1a1a2e', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)' }}>HIRE</span>}
-                        </div>
-                        <div className="text-xs" style={{ color: '#666666' }}>
-                          {p.make} {p.model} {p.year && `(${p.year})`} · {p.registration ?? 'No Reg'}
-                        </div>
-                      </div>
-                      <Badge status={p.status} />
-                      {p.current_job && (
-                        <div className="text-xs text-right hidden md:block" style={{ color: '#444444', fontFamily: "'DM Mono', monospace" }}>
-                          <div>Current Job</div>
-                          <div className="truncate max-w-[120px]">{p.current_job.title}</div>
-                        </div>
-                      )}
-                      {p.daily_rate && (
-                        <div className="text-sm text-right flex-shrink-0 hidden lg:block" style={{ color: '#888888', fontFamily: "'DM Mono', monospace" }}>
-                          {formatCurrency(p.daily_rate)}/d
-                        </div>
-                      )}
+              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No plant items found</p>
+            ) : filtered.map((p, i) => {
+              const alerts = getPlantAlerts(p);
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => setSelected(selected === p.id ? null : p.id)}
+                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                  style={{
+                    borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
+                    backgroundColor: selected === p.id ? '#161616' : undefined,
+                    borderLeft: selected === p.id ? '2px solid #FFD600' : '2px solid transparent',
+                  }}
+                >
+                  <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#1f1f1f', border: '1px solid #222' }}>
+                    {p.status === 'maintenance' ? <Wrench className="w-3.5 h-3.5" style={{ color: '#e07b39' }} /> : <Truck className="w-3.5 h-3.5" style={{ color: '#7a7a7a' }} />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium" style={{ color: '#e2e2e2' }}>{p.name}</span>
+                      {alerts.length > 0 && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#e07b39' }} />}
+                      {!p.owned && <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#4d90d4', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>Hire</span>}
                     </div>
-                  );
-                })}
-              </div>
-            )}
+                    <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>
+                      {p.make} {p.model} {p.year && `(${p.year})`} · {p.registration ?? 'No Reg'}
+                    </div>
+                  </div>
+                  <Badge status={p.status} />
+                  {p.daily_rate && (
+                    <div className="text-sm flex-shrink-0 hidden lg:block" style={{ color: '#7a7a7a', fontFamily: "'DM Mono', monospace" }}>
+                      {formatCurrency(p.daily_rate)}/d
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </Panel>
         </div>
 
         {selectedPlant && (
           <div>
-            <Panel title="Plant Details" actions={<button onClick={() => setSelected(null)} className="text-xs font-mono" style={{ color: '#666666' }}>✕</button>}>
-              <div className="space-y-4">
+            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>}>
+              <div className="space-y-5">
                 <div>
-                  <div className="font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '1.05rem', color: '#e8e8e8' }}>{selectedPlant.name}</div>
-                  <div className="mt-1 flex items-center gap-2">
+                  <div className="flex items-center justify-between mb-1">
                     <Badge status={selectedPlant.status} />
-                    {!selectedPlant.owned && <span className="text-xs px-1.5 py-0.5 rounded font-mono" style={{ backgroundColor: '#1a1a2e', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.3)' }}>HIRED IN</span>}
+                    {!selectedPlant.owned && <span className="text-xs px-1.5 py-0.5 rounded" style={{ color: '#4d90d4', backgroundColor: 'rgba(77,144,212,0.08)', fontFamily: "'DM Mono', monospace" }}>Hired In</span>}
                   </div>
+                  <p className="text-base font-semibold" style={{ color: '#e2e2e2' }}>{selectedPlant.name}</p>
                 </div>
 
                 <div>
-                  <div className="text-xs font-mono uppercase tracking-wider mb-2" style={{ color: '#444444' }}>Update Status</div>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Status</p>
                   <div className="flex flex-wrap gap-1.5">
                     {PLANT_STATUSES.filter(s => s !== 'decommissioned').map(s => (
-                      <button key={s} onClick={() => updateStatus(selectedPlant.id, s)} className="px-2.5 py-1 rounded text-xs font-mono uppercase transition-colors" style={selectedPlant.status === s ? { backgroundColor: '#FFD600', color: '#0c0c0c', fontWeight: 700 } : { backgroundColor: '#1c1c1c', color: '#666666', border: '1px solid #2a2a2a' }}>
+                      <button
+                        key={s}
+                        onClick={() => updateStatus(selectedPlant.id, s)}
+                        className="px-2.5 py-1 rounded text-xs transition-colors capitalize"
+                        style={selectedPlant.status === s
+                          ? { backgroundColor: '#FFD600', color: '#0a0a0a', fontWeight: 600 }
+                          : { backgroundColor: '#181818', color: '#5a5a5a', border: '1px solid #222' }}
+                      >
                         {s.replace('_', ' ')}
                       </button>
                     ))}
                   </div>
                 </div>
 
-                {[
-                  { label: 'Make / Model', value: `${selectedPlant.make ?? '—'} ${selectedPlant.model ?? ''}`.trim() },
-                  { label: 'Year', value: selectedPlant.year?.toString() ?? '—' },
-                  { label: 'Registration', value: selectedPlant.registration ?? '—' },
-                  { label: 'Category', value: selectedPlant.category },
-                  { label: 'Day Rate', value: selectedPlant.daily_rate ? formatCurrency(selectedPlant.daily_rate) : '—' },
-                  { label: 'Current Job', value: selectedPlant.current_job?.title ?? '—' },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <div className="text-xs font-mono uppercase tracking-wider" style={{ color: '#444444' }}>{label}</div>
-                    <div className="text-sm mt-0.5" style={{ color: '#e8e8e8' }}>{value}</div>
-                  </div>
-                ))}
+                <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1a1a1a' }}>
+                  {[
+                    { label: 'Make / Model', value: `${selectedPlant.make ?? '—'} ${selectedPlant.model ?? ''}`.trim() },
+                    { label: 'Year', value: selectedPlant.year?.toString() ?? '—' },
+                    { label: 'Registration', value: selectedPlant.registration ?? '—' },
+                    { label: 'Category', value: selectedPlant.category },
+                    { label: 'Day Rate', value: selectedPlant.daily_rate ? formatCurrency(selectedPlant.daily_rate) : '—' },
+                    { label: 'Current Job', value: selectedPlant.current_job?.title ?? '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
+                      <span className="text-xs flex-shrink-0" style={{ color: '#5a5a5a' }}>{label}</span>
+                      <span className="text-sm text-right" style={{ color: '#e2e2e2' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
 
-                <div className="p-3 rounded" style={{ backgroundColor: '#1c1c1c' }}>
-                  <div className="text-xs font-mono uppercase font-bold mb-2" style={{ color: '#444444' }}>Compliance Dates</div>
+                <div className="pt-3" style={{ borderTop: '1px solid #1a1a1a' }}>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Compliance</p>
                   {[
                     { label: 'Service Due', value: selectedPlant.service_due },
                     { label: 'MOT Due', value: selectedPlant.mot_due },
-                    { label: 'LOLER Thorough Exam', value: selectedPlant.thorough_exam_due },
+                    { label: 'LOLER Exam', value: selectedPlant.thorough_exam_due },
                   ].map(({ label, value }) => {
                     const days = daysUntil(value);
                     const isOverdue = days !== null && days <= 0;
                     const isDue = days !== null && days > 0 && days <= 30;
                     return (
-                      <div key={label} className="flex justify-between items-center py-1.5 text-xs" style={{ borderBottom: '1px solid #2a2a2a' }}>
-                        <span style={{ color: '#666666', fontFamily: "'DM Mono', monospace" }}>{label}</span>
-                        <span style={{ color: isOverdue ? '#ff4444' : isDue ? '#fb923c' : value ? '#4ade80' : '#444444', fontFamily: "'DM Mono', monospace" }}>
+                      <div key={label} className="flex justify-between items-center py-2 text-xs" style={{ borderBottom: '1px solid #141414' }}>
+                        <span style={{ color: '#5a5a5a' }}>{label}</span>
+                        <span style={{ color: isOverdue ? '#e03a3a' : isDue ? '#e07b39' : value ? '#3db56d' : '#3a3a3a', fontFamily: "'DM Mono', monospace" }}>
                           {value ? formatDate(value) : 'N/A'}
                         </span>
                       </div>
@@ -224,10 +239,10 @@ export function PlantPage() {
                 </div>
 
                 {getPlantAlerts(selectedPlant).length > 0 && (
-                  <div className="p-2.5 rounded" style={{ backgroundColor: '#1f1500', border: '1px solid rgba(251,146,60,0.3)' }}>
+                  <div className="space-y-1.5">
                     {getPlantAlerts(selectedPlant).map(w => (
-                      <div key={w} className="flex items-center gap-1.5 text-xs" style={{ color: '#fb923c' }}>
-                        <AlertTriangle className="w-3 h-3" />{w}
+                      <div key={w} className="flex items-center gap-1.5 text-xs" style={{ color: '#e07b39' }}>
+                        <AlertTriangle className="w-3 h-3 flex-shrink-0" />{w}
                       </div>
                     ))}
                   </div>
@@ -235,8 +250,8 @@ export function PlantPage() {
 
                 {selectedPlant.notes && (
                   <div>
-                    <div className="text-xs font-mono uppercase tracking-wider mb-1" style={{ color: '#444444' }}>Notes</div>
-                    <p className="text-xs leading-relaxed" style={{ color: '#888888' }}>{selectedPlant.notes}</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Notes</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#7a7a7a' }}>{selectedPlant.notes}</p>
                   </div>
                 )}
               </div>
@@ -249,7 +264,7 @@ export function PlantPage() {
         <div className="space-y-4">
           <Field label="Name / Description" required>
             <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. 13T Tracked Excavator" />
-            {errors.name && <p className="mt-1 text-xs" style={{ color: '#ff4444' }}>{errors.name}</p>}
+            {errors.name && <p className="mt-1 text-xs" style={{ color: '#e03a3a' }}>{errors.name}</p>}
           </Field>
 
           <div className="grid grid-cols-3 gap-3">

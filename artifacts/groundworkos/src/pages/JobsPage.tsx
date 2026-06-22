@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, Download, Briefcase, TrendingUp, Clock, CheckCircle } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { Plus, Search, Filter, Download, X } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -10,10 +9,7 @@ import { useApp, nextJobNumber } from '../store/AppContext';
 import type { JobType, JobStatus } from '../types';
 
 const YELLOW = '#FFD600';
-const GREEN = '#4ade80';
-const BLUE = '#60a5fa';
-const ORANGE = '#fb923c';
-const RED = '#ff4444';
+const RED = '#e03a3a';
 
 const TABS: { id: string; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -31,16 +27,6 @@ const emptyForm = {
   site_address: '', value: '', start_date: '', end_date: '',
   foreman: '', crew_count: '', nrswa_required: false,
   permit_number: '', description: '', status: 'enquiry' as JobStatus,
-};
-
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="px-2.5 py-1.5 rounded text-xs" style={{ backgroundColor: '#1c1c1c', border: '1px solid #3a3a3a', fontFamily: "'DM Mono', monospace" }}>
-      <div style={{ color: '#888888' }}>{label}</div>
-      <div style={{ color: '#e8e8e8' }}>{formatCurrency(payload[0].value)}</div>
-    </div>
-  );
 };
 
 export function JobsPage() {
@@ -65,18 +51,6 @@ export function JobsPage() {
     }
     return true;
   });
-
-  const activeJobs = jobs.filter(j => j.status === 'active');
-  const totalActiveValue = activeJobs.reduce((s, j) => s + (j.value ?? 0), 0);
-  const completedJobs = jobs.filter(j => j.status === 'complete');
-  const avgProgress = activeJobs.length ? Math.round(activeJobs.reduce((s, j) => s + (j.progress_percent ?? 0), 0) / activeJobs.length) : 0;
-
-  const typeChartData = JOB_TYPES.map(t => ({
-    name: t.charAt(0).toUpperCase() + t.slice(1),
-    value: jobs.filter(j => j.type === t).reduce((s, j) => s + (j.value ?? 0), 0),
-  })).filter(d => d.value > 0).sort((a, b) => b.value - a.value).slice(0, 6);
-
-  const TYPE_COLORS = [YELLOW, GREEN, BLUE, ORANGE, '#a78bfa', '#f472b6'];
 
   function openNew() {
     setForm(emptyForm);
@@ -141,82 +115,69 @@ export function JobsPage() {
   const selectedJob = selected ? jobs.find(j => j.id === selected) : null;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold uppercase" style={{ fontFamily: "'Barlow Condensed', sans-serif" }}>Jobs</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#666666' }}>{jobs.length} jobs total</p>
+          <h1 className="text-xl font-semibold" style={{ color: '#e2e2e2' }}>Jobs</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#5a5a5a' }}>{jobs.length} total</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Job</Btn>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: 'Active Jobs', value: activeJobs.length, sub: formatCurrency(totalActiveValue), color: GREEN, icon: <Clock className="w-4 h-4" /> },
-          { label: 'Avg Progress', value: `${avgProgress}%`, sub: `across ${activeJobs.length} active`, color: YELLOW, icon: <TrendingUp className="w-4 h-4" /> },
-          { label: 'Completed', value: completedJobs.length, sub: formatCurrency(completedJobs.reduce((s, j) => s + (j.value ?? 0), 0)), color: BLUE, icon: <CheckCircle className="w-4 h-4" /> },
-          { label: 'Total Pipeline', value: formatCurrency(jobs.filter(j => j.status !== 'cancelled').reduce((s, j) => s + (j.value ?? 0), 0)), sub: `${jobs.filter(j => j.status !== 'cancelled').length} live jobs`, color: ORANGE, icon: <Briefcase className="w-4 h-4" /> },
-        ].map(({ label, value, sub, color, icon }) => (
-          <div key={label} className="p-3 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-mono uppercase tracking-wider" style={{ color: '#555555' }}>{label}</span>
-              <span style={{ color, opacity: 0.6 }}>{icon}</span>
-            </div>
-            <div className="text-2xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color }}>{value}</div>
-            <div className="text-xs font-mono mt-0.5" style={{ color: '#555555' }}>{sub}</div>
-          </div>
-        ))}
-      </div>
-
-      {typeChartData.length > 0 && (
-        <Panel title="Value by Job Type">
-          <div style={{ height: 110 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={typeChartData} barCategoryGap="25%">
-                <XAxis dataKey="name" tick={{ fill: '#555555', fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fill: '#555555', fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={38} />
-                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                <Bar dataKey="value" name="Value" radius={[2, 2, 0, 0]}>
-                  {typeChartData.map((_, i) => <Cell key={i} fill={TYPE_COLORS[i % TYPE_COLORS.length]} />)}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Panel>
-      )}
-
-      <div className="flex items-center gap-1 p-1 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
-        {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="px-4 py-1.5 rounded text-sm transition-colors" style={activeTab === tab.id ? { backgroundColor: YELLOW, color: '#0c0c0c', fontWeight: 700 } : { color: '#666666' }}>
-            {tab.label}{tab.id !== 'all' && <span className="text-xs opacity-60 ml-1">({jobs.filter(j => j.status === tab.id).length})</span>}
-          </button>
-        ))}
-      </div>
-
       <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #1a1a1a' }}>
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="px-4 py-2.5 text-sm transition-colors relative"
+              style={activeTab === tab.id
+                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+                : { color: '#5a5a5a' }}
+            >
+              {tab.label}
+              {tab.id !== 'all' && (
+                <span className="text-xs ml-1.5" style={{ color: activeTab === tab.id ? '#7a7a7a' : '#3a3a3a' }}>
+                  {jobs.filter(j => j.status === tab.id).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#444444' }} />
-            <input type="text" placeholder="Search jobs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 pr-4 py-1.5 rounded text-sm w-56 focus:outline-none" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a', color: '#e8e8e8', fontFamily: "'DM Mono', monospace" }} onFocus={e => (e.target.style.borderColor = YELLOW)} onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#3a3a3a' }} />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-1.5 rounded-md text-sm w-48 focus:outline-none transition-colors"
+              style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a', color: '#e2e2e2' }}
+              onFocus={e => (e.target.style.borderColor = '#2a2a2a')}
+              onBlur={e => (e.target.style.borderColor = '#1a1a1a')}
+            />
           </div>
           <Btn variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}>
-            <Filter className="w-3.5 h-3.5" /> Filter{filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: YELLOW, color: '#0c0c0c' }}>{filterTypes.length}</span>}
+            <Filter className="w-3.5 h-3.5" />
+            {filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: '#FFD600', color: '#0a0a0a' }}>{filterTypes.length}</span>}
           </Btn>
+          <Btn variant="ghost" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /></Btn>
         </div>
-        <Btn variant="ghost" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /> Export</Btn>
       </div>
 
       {showFilters && (
-        <div className="p-3 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-xs font-mono uppercase tracking-wider" style={{ color: '#444444' }}>Filter by Type</span>
-            {filterTypes.length > 0 && <button className="text-xs" style={{ color: YELLOW }} onClick={() => setFilterTypes([])}>Clear</button>}
+        <div className="p-4 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Filter by type</span>
+            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#FFD600' }} onClick={() => setFilterTypes([])}>Clear</button>}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             {JOB_TYPES.map(t => (
-              <label key={t} className="flex items-center gap-1.5 text-sm cursor-pointer">
+              <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={filterTypes.includes(t)} onChange={e => setFilterTypes(prev => e.target.checked ? [...prev, t] : prev.filter(v => v !== t))} className="accent-yellow-400" />
-                <span style={{ color: '#888888' }} className="capitalize">{t}</span>
+                <span style={{ color: '#7a7a7a' }} className="capitalize">{t}</span>
               </label>
             ))}
           </div>
@@ -225,51 +186,68 @@ export function JobsPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className={selectedJob ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <Panel>
+          <Panel noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#444444' }}>No jobs found</p>
-            ) : (
-              <div className="space-y-2">
-                {filtered.map(job => (
-                  <div key={job.id} onClick={() => setSelected(selected === job.id ? null : job.id)} className={cn('flex items-center gap-3 p-3 rounded cursor-pointer transition-colors', selected === job.id ? 'ring-1 ring-[#FFD600]' : 'hover:bg-[#242424]')} style={{ backgroundColor: '#1c1c1c' }}>
-                    <span className="text-xs font-mono w-24 flex-shrink-0" style={{ color: '#444444' }}>{job.job_number}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate" style={{ color: '#e8e8e8' }}>{job.title}</div>
-                      <div className="text-xs truncate" style={{ color: '#444444' }}>{job.client?.company_name ?? '—'}</div>
+              <p className="text-center py-12 text-sm" style={{ color: '#3a3a3a' }}>No jobs found</p>
+            ) : filtered.map((job, i) => (
+              <div
+                key={job.id}
+                onClick={() => setSelected(selected === job.id ? null : job.id)}
+                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#161616]"
+                style={{
+                  borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
+                  backgroundColor: selected === job.id ? '#161616' : undefined,
+                  borderLeft: selected === job.id ? '2px solid #FFD600' : '2px solid transparent',
+                }}
+              >
+                <span className="text-xs w-24 flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{job.job_number}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate" style={{ color: '#e2e2e2' }}>{job.title}</div>
+                  <div className="text-xs mt-0.5" style={{ color: '#5a5a5a' }}>{job.client?.company_name ?? '—'} {job.type ? `· ${job.type}` : ''}</div>
+                </div>
+                <Badge status={job.status} />
+                <span className="text-sm hidden md:block flex-shrink-0" style={{ color: '#e2e2e2', fontFamily: "'DM Mono', monospace", minWidth: '80px', textAlign: 'right' }}>
+                  {job.value ? formatCurrency(job.value) : '—'}
+                </span>
+                {job.status === 'active' && (
+                  <div className="w-16 hidden lg:block flex-shrink-0">
+                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#1f1f1f' }}>
+                      <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#3db56d' }} />
                     </div>
-                    <span className="text-xs uppercase tracking-wide hidden sm:block" style={{ color: '#444444', fontFamily: "'DM Mono', monospace", minWidth: '80px' }}>{job.type ?? '—'}</span>
-                    <Badge status={job.status} />
-                    <span className="text-sm hidden md:block" style={{ color: '#e8e8e8', fontFamily: "'DM Mono', monospace", minWidth: '80px', textAlign: 'right' }}>{job.value ? formatCurrency(job.value) : '—'}</span>
-                    {job.status === 'active' && (
-                      <div className="w-20 hidden lg:flex flex-col flex-shrink-0">
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#242424' }}>
-                          <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: YELLOW }} />
-                        </div>
-                        <div className="text-xs text-right mt-0.5" style={{ color: '#444444', fontFamily: "'DM Mono', monospace" }}>{job.progress_percent}%</div>
-                      </div>
-                    )}
-                    {job.nrswa_required && <span className="px-1.5 py-0.5 rounded text-xs font-mono hidden xl:block" style={{ backgroundColor: '#1a1400', color: YELLOW, border: '1px solid rgba(255,214,0,0.3)' }}>NRSWA</span>}
+                    <div className="text-xs text-right mt-1" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{job.progress_percent}%</div>
                   </div>
-                ))}
+                )}
               </div>
-            )}
+            ))}
           </Panel>
         </div>
 
         {selectedJob && (
           <div>
-            <Panel title={selectedJob.job_number} actions={<button onClick={() => setSelected(null)} className="text-xs font-mono" style={{ color: '#666666' }}>✕</button>}>
-              <div className="space-y-4">
+            <Panel actions={
+              <button onClick={() => setSelected(null)} style={{ color: '#5a5a5a' }}><X className="w-4 h-4" /></button>
+            }>
+              <div className="space-y-5">
                 <div>
-                  <h3 className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e8e8e8' }}>{selectedJob.title}</h3>
-                  <div className="mt-1"><Badge status={selectedJob.status} /></div>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{selectedJob.job_number}</span>
+                    <Badge status={selectedJob.status} />
+                  </div>
+                  <h3 className="text-base font-semibold leading-snug" style={{ color: '#e2e2e2' }}>{selectedJob.title}</h3>
                 </div>
 
                 <div>
-                  <div className="text-xs font-mono uppercase tracking-wider mb-2" style={{ color: '#444444' }}>Update Status</div>
+                  <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Status</p>
                   <div className="flex flex-wrap gap-1.5">
                     {JOB_STATUSES.map(s => (
-                      <button key={s} onClick={() => updateStatus(selectedJob.id, s)} className="px-2.5 py-1 rounded text-xs font-mono uppercase transition-colors" style={selectedJob.status === s ? { backgroundColor: YELLOW, color: '#0c0c0c', fontWeight: 700 } : { backgroundColor: '#1c1c1c', color: '#666666', border: '1px solid #2a2a2a' }}>
+                      <button
+                        key={s}
+                        onClick={() => updateStatus(selectedJob.id, s)}
+                        className="px-2.5 py-1 rounded text-xs transition-colors capitalize"
+                        style={selectedJob.status === s
+                          ? { backgroundColor: '#FFD600', color: '#0a0a0a', fontWeight: 600 }
+                          : { backgroundColor: '#181818', color: '#5a5a5a', border: '1px solid #222' }}
+                      >
                         {s.replace('_', ' ')}
                       </button>
                     ))}
@@ -278,40 +256,42 @@ export function JobsPage() {
 
                 {selectedJob.status === 'active' && (
                   <div>
-                    <div className="text-xs font-mono uppercase tracking-wider mb-2" style={{ color: '#444444' }}>Progress: {selectedJob.progress_percent}%</div>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Progress — {selectedJob.progress_percent}%</p>
                     <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-yellow-400 cursor-pointer" />
-                    <div className="mt-1.5 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#242424' }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: YELLOW }} />
+                    <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#1f1f1f' }}>
+                      <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: '#3db56d' }} />
                     </div>
                   </div>
                 )}
 
-                {[
-                  { label: 'Client', value: selectedJob.client?.company_name ?? '—' },
-                  { label: 'Type', value: selectedJob.type ?? '—' },
-                  { label: 'Site', value: selectedJob.site_address ?? '—' },
-                  { label: 'Value', value: selectedJob.value ? formatCurrency(selectedJob.value) : '—' },
-                  { label: 'Start Date', value: formatDate(selectedJob.start_date) },
-                  { label: 'Foreman', value: selectedJob.foreman ?? '—' },
-                  { label: 'Crew', value: selectedJob.crew_count ? `${selectedJob.crew_count} operatives` : '—' },
-                ].map(({ label, value }) => (
-                  <div key={label}>
-                    <span className="text-xs font-mono uppercase tracking-wider" style={{ color: '#444444' }}>{label}</span>
-                    <p className="text-sm mt-0.5 capitalize" style={{ color: '#e8e8e8' }}>{value}</p>
-                  </div>
-                ))}
+                <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1a1a1a' }}>
+                  {[
+                    { label: 'Client', value: selectedJob.client?.company_name ?? '—' },
+                    { label: 'Type', value: selectedJob.type ?? '—' },
+                    { label: 'Site', value: selectedJob.site_address ?? '—' },
+                    { label: 'Value', value: selectedJob.value ? formatCurrency(selectedJob.value) : '—' },
+                    { label: 'Start', value: formatDate(selectedJob.start_date) },
+                    { label: 'Foreman', value: selectedJob.foreman ?? '—' },
+                    { label: 'Crew', value: selectedJob.crew_count ? `${selectedJob.crew_count} ops` : '—' },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
+                      <span className="text-xs" style={{ color: '#5a5a5a', flexShrink: 0 }}>{label}</span>
+                      <span className="text-sm text-right capitalize" style={{ color: '#e2e2e2' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
 
                 {selectedJob.nrswa_required && (
-                  <div className="p-2.5 rounded" style={{ backgroundColor: '#1a1400', border: '1px solid rgba(255,214,0,0.2)' }}>
-                    <div className="text-xs font-mono font-bold" style={{ color: YELLOW }}>NRSWA Street Works</div>
-                    <div className="text-xs mt-0.5" style={{ color: '#888888' }}>Permit: {selectedJob.permit_number ?? '—'}</div>
+                  <div className="p-3 rounded-md text-xs" style={{ backgroundColor: '#181818', border: '1px solid #222' }}>
+                    <div className="font-semibold mb-0.5" style={{ color: '#FFD600' }}>NRSWA Street Works</div>
+                    <div style={{ color: '#5a5a5a' }}>Permit: {selectedJob.permit_number ?? '—'}</div>
                   </div>
                 )}
 
                 {selectedJob.description && (
                   <div>
-                    <span className="text-xs font-mono uppercase tracking-wider" style={{ color: '#444444' }}>Description</span>
-                    <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#888888' }}>{selectedJob.description}</p>
+                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Description</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#7a7a7a' }}>{selectedJob.description}</p>
                   </div>
                 )}
               </div>
@@ -323,10 +303,9 @@ export function JobsPage() {
       <Modal open={showModal} onClose={() => setShowModal(false)} title="New Job">
         <div className="space-y-4">
           <Field label="Job Title" required>
-            <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage Installation - Plot 12" />
+            <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage Installation — Plot 12" />
             {errors.title && <p className="mt-1 text-xs" style={{ color: RED }}>{errors.title}</p>}
           </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Status">
               <Select value={form.status} onChange={e => setForm(f => ({ ...f, status: e.target.value as JobStatus }))}>
@@ -340,18 +319,15 @@ export function JobsPage() {
               </Select>
             </Field>
           </div>
-
           <Field label="Client">
             <Select value={form.client_id} onChange={e => setForm(f => ({ ...f, client_id: e.target.value }))}>
               <option value="">Select client...</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
             </Select>
           </Field>
-
           <Field label="Site Address">
             <Input value={form.site_address} onChange={e => setForm(f => ({ ...f, site_address: e.target.value }))} placeholder="e.g. Longbridge Lane, Birmingham, B31 4SX" />
           </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Contract Value (£)">
               <Input type="number" value={form.value} onChange={e => setForm(f => ({ ...f, value: e.target.value }))} placeholder="0.00" />
@@ -360,7 +336,6 @@ export function JobsPage() {
               <Input type="number" value={form.crew_count} onChange={e => setForm(f => ({ ...f, crew_count: e.target.value }))} placeholder="0" />
             </Field>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Start Date">
               <Input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} />
@@ -369,28 +344,23 @@ export function JobsPage() {
               <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} />
             </Field>
           </div>
-
           <Field label="Foreman">
             <Input value={form.foreman} onChange={e => setForm(f => ({ ...f, foreman: e.target.value }))} placeholder="e.g. Dave Walters" />
           </Field>
-
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2.5 cursor-pointer">
               <input type="checkbox" checked={form.nrswa_required} onChange={e => setForm(f => ({ ...f, nrswa_required: e.target.checked }))} className="w-4 h-4 accent-yellow-400" />
-              <span className="text-sm" style={{ color: '#888888' }}>NRSWA Street Works required</span>
+              <span className="text-sm" style={{ color: '#7a7a7a' }}>NRSWA Street Works required</span>
             </label>
           </div>
-
           {form.nrswa_required && (
             <Field label="Permit Number">
               <Input value={form.permit_number} onChange={e => setForm(f => ({ ...f, permit_number: e.target.value }))} placeholder="e.g. BCC-2024-0892" />
             </Field>
           )}
-
           <Field label="Description">
             <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Scope of works..." rows={3} />
           </Field>
-
           <div className="flex gap-3 pt-2">
             <Btn className="flex-1 justify-center" onClick={handleSubmit}>Create Job</Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>

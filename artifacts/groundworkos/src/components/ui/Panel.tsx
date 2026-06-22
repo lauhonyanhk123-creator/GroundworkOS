@@ -6,18 +6,19 @@ interface PanelProps {
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  noPad?: boolean;
 }
 
-export function Panel({ title, actions, children, className }: PanelProps) {
+export function Panel({ title, actions, children, className, noPad }: PanelProps) {
   return (
-    <div className={cn('bg-[#141414] border border-[#2a2a2a] rounded', className)}>
+    <div className={cn('rounded-lg', className)} style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
       {title && (
-        <div className="flex items-center justify-between px-4 py-3 border-b border-[#2a2a2a]">
-          <h3 className="text-sm font-mono text-[#888888] uppercase tracking-wider">{title}</h3>
+        <div className="flex items-center justify-between px-5 py-4" style={{ borderBottom: '1px solid #1a1a1a' }}>
+          <h3 className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>{title}</h3>
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </div>
       )}
-      <div className="p-4">{children}</div>
+      <div className={noPad ? '' : 'p-5'}>{children}</div>
     </div>
   );
 }
