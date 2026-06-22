@@ -8,7 +8,7 @@ import { cn, formatCurrency, formatDate } from '../lib/utils';
 import { useApp, nextJobNumber } from '../store/AppContext';
 import type { JobType, JobStatus } from '../types';
 
-const YELLOW = '#FFD600';
+const YELLOW = '#3db56d';
 const RED = '#e03a3a';
 
 const TABS: { id: string; label: string }[] = [
@@ -132,7 +132,7 @@ export function JobsPage() {
               onClick={() => setActiveTab(tab.id)}
               className="px-4 py-2.5 text-sm transition-colors relative"
               style={activeTab === tab.id
-                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
                 : { color: '#5a5a5a' }}
             >
               {tab.label}
@@ -161,7 +161,7 @@ export function JobsPage() {
           </div>
           <Btn variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}>
             <Filter className="w-3.5 h-3.5" />
-            {filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: '#FFD600', color: '#0a0a0a' }}>{filterTypes.length}</span>}
+            {filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: '#2a2a2a', color: '#e2e2e2' }}>{filterTypes.length}</span>}
           </Btn>
           <Btn variant="ghost" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /></Btn>
         </div>
@@ -171,7 +171,7 @@ export function JobsPage() {
         <div className="p-4 rounded-lg" style={{ backgroundColor: '#111111', border: '1px solid #1a1a1a' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Filter by type</span>
-            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#FFD600' }} onClick={() => setFilterTypes([])}>Clear</button>}
+            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#7a7a7a' }} onClick={() => setFilterTypes([])}>Clear</button>}
           </div>
           <div className="flex flex-wrap gap-3">
             {JOB_TYPES.map(t => (
@@ -197,7 +197,7 @@ export function JobsPage() {
                 style={{
                   borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                   backgroundColor: selected === job.id ? '#161616' : undefined,
-                  borderLeft: selected === job.id ? '2px solid #FFD600' : '2px solid transparent',
+                  borderLeft: selected === job.id ? '2px solid #e2e2e2' : '2px solid transparent',
                 }}
               >
                 <span className="text-xs w-24 flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{job.job_number}</span>
@@ -245,7 +245,7 @@ export function JobsPage() {
                         onClick={() => updateStatus(selectedJob.id, s)}
                         className="px-2.5 py-1 rounded text-xs transition-colors capitalize"
                         style={selectedJob.status === s
-                          ? { backgroundColor: '#FFD600', color: '#0a0a0a', fontWeight: 600 }
+                          ? { backgroundColor: '#e2e2e2', color: '#0a0a0a', fontWeight: 600 }
                           : { backgroundColor: '#181818', color: '#5a5a5a', border: '1px solid #222' }}
                       >
                         {s.replace('_', ' ')}
@@ -283,7 +283,7 @@ export function JobsPage() {
 
                 {selectedJob.nrswa_required && (
                   <div className="p-3 rounded-md text-xs" style={{ backgroundColor: '#181818', border: '1px solid #222' }}>
-                    <div className="font-semibold mb-0.5" style={{ color: '#FFD600' }}>NRSWA Street Works</div>
+                    <div className="font-semibold mb-0.5" style={{ color: '#4d90d4' }}>NRSWA Street Works</div>
                     <div style={{ color: '#5a5a5a' }}>Permit: {selectedJob.permit_number ?? '—'}</div>
                   </div>
                 )}

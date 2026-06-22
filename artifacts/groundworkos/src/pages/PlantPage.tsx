@@ -120,7 +120,7 @@ export function PlantPage() {
             onClick={() => setStatusFilter(opt.id)}
             className="px-4 py-2.5 text-sm transition-colors"
             style={statusFilter === opt.id
-              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
               : { color: '#5a5a5a' }}
           >
             {opt.label}
@@ -143,7 +143,7 @@ export function PlantPage() {
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                     backgroundColor: selected === p.id ? '#161616' : undefined,
-                    borderLeft: selected === p.id ? '2px solid #FFD600' : '2px solid transparent',
+                    borderLeft: selected === p.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
                   <div className="w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#1f1f1f', border: '1px solid #222' }}>
@@ -192,7 +192,7 @@ export function PlantPage() {
                         onClick={() => updateStatus(selectedPlant.id, s)}
                         className="px-2.5 py-1 rounded text-xs transition-colors capitalize"
                         style={selectedPlant.status === s
-                          ? { backgroundColor: '#FFD600', color: '#0a0a0a', fontWeight: 600 }
+                          ? { backgroundColor: '#e2e2e2', color: '#0a0a0a', fontWeight: 600 }
                           : { backgroundColor: '#181818', color: '#5a5a5a', border: '1px solid #222' }}
                       >
                         {s.replace('_', ' ')}

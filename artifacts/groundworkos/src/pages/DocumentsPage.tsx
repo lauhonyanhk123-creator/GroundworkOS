@@ -19,7 +19,7 @@ const TYPE_LABELS: Record<DocumentType, string> = {
 };
 
 const TYPE_COLORS: Record<DocumentType, string> = {
-  rams: '#FFD600',
+  rams: '#a78bfa',
   insurance: '#4ade80',
   certification: '#60a5fa',
   permit: '#a78bfa',
@@ -191,7 +191,7 @@ export function DocumentsPage() {
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                     backgroundColor: selected === doc.id ? '#161616' : undefined,
-                    borderLeft: selected === doc.id ? '2px solid #FFD600' : '2px solid transparent',
+                    borderLeft: selected === doc.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
                   <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[doc.type] }} />
@@ -206,7 +206,7 @@ export function DocumentsPage() {
                     </div>
                   </div>
                   <Badge status={doc.status} />
-                  <div className="text-right text-xs hidden md:block flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace', minWidth: '80px'" }}>
+                  <div className="text-right text-xs hidden md:block flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace", minWidth: '80px' }}>
                     {doc.expiry_date ? (
                       <span style={{ color: isExpired ? '#e03a3a' : isExpiringSoon ? '#e07b39' : '#5a5a5a' }}>{formatDate(doc.expiry_date)}</span>
                     ) : <span>No expiry</span>}

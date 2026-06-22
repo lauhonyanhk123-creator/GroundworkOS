@@ -62,7 +62,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${j.job_number} · ${j.client?.company_name ?? '—'}`,
         href: '/jobs',
         badge: j.status.toUpperCase(),
-        badgeColor: j.status === 'active' ? '#4ade80' : j.status === 'complete' ? '#60a5fa' : '#FFD600',
+        badgeColor: j.status === 'active' ? '#4ade80' : j.status === 'complete' ? '#60a5fa' : '#7a7a7a',
       })),
     ...state.invoices
       .filter(i => i.invoice_number.toLowerCase().includes(q) || i.client?.company_name.toLowerCase().includes(q) || i.job?.title.toLowerCase().includes(q))
@@ -73,7 +73,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${formatCurrency(i.total_amount)} · ${i.status.toUpperCase()}`,
         href: '/invoices',
         badge: i.status.toUpperCase(),
-        badgeColor: i.status === 'paid' ? '#4ade80' : i.status === 'overdue' ? '#ff4444' : '#FFD600',
+        badgeColor: i.status === 'paid' ? '#4ade80' : i.status === 'overdue' ? '#ff4444' : '#7a7a7a',
       })),
     ...state.quotes
       .filter(q2 => q2.quote_number.toLowerCase().includes(q) || q2.title?.toLowerCase().includes(q) || q2.client?.company_name.toLowerCase().includes(q))
@@ -84,7 +84,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${q2.client?.company_name ?? '—'} · ${formatCurrency(q2.total_amount)}`,
         href: '/quotes',
         badge: q2.status.toUpperCase(),
-        badgeColor: q2.status === 'accepted' ? '#4ade80' : q2.status === 'declined' ? '#ff4444' : '#FFD600',
+        badgeColor: q2.status === 'accepted' ? '#4ade80' : q2.status === 'declined' ? '#ff4444' : '#7a7a7a',
       })),
     ...state.clients
       .filter(c => c.company_name.toLowerCase().includes(q) || c.contact_name?.toLowerCase().includes(q) || c.email?.toLowerCase().includes(q))
@@ -104,7 +104,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         subtitle: `${s.trade ?? '—'} · ${s.contact_name ?? '—'}`,
         href: '/subcontractors',
         badge: s.cis_status.toUpperCase(),
-        badgeColor: s.cis_status === 'gross' ? '#4ade80' : s.cis_status === 'unverified' ? '#ff4444' : '#FFD600',
+        badgeColor: s.cis_status === 'gross' ? '#4ade80' : s.cis_status === 'unverified' ? '#ff4444' : '#7a7a7a',
       })),
   ];
 
@@ -128,7 +128,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
         onClick={e => e.stopPropagation()}
       >
         <div className="flex items-center gap-3 px-4 py-3" style={{ borderBottom: '1px solid #2a2a2a' }}>
-          <Search className="w-4 h-4 flex-shrink-0" style={{ color: '#FFD600' }} />
+          <Search className="w-4 h-4 flex-shrink-0" style={{ color: '#7a7a7a' }} />
           <input
             ref={inputRef}
             value={query}
@@ -159,7 +159,7 @@ export function GlobalSearch({ open, onClose }: GlobalSearchProps) {
                   onMouseEnter={() => setSelected(i)}
                 >
                   <div className="w-7 h-7 rounded flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#0c0c0c' }}>
-                    <Icon className="w-3.5 h-3.5" style={{ color: '#FFD600' }} />
+                    <Icon className="w-3.5 h-3.5" style={{ color: '#7a7a7a' }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate" style={{ color: '#e8e8e8', fontFamily: "'Barlow', sans-serif" }}>{r.title}</p>

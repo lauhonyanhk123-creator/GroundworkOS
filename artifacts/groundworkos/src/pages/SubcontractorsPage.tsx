@@ -121,7 +121,7 @@ export function SubcontractorsPage() {
               onClick={() => setTab(t)}
               className="px-4 py-2.5 text-sm capitalize transition-colors"
               style={tab === t
-                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
                 : { color: '#5a5a5a' }}
             >{t}</button>
           ))}
@@ -156,7 +156,7 @@ export function SubcontractorsPage() {
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                     backgroundColor: selected === sub.id ? '#161616' : undefined,
-                    borderLeft: selected === sub.id ? '2px solid #FFD600' : '2px solid transparent',
+                    borderLeft: selected === sub.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
                   <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#7a7a7a', border: '1px solid #222', fontFamily: "'Barlow Condensed', sans-serif" }}>
@@ -283,8 +283,8 @@ export function SubcontractorsPage() {
             </Field>
           </div>
 
-          <div className="p-3 rounded" style={{ backgroundColor: '#1a1400', border: '1px solid rgba(255,214,0,0.15)' }}>
-            <div className="text-xs font-mono uppercase font-bold mb-3" style={{ color: '#FFD600' }}>CIS Details</div>
+          <div className="p-3 rounded" style={{ backgroundColor: '#161616', border: '1px solid #222' }}>
+            <div className="text-xs font-mono uppercase font-bold mb-3" style={{ color: '#7a7a7a' }}>CIS Details</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="UTR Number">
                 <Input value={form.utr_number} onChange={e => setForm(f => ({ ...f, utr_number: e.target.value }))} placeholder="1234567890" />

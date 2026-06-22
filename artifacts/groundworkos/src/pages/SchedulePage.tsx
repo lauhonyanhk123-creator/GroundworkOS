@@ -8,7 +8,7 @@ import { useApp } from '../store/AppContext';
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const TYPE_COLORS: Record<string, string> = {
-  site_work: '#FFD600',
+  site_work: '#60a5fa',
   delivery: '#60a5fa',
   inspection: '#fb923c',
   meeting: '#a78bfa',
@@ -143,11 +143,11 @@ export function SchedulePage() {
             const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
             return (
               <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #1a1a1a' }}>
-                <div className="text-xs uppercase" style={{ color: isToday ? '#FFD600' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{DAY_LABELS[i]}</div>
-                <div className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: isToday ? '#FFD600' : '#3a3a3a' }}>{day.getDate()}</div>
+                <div className="text-xs uppercase" style={{ color: isToday ? '#e2e2e2' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{DAY_LABELS[i]}</div>
+                <div className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: isToday ? '#e2e2e2' : '#3a3a3a' }}>{day.getDate()}</div>
                 {dayEntries.length > 0 && (
                   <div className="flex justify-center mt-0.5">
-                    <span className="w-1 h-1 rounded-full" style={{ backgroundColor: isToday ? '#FFD600' : '#5a5a5a' }} />
+                    <span className="w-1 h-1 rounded-full" style={{ backgroundColor: isToday ? '#e2e2e2' : '#5a5a5a' }} />
                   </div>
                 )}
               </div>
@@ -163,7 +163,7 @@ export function SchedulePage() {
           return (
             <div key={dayIdx} className="grid" style={{ gridTemplateColumns: '72px 1fr', borderBottom: '1px solid #141414' }}>
               <div className="p-3 flex items-start justify-end" style={{ borderRight: '1px solid #1a1a1a' }}>
-                <span className="text-xs" style={{ color: dateStr === today ? '#FFD600' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>
+                <span className="text-xs" style={{ color: dateStr === today ? '#e2e2e2' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>
                   {DAY_LABELS[dayIdx % 7]}
                 </span>
               </div>

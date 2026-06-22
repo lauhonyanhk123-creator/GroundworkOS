@@ -128,7 +128,7 @@ export function InvoicesPage() {
               onClick={() => setTab(t.id)}
               className="px-4 py-2.5 text-sm transition-colors"
               style={tab === t.id
-                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
                 : { color: '#5a5a5a' }}
             >
               {t.label}
@@ -157,7 +157,7 @@ export function InvoicesPage() {
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                     backgroundColor: selected === inv.id ? '#161616' : undefined,
-                    borderLeft: selected === inv.id ? '2px solid #FFD600' : '2px solid transparent',
+                    borderLeft: selected === inv.id ? '2px solid #e2e2e2' : '2px solid transparent',
                   }}
                 >
                   <span className="text-xs w-28 flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{inv.invoice_number}</span>

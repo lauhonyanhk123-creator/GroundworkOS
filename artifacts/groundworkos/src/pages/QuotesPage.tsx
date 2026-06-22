@@ -163,7 +163,7 @@ export function QuotesPage() {
               onClick={() => setTab(t.id)}
               className="px-4 py-2.5 text-sm transition-colors"
               style={tab === t.id
-                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+                ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
                 : { color: '#5a5a5a' }}
             >
               {t.label}
@@ -198,7 +198,7 @@ export function QuotesPage() {
                 style={{
                   borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                   backgroundColor: selected === q.id ? '#161616' : undefined,
-                  borderLeft: selected === q.id ? '2px solid #FFD600' : '2px solid transparent',
+                  borderLeft: selected === q.id ? '2px solid #e2e2e2' : '2px solid transparent',
                 }}
               >
                 <span className="text-xs w-28 flex-shrink-0" style={{ color: '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{q.quote_number}</span>
@@ -317,7 +317,7 @@ export function QuotesPage() {
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#5a5a5a', letterSpacing: '0.08em' }}>Line Items</span>
-              <button onClick={addLineItem} className="text-xs flex items-center gap-1" style={{ color: '#FFD600' }}>
+              <button onClick={addLineItem} className="text-xs flex items-center gap-1" style={{ color: '#7a7a7a' }}>
                 <Plus className="w-3 h-3" /> Add Item
               </button>
             </div>

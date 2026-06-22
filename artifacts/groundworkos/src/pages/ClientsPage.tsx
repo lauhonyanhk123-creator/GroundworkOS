@@ -101,7 +101,7 @@ export function ClientsPage() {
                 style={{
                   borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
                   backgroundColor: selected === client.id ? '#161616' : undefined,
-                  borderLeft: selected === client.id ? '2px solid #FFD600' : '2px solid transparent',
+                  borderLeft: selected === client.id ? '2px solid #e2e2e2' : '2px solid transparent',
                 }}
               >
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#1f1f1f', color: '#7a7a7a', border: '1px solid #222' }}>

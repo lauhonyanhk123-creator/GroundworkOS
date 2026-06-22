@@ -12,7 +12,8 @@ import { useApp } from '../store/AppContext';
 
 type ReportTab = 'overview' | 'cis' | 'ratebook';
 
-const YELLOW = '#FFD600';
+const CHART_INVOICED = '#4d90d4';
+const YELLOW = '#4d90d4';
 const RED = '#ff4444';
 const GREEN = '#4ade80';
 const ORANGE = '#fb923c';
@@ -90,7 +91,7 @@ export function ReportsPage() {
   ).map(([name, count]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value: count }))
    .sort((a, b) => b.value - a.value);
 
-  const TYPE_COLORS = ['#60a5fa', '#fb923c', '#4ade80', '#FFD600', '#a78bfa', '#f472b6', '#34d399', '#fbbf24'];
+  const TYPE_COLORS = ['#60a5fa', '#fb923c', '#4ade80', '#a78bfa', '#f472b6', '#34d399', '#fbbf24', '#94a3b8'];
 
   const agingBuckets = [
     { label: '0–30 days', invoices: invoices.filter(i => (i.status === 'sent' || i.status === 'overdue') && daysOld(i.due_date) <= 30) },
@@ -128,7 +129,7 @@ export function ReportsPage() {
             onClick={() => setTab(t.id)}
             className="px-4 py-2.5 text-sm transition-colors"
             style={tab === t.id
-              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #FFD600', marginBottom: '-1px' }
+              ? { color: '#e2e2e2', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
               : { color: '#5a5a5a' }}
           >
             {t.label}

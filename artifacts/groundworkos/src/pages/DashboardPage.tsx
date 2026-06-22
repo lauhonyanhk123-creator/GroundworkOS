@@ -122,11 +122,11 @@ export function DashboardPage() {
             <div className="grid grid-cols-5 gap-1 mb-4 pb-4" style={{ borderBottom: '1px solid #1a1a1a' }}>
               {weekDays.map(d => (
                 <div key={d.day} className="text-center">
-                  <div className="text-xs mb-1" style={{ color: d.isToday ? '#FFD600' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{d.day}</div>
-                  <div className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: d.isToday ? '#FFD600' : '#3a3a3a' }}>{d.date}</div>
+                  <div className="text-xs mb-1" style={{ color: d.isToday ? '#e2e2e2' : '#5a5a5a', fontFamily: "'DM Mono', monospace" }}>{d.day}</div>
+                  <div className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: d.isToday ? '#e2e2e2' : '#3a3a3a' }}>{d.date}</div>
                   {d.entries.length > 0 && (
                     <div className="flex justify-center mt-1">
-                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: d.isToday ? '#FFD600' : '#5a5a5a' }} />
+                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: d.isToday ? '#e2e2e2' : '#5a5a5a' }} />
                     </div>
                   )}
                 </div>

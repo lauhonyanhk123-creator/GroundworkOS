@@ -20,7 +20,7 @@ const queryClient = new QueryClient();
 function NotFound() {
   return (
     <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-      <div className="text-6xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#FFD600' }}>404</div>
+      <div className="text-6xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#e2e2e2' }}>404</div>
       <p className="text-sm" style={{ color: '#666666' }}>Page not found</p>
     </div>
   );
