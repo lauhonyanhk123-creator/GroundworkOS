@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, Download } from 'lucide-react';
+import { Plus, Search, Filter, Download, Briefcase, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -7,6 +8,12 @@ import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency, formatDate } from '../lib/utils';
 import { useApp, nextJobNumber } from '../store/AppContext';
 import type { JobType, JobStatus } from '../types';
+
+const YELLOW = '#FFD600';
+const GREEN = '#4ade80';
+const BLUE = '#60a5fa';
+const ORANGE = '#fb923c';
+const RED = '#ff4444';
 
 const TABS: { id: string; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -16,14 +23,24 @@ const TABS: { id: string; label: string }[] = [
   { id: 'complete', label: 'Complete' },
 ];
 
-const JOB_TYPES: JobType[] = ['drainage','foundations','excavation','kerbing','sewers','reinstatement','piling','subbase','utilities','groundworks'];
-const JOB_STATUSES: JobStatus[] = ['enquiry','quoted','active','on_hold','complete','cancelled'];
+const JOB_TYPES: JobType[] = ['drainage', 'foundations', 'excavation', 'kerbing', 'sewers', 'reinstatement', 'piling', 'subbase', 'utilities', 'groundworks'];
+const JOB_STATUSES: JobStatus[] = ['enquiry', 'quoted', 'active', 'on_hold', 'complete', 'cancelled'];
 
 const emptyForm = {
   title: '', client_id: '', type: '' as JobType | '',
   site_address: '', value: '', start_date: '', end_date: '',
   foreman: '', crew_count: '', nrswa_required: false,
   permit_number: '', description: '', status: 'enquiry' as JobStatus,
+};
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="px-2.5 py-1.5 rounded text-xs" style={{ backgroundColor: '#1c1c1c', border: '1px solid #3a3a3a', fontFamily: "'DM Mono', monospace" }}>
+      <div style={{ color: '#888888' }}>{label}</div>
+      <div style={{ color: '#e8e8e8' }}>{formatCurrency(payload[0].value)}</div>
+    </div>
+  );
 };
 
 export function JobsPage() {
@@ -48,6 +65,18 @@ export function JobsPage() {
     }
     return true;
   });
+
+  const activeJobs = jobs.filter(j => j.status === 'active');
+  const totalActiveValue = activeJobs.reduce((s, j) => s + (j.value ?? 0), 0);
+  const completedJobs = jobs.filter(j => j.status === 'complete');
+  const avgProgress = activeJobs.length ? Math.round(activeJobs.reduce((s, j) => s + (j.progress_percent ?? 0), 0) / activeJobs.length) : 0;
+
+  const typeChartData = JOB_TYPES.map(t => ({
+    name: t.charAt(0).toUpperCase() + t.slice(1),
+    value: jobs.filter(j => j.type === t).reduce((s, j) => s + (j.value ?? 0), 0),
+  })).filter(d => d.value > 0).sort((a, b) => b.value - a.value).slice(0, 6);
+
+  const TYPE_COLORS = [YELLOW, GREEN, BLUE, ORANGE, '#a78bfa', '#f472b6'];
 
   function openNew() {
     setForm(emptyForm);
@@ -121,10 +150,45 @@ export function JobsPage() {
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Job</Btn>
       </div>
 
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: 'Active Jobs', value: activeJobs.length, sub: formatCurrency(totalActiveValue), color: GREEN, icon: <Clock className="w-4 h-4" /> },
+          { label: 'Avg Progress', value: `${avgProgress}%`, sub: `across ${activeJobs.length} active`, color: YELLOW, icon: <TrendingUp className="w-4 h-4" /> },
+          { label: 'Completed', value: completedJobs.length, sub: formatCurrency(completedJobs.reduce((s, j) => s + (j.value ?? 0), 0)), color: BLUE, icon: <CheckCircle className="w-4 h-4" /> },
+          { label: 'Total Pipeline', value: formatCurrency(jobs.filter(j => j.status !== 'cancelled').reduce((s, j) => s + (j.value ?? 0), 0)), sub: `${jobs.filter(j => j.status !== 'cancelled').length} live jobs`, color: ORANGE, icon: <Briefcase className="w-4 h-4" /> },
+        ].map(({ label, value, sub, color, icon }) => (
+          <div key={label} className="p-3 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-mono uppercase tracking-wider" style={{ color: '#555555' }}>{label}</span>
+              <span style={{ color, opacity: 0.6 }}>{icon}</span>
+            </div>
+            <div className="text-2xl font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color }}>{value}</div>
+            <div className="text-xs font-mono mt-0.5" style={{ color: '#555555' }}>{sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {typeChartData.length > 0 && (
+        <Panel title="Value by Job Type">
+          <div style={{ height: 110 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={typeChartData} barCategoryGap="25%">
+                <XAxis dataKey="name" tick={{ fill: '#555555', fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fill: '#555555', fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={38} />
+                <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
+                <Bar dataKey="value" name="Value" radius={[2, 2, 0, 0]}>
+                  {typeChartData.map((_, i) => <Cell key={i} fill={TYPE_COLORS[i % TYPE_COLORS.length]} />)}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </Panel>
+      )}
+
       <div className="flex items-center gap-1 p-1 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
         {TABS.map(tab => (
-          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="px-4 py-1.5 rounded text-sm transition-colors" style={activeTab === tab.id ? { backgroundColor: '#FFD600', color: '#0c0c0c', fontWeight: 700 } : { color: '#666666' }}>
-            {tab.label} {tab.id !== 'all' && <span className="text-xs opacity-60">({jobs.filter(j => j.status === tab.id).length})</span>}
+          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className="px-4 py-1.5 rounded text-sm transition-colors" style={activeTab === tab.id ? { backgroundColor: YELLOW, color: '#0c0c0c', fontWeight: 700 } : { color: '#666666' }}>
+            {tab.label}{tab.id !== 'all' && <span className="text-xs opacity-60 ml-1">({jobs.filter(j => j.status === tab.id).length})</span>}
           </button>
         ))}
       </div>
@@ -133,10 +197,10 @@ export function JobsPage() {
         <div className="flex items-center gap-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#444444' }} />
-            <input type="text" placeholder="Search jobs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 pr-4 py-1.5 rounded text-sm w-56 focus:outline-none" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a', color: '#e8e8e8', fontFamily: "'DM Mono', monospace" }} onFocus={e => (e.target.style.borderColor = '#FFD600')} onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
+            <input type="text" placeholder="Search jobs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 pr-4 py-1.5 rounded text-sm w-56 focus:outline-none" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a', color: '#e8e8e8', fontFamily: "'DM Mono', monospace" }} onFocus={e => (e.target.style.borderColor = YELLOW)} onBlur={e => (e.target.style.borderColor = '#2a2a2a')} />
           </div>
           <Btn variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}>
-            <Filter className="w-3.5 h-3.5" /> Filter{filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: '#FFD600', color: '#0c0c0c' }}>{filterTypes.length}</span>}
+            <Filter className="w-3.5 h-3.5" /> Filter{filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: YELLOW, color: '#0c0c0c' }}>{filterTypes.length}</span>}
           </Btn>
         </div>
         <Btn variant="ghost" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /> Export</Btn>
@@ -146,7 +210,7 @@ export function JobsPage() {
         <div className="p-3 rounded" style={{ backgroundColor: '#141414', border: '1px solid #2a2a2a' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs font-mono uppercase tracking-wider" style={{ color: '#444444' }}>Filter by Type</span>
-            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#FFD600' }} onClick={() => setFilterTypes([])}>Clear</button>}
+            {filterTypes.length > 0 && <button className="text-xs" style={{ color: YELLOW }} onClick={() => setFilterTypes([])}>Clear</button>}
           </div>
           <div className="flex flex-wrap gap-2">
             {JOB_TYPES.map(t => (
@@ -177,14 +241,14 @@ export function JobsPage() {
                     <Badge status={job.status} />
                     <span className="text-sm hidden md:block" style={{ color: '#e8e8e8', fontFamily: "'DM Mono', monospace", minWidth: '80px', textAlign: 'right' }}>{job.value ? formatCurrency(job.value) : '—'}</span>
                     {job.status === 'active' && (
-                      <div className="w-20 hidden lg:block flex-shrink-0">
-                        <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#242424' }}>
-                          <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#FFD600' }} />
+                      <div className="w-20 hidden lg:flex flex-col flex-shrink-0">
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#242424' }}>
+                          <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: YELLOW }} />
                         </div>
                         <div className="text-xs text-right mt-0.5" style={{ color: '#444444', fontFamily: "'DM Mono', monospace" }}>{job.progress_percent}%</div>
                       </div>
                     )}
-                    {job.nrswa_required && <span className="px-1.5 py-0.5 rounded text-xs font-mono hidden xl:block" style={{ backgroundColor: '#1a1400', color: '#FFD600', border: '1px solid rgba(255,214,0,0.3)' }}>NRSWA</span>}
+                    {job.nrswa_required && <span className="px-1.5 py-0.5 rounded text-xs font-mono hidden xl:block" style={{ backgroundColor: '#1a1400', color: YELLOW, border: '1px solid rgba(255,214,0,0.3)' }}>NRSWA</span>}
                   </div>
                 ))}
               </div>
@@ -205,7 +269,7 @@ export function JobsPage() {
                   <div className="text-xs font-mono uppercase tracking-wider mb-2" style={{ color: '#444444' }}>Update Status</div>
                   <div className="flex flex-wrap gap-1.5">
                     {JOB_STATUSES.map(s => (
-                      <button key={s} onClick={() => updateStatus(selectedJob.id, s)} className="px-2.5 py-1 rounded text-xs font-mono uppercase transition-colors" style={selectedJob.status === s ? { backgroundColor: '#FFD600', color: '#0c0c0c', fontWeight: 700 } : { backgroundColor: '#1c1c1c', color: '#666666', border: '1px solid #2a2a2a' }}>
+                      <button key={s} onClick={() => updateStatus(selectedJob.id, s)} className="px-2.5 py-1 rounded text-xs font-mono uppercase transition-colors" style={selectedJob.status === s ? { backgroundColor: YELLOW, color: '#0c0c0c', fontWeight: 700 } : { backgroundColor: '#1c1c1c', color: '#666666', border: '1px solid #2a2a2a' }}>
                         {s.replace('_', ' ')}
                       </button>
                     ))}
@@ -217,7 +281,7 @@ export function JobsPage() {
                     <div className="text-xs font-mono uppercase tracking-wider mb-2" style={{ color: '#444444' }}>Progress: {selectedJob.progress_percent}%</div>
                     <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-yellow-400 cursor-pointer" />
                     <div className="mt-1.5 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#242424' }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: '#FFD600' }} />
+                      <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: YELLOW }} />
                     </div>
                   </div>
                 )}
@@ -239,7 +303,7 @@ export function JobsPage() {
 
                 {selectedJob.nrswa_required && (
                   <div className="p-2.5 rounded" style={{ backgroundColor: '#1a1400', border: '1px solid rgba(255,214,0,0.2)' }}>
-                    <div className="text-xs font-mono font-bold" style={{ color: '#FFD600' }}>NRSWA Street Works</div>
+                    <div className="text-xs font-mono font-bold" style={{ color: YELLOW }}>NRSWA Street Works</div>
                     <div className="text-xs mt-0.5" style={{ color: '#888888' }}>Permit: {selectedJob.permit_number ?? '—'}</div>
                   </div>
                 )}
@@ -260,7 +324,7 @@ export function JobsPage() {
         <div className="space-y-4">
           <Field label="Job Title" required>
             <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage Installation - Plot 12" />
-            {errors.title && <p className="mt-1 text-xs" style={{ color: '#ff4444' }}>{errors.title}</p>}
+            {errors.title && <p className="mt-1 text-xs" style={{ color: RED }}>{errors.title}</p>}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
