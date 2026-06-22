@@ -1,0 +1,59 @@
+import { Router } from "express";
+import { db, clientsTable, jobsTable } from "@workspace/db";
+import { eq, sql } from "drizzle-orm";
+
+const router = Router();
+
+router.get("/clients", async (req, res) => {
+  const clients = await db.select().from(clientsTable).orderBy(clientsTable.companyName);
+  const jobStats = await db
+    .select({
+      clientId: jobsTable.clientId,
+      totalJobs: sql<number>`count(*)::int`,
+      totalValue: sql<number>`coalesce(sum(${jobsTable.value}), 0)`,
+    })
+    .from(jobsTable)
+    .groupBy(jobsTable.clientId);
+  const statsMap = new Map(jobStats.map((s) => [s.clientId, s]));
+  const result = clients.map((c) => ({
+    ...c,
+    totalJobs: statsMap.get(c.id)?.totalJobs ?? 0,
+    totalValue: statsMap.get(c.id)?.totalValue ?? 0,
+  }));
+  res.json(result);
+});
+
+router.post("/clients", async (req, res) => {
+  const [client] = await db.insert(clientsTable).values(req.body).returning();
+  res.status(201).json({ ...client, totalJobs: 0, totalValue: 0 });
+});
+
+router.get("/clients/:id", async (req, res) => {
+  const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, req.params.id));
+  if (!client) return res.status(404).json({ error: "Not found" });
+  const [stats] = await db
+    .select({
+      totalJobs: sql<number>`count(*)::int`,
+      totalValue: sql<number>`coalesce(sum(${jobsTable.value}), 0)`,
+    })
+    .from(jobsTable)
+    .where(eq(jobsTable.clientId, req.params.id));
+  res.json({ ...client, totalJobs: stats?.totalJobs ?? 0, totalValue: stats?.totalValue ?? 0 });
+});
+
+router.patch("/clients/:id", async (req, res) => {
+  const [client] = await db
+    .update(clientsTable)
+    .set(req.body)
+    .where(eq(clientsTable.id, req.params.id))
+    .returning();
+  if (!client) return res.status(404).json({ error: "Not found" });
+  res.json({ ...client, totalJobs: 0, totalValue: 0 });
+});
+
+router.delete("/clients/:id", async (req, res) => {
+  await db.delete(clientsTable).where(eq(clientsTable.id, req.params.id));
+  res.status(204).send();
+});
+
+export default router;

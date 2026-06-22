@@ -1,6 +1,5 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
 import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant } from '../types';
-import { JOBS, QUOTES, INVOICES, CLIENTS, SUBCONTRACTORS, DOCUMENTS, SCHEDULE, PLANT, CIS_RETURNS } from '../data/mock';
 import type { CISReturn } from '../types';
 
 export interface AppState {
@@ -16,6 +15,14 @@ export interface AppState {
 }
 
 export type AppAction =
+  | { type: 'INIT_JOBS'; jobs: Job[] }
+  | { type: 'INIT_QUOTES'; quotes: Quote[] }
+  | { type: 'INIT_INVOICES'; invoices: Invoice[] }
+  | { type: 'INIT_CLIENTS'; clients: Client[] }
+  | { type: 'INIT_SUBCONTRACTORS'; subcontractors: Subcontractor[] }
+  | { type: 'INIT_DOCUMENTS'; documents: Document[] }
+  | { type: 'INIT_SCHEDULE'; schedule: ScheduleEntry[] }
+  | { type: 'INIT_PLANT'; plant: Plant[] }
   | { type: 'ADD_JOB'; job: Job }
   | { type: 'UPDATE_JOB'; id: string; updates: Partial<Job> }
   | { type: 'ADD_QUOTE'; quote: Quote }
@@ -32,19 +39,27 @@ export type AppAction =
   | { type: 'ADD_SCHEDULE'; entry: ScheduleEntry };
 
 const initialState: AppState = {
-  jobs: JOBS,
-  quotes: QUOTES,
-  invoices: INVOICES,
-  clients: CLIENTS,
-  subcontractors: SUBCONTRACTORS,
-  documents: DOCUMENTS,
-  schedule: SCHEDULE,
-  plant: PLANT,
-  cisReturns: CIS_RETURNS,
+  jobs: [],
+  quotes: [],
+  invoices: [],
+  clients: [],
+  subcontractors: [],
+  documents: [],
+  schedule: [],
+  plant: [],
+  cisReturns: [],
 };
 
 function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case 'INIT_JOBS': return { ...state, jobs: action.jobs };
+    case 'INIT_QUOTES': return { ...state, quotes: action.quotes };
+    case 'INIT_INVOICES': return { ...state, invoices: action.invoices };
+    case 'INIT_CLIENTS': return { ...state, clients: action.clients };
+    case 'INIT_SUBCONTRACTORS': return { ...state, subcontractors: action.subcontractors };
+    case 'INIT_DOCUMENTS': return { ...state, documents: action.documents };
+    case 'INIT_SCHEDULE': return { ...state, schedule: action.schedule };
+    case 'INIT_PLANT': return { ...state, plant: action.plant };
     case 'ADD_JOB':
       return { ...state, jobs: [action.job, ...state.jobs] };
     case 'UPDATE_JOB':

@@ -1,0 +1,2 @@
+- [GroundworkOS API bridge](groundworkos-api-bridge.md) — DB/API returns camelCase; frontend types.ts uses snake_case; transform layer required
+- [API server seed pattern](api-server-seed.md) — no tsx available; seed via esbuild build then `node dist/seed.mjs`
