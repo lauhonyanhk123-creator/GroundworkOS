@@ -9,13 +9,13 @@ import { useApp } from '../store/AppContext';
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-3 py-2.5 rounded-lg text-xs" style={{ backgroundColor: '#f5f1ec', border: '1px solid #2a2a2a' }}>
-      <div className="font-medium mb-1.5" style={{ color: '#181410', fontFamily: "'Barlow', sans-serif" }}>{label}</div>
+    <div className="px-3 py-2.5 rounded-lg text-xs" style={{ backgroundColor: '#f5f1ec', border: '1px solid #d9d4ce' }}>
+      <div className="font-medium mb-1.5" style={{ color: '#181410', fontFamily: "'Inter', sans-serif" }}>{label}</div>
       {payload.map((p: any) => (
         <div key={p.name} className="flex items-center gap-2 mb-0.5">
           <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
           <span style={{ color: '#7a7469' }}>{p.name}: </span>
-          <span style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{typeof p.value === 'number' ? formatCurrency(p.value) : p.value}</span>
+          <span style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace" }}>{typeof p.value === 'number' ? formatCurrency(p.value) : p.value}</span>
         </div>
       ))}
     </div>
@@ -68,9 +68,9 @@ export function DashboardPage() {
           { label: 'Outstanding', value: formatCurrency(totalOutstanding), sub: `${outstandingInvoices.length} invoices` },
           { label: 'Overdue', value: formatCurrency(totalOverdue), sub: `${overdueInvoices.length} overdue`, isDanger: overdueInvoices.length > 0 },
         ].map(({ label, value, sub, isDanger }) => (
-          <div key={label} className="p-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
+          <div key={label} className="p-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
             <p className="text-xs font-medium uppercase tracking-widest mb-3" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
-            <p className="text-3xl font-bold leading-none mb-2" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: isDanger && totalOverdue > 0 ? '#e03a3a' : '#181410' }}>{value}</p>
+            <p className="text-3xl font-bold leading-none mb-2" style={{ fontFamily: "'Space Grotesk', sans-serif", color: isDanger && totalOverdue > 0 ? '#c13a2a' : '#181410' }}>{value}</p>
             <p className="text-xs" style={{ color: '#7a7469' }}>{sub}</p>
           </div>
         ))}
@@ -83,8 +83,8 @@ export function DashboardPage() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={revenueData} barGap={4} barCategoryGap="32%">
                   <CartesianGrid vertical={false} stroke="#e8e4dd" />
-                  <XAxis dataKey="month" tick={{ fill: '#7a7469', fontSize: 11, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'DM Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={38} />
+                  <XAxis dataKey="month" tick={{ fill: '#7a7469', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={38} />
                   <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
                   <Bar dataKey="invoiced" name="Invoiced" fill="#d4cfc9" radius={[3, 3, 0, 0]} />
                   <Bar dataKey="collected" name="Collected" fill="#2a6e45" radius={[3, 3, 0, 0]} />
@@ -96,7 +96,7 @@ export function DashboardPage() {
                 <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: '#e0dbd5' }} /> Invoiced
               </div>
               <div className="flex items-center gap-1.5 text-xs" style={{ color: '#7a7469' }}>
-                <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: '#3db56d' }} /> Collected
+                <span className="w-2 h-2 rounded-sm inline-block" style={{ backgroundColor: '#2a6e45' }} /> Collected
               </div>
             </div>
           </Panel>
@@ -108,7 +108,7 @@ export function DashboardPage() {
               <p className="text-xs text-center py-8" style={{ color: '#c0bab4' }}>No active jobs</p>
             ) : activeJobs.slice(0, 5).map((job, i) => (
               <Link key={job.id} href="/jobs">
-                <div className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#eeeae4] cursor-pointer" style={{ borderBottom: i < Math.min(activeJobs.length, 5) - 1 ? '1px solid #1a1a1a' : 'none' }}>
+                <div className="flex items-center gap-4 px-5 py-3.5 transition-colors hover:bg-[#eeeae4] cursor-pointer" style={{ borderBottom: i < Math.min(activeJobs.length, 5) - 1 ? '1px solid #d9d4ce' : 'none' }}>
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate mb-0.5" style={{ color: '#181410' }}>{job.title}</div>
                     <div className="text-xs" style={{ color: '#7a7469' }}>{job.client?.company_name ?? '—'}</div>
@@ -116,13 +116,13 @@ export function DashboardPage() {
                   <div className="flex items-center gap-4 flex-shrink-0">
                     <div className="w-28 hidden sm:block">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="text-xs" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{job.progress_percent}%</span>
+                        <span className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{job.progress_percent}%</span>
                       </div>
                       <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
-                        <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#3db56d' }} />
+                        <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#2a6e45' }} />
                       </div>
                     </div>
-                    <span className="text-sm font-medium hidden md:block" style={{ color: '#181410', fontFamily: "'DM Mono', monospace" }}>{job.value ? formatCurrency(job.value) : '—'}</span>
+                    <span className="text-sm font-medium hidden md:block" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace" }}>{job.value ? formatCurrency(job.value) : '—'}</span>
                   </div>
                 </div>
               </Link>
@@ -138,7 +138,7 @@ export function DashboardPage() {
             {overdueInvoices.slice(0, 3).map(inv => (
               <Link key={inv.id} href="/invoices">
                 <div className="flex items-start gap-2.5 cursor-pointer group">
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#e03a3a' }} />
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: '#c13a2a' }} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium group-hover:text-white transition-colors" style={{ color: '#181410' }}>{inv.invoice_number}</div>
                     <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{formatCurrency(inv.total_amount)} overdue</div>
@@ -149,7 +149,7 @@ export function DashboardPage() {
             {[...expiredDocs, ...expiringDocs].slice(0, 3).map(doc => (
               <Link key={doc.id} href="/documents">
                 <div className="flex items-start gap-2.5 cursor-pointer group">
-                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: doc.status === 'expired' ? '#e03a3a' : '#e07b39' }} />
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" style={{ color: doc.status === 'expired' ? '#c13a2a' : '#e07b39' }} />
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium group-hover:text-white transition-colors truncate" style={{ color: '#181410' }}>{doc.name}</div>
                     <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>

@@ -82,7 +82,7 @@ export function ClientsPage() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           className="pl-9 pr-4 py-2 rounded-md text-sm w-64 focus:outline-none"
-          style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#181410' }}
+          style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#181410' }}
           onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
           onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
         />
@@ -99,12 +99,12 @@ export function ClientsPage() {
                 onClick={() => setSelected(selected === client.id ? null : client.id)}
                 className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                 style={{
-                  borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
+                  borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
                   backgroundColor: selected === client.id ? '#eeeae4' : undefined,
-                  borderLeft: selected === client.id ? '2px solid #e2e2e2' : '2px solid transparent',
+                  borderLeft: selected === client.id ? '2px solid #1b5e78' : '2px solid transparent',
                 }}
               >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#a8a099', border: '1px solid #d9d4ce' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#8a8377', border: '1px solid #d9d4ce' }}>
                   {client.company_name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -113,12 +113,12 @@ export function ClientsPage() {
                 </div>
                 <div className="text-right hidden sm:block flex-shrink-0">
                   <div className="text-sm font-medium" style={{ color: '#181410' }}>{client.total_jobs} jobs</div>
-                  <div className="text-xs" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
+                  <div className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
                 </div>
                 {client.email && (
                   <div className="hidden md:flex items-center gap-1.5 text-xs" style={{ color: '#7a7469' }}>
                     <Mail className="w-3 h-3" />
-                    <span style={{ fontFamily: "'DM Mono', monospace" }}>{client.email}</span>
+                    <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{client.email}</span>
                   </div>
                 )}
               </div>
@@ -140,13 +140,13 @@ export function ClientsPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 py-4" style={{ borderTop: '1px solid #1a1a1a', borderBottom: '1px solid #1a1a1a' }}>
+                <div className="flex gap-4 py-4" style={{ borderTop: '1px solid #d9d4ce', borderBottom: '1px solid #d9d4ce' }}>
                   <div className="flex-1 text-center">
-                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{selectedClient.total_jobs}</div>
+                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{selectedClient.total_jobs}</div>
                     <div className="text-xs" style={{ color: '#7a7469' }}>Jobs</div>
                   </div>
-                  <div className="flex-1 text-center" style={{ borderLeft: '1px solid #1a1a1a' }}>
-                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: '#181410' }}>{formatCurrency(selectedClient.total_value)}</div>
+                  <div className="flex-1 text-center" style={{ borderLeft: '1px solid #d9d4ce' }}>
+                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{formatCurrency(selectedClient.total_value)}</div>
                     <div className="text-xs" style={{ color: '#7a7469' }}>Value</div>
                   </div>
                 </div>
@@ -158,7 +158,7 @@ export function ClientsPage() {
                     { label: 'Address', value: selectedClient.address, icon: null },
                     { label: 'VAT No', value: selectedClient.vat_number, icon: null },
                   ].map(({ label, value, icon }) => (
-                    <div key={label} className="flex justify-between items-start gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
+                    <div key={label} className="flex justify-between items-start gap-3 pt-3" style={{ borderTop: '1px solid #ece8e3' }}>
                       <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>{label}</span>
                       <span className="text-sm text-right flex items-center gap-1.5" style={{ color: value ? '#181410' : '#c0bab4' }}>
                         {icon && <span style={{ color: '#7a7469' }}>{icon}</span>}
@@ -171,7 +171,7 @@ export function ClientsPage() {
                 {selectedClient.notes && (
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#a8a099' }}>{selectedClient.notes}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#8a8377' }}>{selectedClient.notes}</p>
                   </div>
                 )}
               </div>
@@ -184,7 +184,7 @@ export function ClientsPage() {
         <div className="space-y-4">
           <Field label="Company Name" required>
             <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Midlands Groundworks Ltd" />
-            {errors.company_name && <p className="mt-1 text-xs" style={{ color: '#e03a3a' }}>{errors.company_name}</p>}
+            {errors.company_name && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.company_name}</p>}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Contact Name">

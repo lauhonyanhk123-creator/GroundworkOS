@@ -8,8 +8,8 @@ import { cn, formatCurrency, formatDate } from '../lib/utils';
 import { useApp, nextJobNumber } from '../store/AppContext';
 import type { JobType, JobStatus } from '../types';
 
-const YELLOW = '#3db56d';
-const RED = '#e03a3a';
+const YELLOW = '#2a6e45';
+const RED = '#c13a2a';
 
 const TABS: { id: string; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -125,19 +125,19 @@ export function JobsPage() {
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #1a1a1a' }}>
+        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #d9d4ce' }}>
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className="px-4 py-2.5 text-sm transition-colors relative"
               style={activeTab === tab.id
-                ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #e2e2e2', marginBottom: '-1px' }
+                ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #1b5e78', marginBottom: '-1px' }
                 : { color: '#7a7469' }}
             >
               {tab.label}
               {tab.id !== 'all' && (
-                <span className="text-xs ml-1.5" style={{ color: activeTab === tab.id ? '#a8a099' : '#c0bab4' }}>
+                <span className="text-xs ml-1.5" style={{ color: activeTab === tab.id ? '#8a8377' : '#c0bab4' }}>
                   {jobs.filter(j => j.status === tab.id).length}
                 </span>
               )}
@@ -154,7 +154,7 @@ export function JobsPage() {
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="pl-9 pr-4 py-1.5 rounded-md text-sm w-48 focus:outline-none transition-colors"
-              style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a', color: '#181410' }}
+              style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#181410' }}
               onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
               onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
             />
@@ -168,16 +168,16 @@ export function JobsPage() {
       </div>
 
       {showFilters && (
-        <div className="p-4 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #1a1a1a' }}>
+        <div className="p-4 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Filter by type</span>
-            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#a8a099' }} onClick={() => setFilterTypes([])}>Clear</button>}
+            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#8a8377' }} onClick={() => setFilterTypes([])}>Clear</button>}
           </div>
           <div className="flex flex-wrap gap-3">
             {JOB_TYPES.map(t => (
               <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
                 <input type="checkbox" checked={filterTypes.includes(t)} onChange={e => setFilterTypes(prev => e.target.checked ? [...prev, t] : prev.filter(v => v !== t))} className="accent-neutral-400" />
-                <span style={{ color: '#a8a099' }} className="capitalize">{t}</span>
+                <span style={{ color: '#8a8377' }} className="capitalize">{t}</span>
               </label>
             ))}
           </div>
@@ -195,26 +195,26 @@ export function JobsPage() {
                 onClick={() => setSelected(selected === job.id ? null : job.id)}
                 className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
                 style={{
-                  borderBottom: i < filtered.length - 1 ? '1px solid #1a1a1a' : 'none',
+                  borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
                   backgroundColor: selected === job.id ? '#eeeae4' : undefined,
-                  borderLeft: selected === job.id ? '2px solid #e2e2e2' : '2px solid transparent',
+                  borderLeft: selected === job.id ? '2px solid #1b5e78' : '2px solid transparent',
                 }}
               >
-                <span className="text-xs w-24 flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{job.job_number}</span>
+                <span className="text-xs w-24 flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{job.job_number}</span>
                 <div className="flex-1 min-w-0">
                   <div className="text-sm font-medium truncate" style={{ color: '#181410' }}>{job.title}</div>
                   <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{job.client?.company_name ?? '—'} {job.type ? `· ${job.type}` : ''}</div>
                 </div>
                 <Badge status={job.status} />
-                <span className="text-sm hidden md:block flex-shrink-0" style={{ color: '#181410', fontFamily: "'DM Mono', monospace", minWidth: '80px', textAlign: 'right' }}>
+                <span className="text-sm hidden md:block flex-shrink-0" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace", minWidth: '80px', textAlign: 'right' }}>
                   {job.value ? formatCurrency(job.value) : '—'}
                 </span>
                 {job.status === 'active' && (
                   <div className="w-16 hidden lg:block flex-shrink-0">
                     <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
-                      <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#3db56d' }} />
+                      <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#2a6e45' }} />
                     </div>
-                    <div className="text-xs text-right mt-1" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{job.progress_percent}%</div>
+                    <div className="text-xs text-right mt-1" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{job.progress_percent}%</div>
                   </div>
                 )}
               </div>
@@ -230,7 +230,7 @@ export function JobsPage() {
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>{selectedJob.job_number}</span>
+                    <span className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{selectedJob.job_number}</span>
                     <Badge status={selectedJob.status} />
                   </div>
                   <h3 className="text-base font-semibold leading-snug" style={{ color: '#181410' }}>{selectedJob.title}</h3>
@@ -259,12 +259,12 @@ export function JobsPage() {
                     <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Progress — {selectedJob.progress_percent}%</p>
                     <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-neutral-400 cursor-pointer" />
                     <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
-                      <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: '#3db56d' }} />
+                      <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: '#2a6e45' }} />
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #1a1a1a' }}>
+                <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #d9d4ce' }}>
                   {[
                     { label: 'Client', value: selectedJob.client?.company_name ?? '—' },
                     { label: 'Type', value: selectedJob.type ?? '—' },
@@ -274,7 +274,7 @@ export function JobsPage() {
                     { label: 'Foreman', value: selectedJob.foreman ?? '—' },
                     { label: 'Crew', value: selectedJob.crew_count ? `${selectedJob.crew_count} ops` : '—' },
                   ].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #141414' }}>
+                    <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #ece8e3' }}>
                       <span className="text-xs" style={{ color: '#7a7469', flexShrink: 0 }}>{label}</span>
                       <span className="text-sm text-right capitalize" style={{ color: '#181410' }}>{value}</span>
                     </div>
@@ -291,7 +291,7 @@ export function JobsPage() {
                 {selectedJob.description && (
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Description</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#a8a099' }}>{selectedJob.description}</p>
+                    <p className="text-sm leading-relaxed" style={{ color: '#8a8377' }}>{selectedJob.description}</p>
                   </div>
                 )}
               </div>
@@ -350,7 +350,7 @@ export function JobsPage() {
           <div className="flex items-center gap-3">
             <label className="flex items-center gap-2.5 cursor-pointer">
               <input type="checkbox" checked={form.nrswa_required} onChange={e => setForm(f => ({ ...f, nrswa_required: e.target.checked }))} className="w-4 h-4 accent-neutral-400" />
-              <span className="text-sm" style={{ color: '#a8a099' }}>NRSWA Street Works required</span>
+              <span className="text-sm" style={{ color: '#8a8377' }}>NRSWA Street Works required</span>
             </label>
           </div>
           {form.nrswa_required && (

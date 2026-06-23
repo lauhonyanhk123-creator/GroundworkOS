@@ -8,8 +8,8 @@ import { useApp } from '../store/AppContext';
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const TYPE_COLORS: Record<string, string> = {
-  site_work: '#60a5fa',
-  delivery: '#60a5fa',
+  site_work: '#1b5e78',
+  delivery: '#1b5e78',
   inspection: '#fb923c',
   meeting: '#a78bfa',
   other: '#888888',
@@ -128,23 +128,23 @@ export function SchedulePage() {
       </div>
 
       <div className="flex items-center gap-3">
-        <button onClick={prevWeek} className="p-1.5 rounded-md hover:bg-[#181818] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
+        <button onClick={prevWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
         <span className="text-sm font-medium" style={{ color: '#181410' }}>{weekLabel}</span>
-        <button onClick={nextWeek} className="p-1.5 rounded-md hover:bg-[#181818] transition-colors" style={{ color: '#7a7469' }}><ChevronRight className="w-4 h-4" /></button>
-        <button onClick={() => setCurrentDate(new Date())} className="px-2.5 py-1 text-xs rounded-md" style={{ backgroundColor: '#f5f1ec', color: '#a8a099', border: '1px solid #1a1a1a' }}>Today</button>
+        <button onClick={nextWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronRight className="w-4 h-4" /></button>
+        <button onClick={() => setCurrentDate(new Date())} className="px-2.5 py-1 text-xs rounded-md" style={{ backgroundColor: '#f5f1ec', color: '#8a8377', border: '1px solid #d9d4ce' }}>Today</button>
       </div>
 
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #1a1a1a' }}>
-        <div className="grid" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', backgroundColor: '#fafaf8', borderBottom: '1px solid #1a1a1a' }}>
+      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #d9d4ce' }}>
+        <div className="grid" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', backgroundColor: '#fafaf8', borderBottom: '1px solid #d9d4ce' }}>
           <div className="p-2" />
           {weekDays.map((day, i) => {
             const dateStr = day.toISOString().split('T')[0];
             const isToday = dateStr === today;
             const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
             return (
-              <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #1a1a1a' }}>
-                <div className="text-xs uppercase" style={{ color: isToday ? '#181410' : '#7a7469', fontFamily: "'DM Mono', monospace" }}>{DAY_LABELS[i]}</div>
-                <div className="text-lg font-bold" style={{ fontFamily: "'Barlow Condensed', sans-serif", color: isToday ? '#181410' : '#c0bab4' }}>{day.getDate()}</div>
+              <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #d9d4ce' }}>
+                <div className="text-xs uppercase" style={{ color: isToday ? '#181410' : '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{DAY_LABELS[i]}</div>
+                <div className="text-lg font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: isToday ? '#181410' : '#c0bab4' }}>{day.getDate()}</div>
                 {dayEntries.length > 0 && (
                   <div className="flex justify-center mt-0.5">
                     <span className="w-1 h-1 rounded-full" style={{ backgroundColor: isToday ? '#181410' : '#7a7469' }} />
@@ -161,9 +161,9 @@ export function SchedulePage() {
           if (dayEntries.length === 0 && dateStr !== today) return null;
 
           return (
-            <div key={dayIdx} className="grid" style={{ gridTemplateColumns: '72px 1fr', borderBottom: '1px solid #141414' }}>
-              <div className="p-3 flex items-start justify-end" style={{ borderRight: '1px solid #1a1a1a' }}>
-                <span className="text-xs" style={{ color: dateStr === today ? '#181410' : '#7a7469', fontFamily: "'DM Mono', monospace" }}>
+            <div key={dayIdx} className="grid" style={{ gridTemplateColumns: '72px 1fr', borderBottom: '1px solid #ece8e3' }}>
+              <div className="p-3 flex items-start justify-end" style={{ borderRight: '1px solid #d9d4ce' }}>
+                <span className="text-xs" style={{ color: dateStr === today ? '#181410' : '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>
                   {DAY_LABELS[dayIdx % 7]}
                 </span>
               </div>
@@ -172,7 +172,7 @@ export function SchedulePage() {
                   <div className="text-xs py-2 text-center" style={{ color: '#222' }}>—</div>
                 ) : dayEntries.map(entry => (
                   <div key={entry.id} className="flex items-start gap-3 px-3 py-2.5 rounded-md" style={{ backgroundColor: '#eeeae4', borderLeft: `2px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
-                    <span className="text-xs flex-shrink-0 mt-0.5" style={{ color: '#7a7469', fontFamily: "'DM Mono', monospace" }}>
+                    <span className="text-xs flex-shrink-0 mt-0.5" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>
                       {new Date(entry.start_datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <div className="flex-1">
@@ -184,7 +184,7 @@ export function SchedulePage() {
                         {entry.foreman && <span>FM: {entry.foreman}</span>}
                       </div>
                     </div>
-                    <span className="text-xs px-1.5 py-0.5 rounded capitalize" style={{ color: TYPE_COLORS[entry.type] ?? '#7a7469', fontFamily: "'DM Mono', monospace" }}>{entry.type.replace('_', ' ')}</span>
+                    <span className="text-xs px-1.5 py-0.5 rounded capitalize" style={{ color: TYPE_COLORS[entry.type] ?? '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{entry.type.replace('_', ' ')}</span>
                   </div>
                 ))}
               </div>
@@ -206,7 +206,7 @@ export function SchedulePage() {
         <div className="space-y-4">
           <Field label="Title" required>
             <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage excavation — Phase 1" />
-            {errors.title && <p className="mt-1 text-xs" style={{ color: '#e03a3a' }}>{errors.title}</p>}
+            {errors.title && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.title}</p>}
           </Field>
 
           <div className="grid grid-cols-2 gap-3">

@@ -178,7 +178,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <span>Search</span>
               <kbd style={{
                 backgroundColor: '#fafaf8',
-                color: '#a8a099',
+                color: '#8a8377',
                 border: '1px solid #d9d4ce',
                 borderRadius: '3px',
                 padding: '1px 5px',

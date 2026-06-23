@@ -11,7 +11,7 @@
   --ink:        #181410;
   --ink-2:      #4a4540;
   --muted:      #7a7469;
-  --muted-2:    #a8a099;
+  --muted-2:    #8a8377;
   --accent:     #1b5e78;
   --accent-bg:  #e8f3f7;
   --success:    #2a6e45;
@@ -44,12 +44,38 @@ body {
   font-family: var(--font-sans);
   font-size: 14px;
   line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+::selection {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* Tabular figures keep numeric columns aligned across rows */
+[style*="JetBrains Mono"],
+.font-mono {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+h1, h2, h3 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
 }
 
 ::-webkit-scrollbar {
