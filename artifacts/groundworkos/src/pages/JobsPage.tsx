@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Search, Filter, Download, X } from 'lucide-react';
+import { Plus, Search, Filter, Download, X, ChevronRight, MapPin } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
+import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
@@ -114,30 +115,42 @@ export function JobsPage() {
 
   const selectedJob = selected ? jobs.find(j => j.id === selected) : null;
 
+  const activeJobs = jobs.filter(j => j.status === 'active');
+  const activeValue = activeJobs.reduce((sum, j) => sum + (j.value ?? 0), 0);
+  const totalPipeline = jobs.filter(j => j.status !== 'cancelled').reduce((sum, j) => sum + (j.value ?? 0), 0);
+  const completedJobs = jobs.filter(j => j.status === 'complete');
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Jobs</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>{jobs.length} total</p>
+          <h1 className="text-xl font-semibold tracking-tight" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Jobs</h1>
+          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}><span className="font-mono font-medium">{jobs.length}</span> total registered</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Job</Btn>
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #d9d4ce' }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Pipeline" value={formatCurrency(totalPipeline)} sub={`${jobs.length} total jobs`} />
+        <StatCard accent label="Active Value" value={formatCurrency(activeValue)} sub={`${activeJobs.length} active jobs`} />
+        <StatCard label="Active Jobs" value={activeJobs.length} sub="Currently in progress" />
+        <StatCard label="Completed" value={completedJobs.length} sub="Successfully delivered" />
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0" style={{ borderBottom: '1px solid #d9d4ce' }}>
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="px-4 py-2.5 text-sm transition-colors relative"
+              className="px-4 py-2 text-sm transition-colors relative whitespace-nowrap"
               style={activeTab === tab.id
                 ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #1b5e78', marginBottom: '-1px' }
                 : { color: '#7a7469' }}
             >
               {tab.label}
               {tab.id !== 'all' && (
-                <span className="text-xs ml-1.5" style={{ color: activeTab === tab.id ? '#8a8377' : '#c0bab4' }}>
+                <span className="text-[11px] ml-1.5 font-mono font-bold" style={{ color: activeTab === tab.id ? '#1b5e78' : '#c0bab4' }}>
                   {jobs.filter(j => j.status === tab.id).length}
                 </span>
               )}
@@ -145,108 +158,139 @@ export function JobsPage() {
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
             <input
               type="text"
-              placeholder="Search..."
+              placeholder="Search jobs..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9 pr-4 py-1.5 rounded-md text-sm w-48 focus:outline-none transition-colors"
+              className="pl-9 pr-4 py-1.5 rounded-md text-sm w-full focus:outline-none transition-colors"
               style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#181410' }}
-              onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+              onFocus={e => (e.target.style.borderColor = '#1b5e78')}
               onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
             />
           </div>
-          <Btn variant="ghost" size="sm" onClick={() => setShowFilters(f => !f)}>
+          <Btn variant={filterTypes.length > 0 ? "primary" : "outline"} size="sm" onClick={() => setShowFilters(f => !f)} className="flex-shrink-0">
             <Filter className="w-3.5 h-3.5" />
-            {filterTypes.length > 0 && <span className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-bold" style={{ backgroundColor: '#e0dbd5', color: '#181410' }}>{filterTypes.length}</span>}
+            <span className="hidden sm:inline">Filter</span>
+            {filterTypes.length > 0 && <span className="ml-1 text-[10px] bg-white/20 px-1.5 rounded font-mono">{filterTypes.length}</span>}
           </Btn>
-          <Btn variant="ghost" size="sm" onClick={handleExport}><Download className="w-3.5 h-3.5" /></Btn>
+          <Btn variant="outline" size="sm" onClick={handleExport} className="flex-shrink-0"><Download className="w-3.5 h-3.5" /><span className="hidden sm:inline">Export</span></Btn>
         </div>
       </div>
 
       {showFilters && (
-        <div className="p-4 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+        <div className="p-4 rounded-xl gw-shadow" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Filter by type</span>
-            {filterTypes.length > 0 && <button className="text-xs" style={{ color: '#8a8377' }} onClick={() => setFilterTypes([])}>Clear</button>}
+            <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Filter by type</span>
+            {filterTypes.length > 0 && <button className="text-xs hover:text-[#181410] transition-colors" style={{ color: '#8a8377' }} onClick={() => setFilterTypes([])}>Clear all</button>}
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-wrap gap-x-5 gap-y-3">
             {JOB_TYPES.map(t => (
-              <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
-                <input type="checkbox" checked={filterTypes.includes(t)} onChange={e => setFilterTypes(prev => e.target.checked ? [...prev, t] : prev.filter(v => v !== t))} className="accent-neutral-400" />
-                <span style={{ color: '#8a8377' }} className="capitalize">{t}</span>
+              <label key={t} className="flex items-center gap-2 text-sm cursor-pointer group">
+                <div className="relative flex items-center justify-center w-4 h-4 rounded border transition-colors" style={{ borderColor: filterTypes.includes(t) ? '#1b5e78' : '#d9d4ce', backgroundColor: filterTypes.includes(t) ? '#1b5e78' : '#ffffff' }}>
+                  <input type="checkbox" checked={filterTypes.includes(t)} onChange={e => setFilterTypes(prev => e.target.checked ? [...prev, t] : prev.filter(v => v !== t))} className="absolute opacity-0 w-full h-full cursor-pointer" />
+                  {filterTypes.includes(t) && <svg viewBox="0 0 14 14" fill="none" className="w-3 h-3 text-white"><path d="M3 7.5L5.5 10L11 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                </div>
+                <span style={{ color: filterTypes.includes(t) ? '#181410' : '#8a8377' }} className="capitalize transition-colors group-hover:text-[#181410]">{t}</span>
               </label>
             ))}
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <div className={selectedJob ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <Panel noPad>
+          <Panel title="Job Register" badge={filtered.length !== jobs.length ? `${filtered.length} matching` : undefined} noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No jobs found</p>
-            ) : filtered.map((job, i) => (
-              <div
-                key={job.id}
-                onClick={() => setSelected(selected === job.id ? null : job.id)}
-                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
-                style={{
-                  borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
-                  backgroundColor: selected === job.id ? '#eeeae4' : undefined,
-                  borderLeft: selected === job.id ? '2px solid #1b5e78' : '2px solid transparent',
-                }}
-              >
-                <span className="text-xs w-24 flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{job.job_number}</span>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium truncate" style={{ color: '#181410' }}>{job.title}</div>
-                  <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{job.client?.company_name ?? '—'} {job.type ? `· ${job.type}` : ''}</div>
-                </div>
-                <Badge status={job.status} />
-                <span className="text-sm hidden md:block flex-shrink-0" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace", minWidth: '80px', textAlign: 'right' }}>
-                  {job.value ? formatCurrency(job.value) : '—'}
-                </span>
-                {job.status === 'active' && (
-                  <div className="w-16 hidden lg:block flex-shrink-0">
-                    <div className="h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
-                      <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#2a6e45' }} />
-                    </div>
-                    <div className="text-xs text-right mt-1" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{job.progress_percent}%</div>
-                  </div>
-                )}
+              <div className="text-center py-16">
+                <p className="text-sm font-medium" style={{ color: '#4a4540' }}>No jobs found</p>
+                <p className="text-sm mt-1" style={{ color: '#a8a099' }}>Try adjusting your search or filters</p>
               </div>
-            ))}
+            ) : (
+              <div className="flex flex-col">
+                {filtered.map((job, i) => (
+                  <div
+                    key={job.id}
+                    onClick={() => setSelected(selected === job.id ? null : job.id)}
+                    className="flex items-center gap-4 px-5 py-4 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                    style={{
+                      borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
+                      backgroundColor: selected === job.id ? '#eeeae4' : undefined,
+                      borderLeft: selected === job.id ? '3px solid #1b5e78' : '3px solid transparent',
+                    }}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <span className="text-sm font-semibold truncate transition-colors group-hover:text-[#1b5e78]" style={{ color: '#181410' }}>{job.title}</span>
+                        {job.client?.company_name && (
+                          <span className="flex-shrink-0 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider" style={{ backgroundColor: '#e8e4dd', color: '#4a4540' }}>
+                            {job.client.company_name}
+                          </span>
+                        )}
+                        <Badge status={job.status} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs" style={{ color: '#7a7469' }}>
+                        <span className="font-mono font-medium">{job.job_number}</span>
+                        {job.site_address && <span className="flex items-center gap-1"><MapPin className="w-3 h-3 opacity-70" /> {job.site_address.split(',')[0]}</span>}
+                        {job.type && <span className="capitalize opacity-80">· {job.type.replace('_', ' ')}</span>}
+                      </div>
+                    </div>
+
+                    <div className="w-28 hidden md:block flex-shrink-0 text-right">
+                      <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#7a7469' }}>Value</div>
+                      <div className="text-sm font-medium font-mono tnum" style={{ color: '#181410' }}>{job.value ? formatCurrency(job.value) : '—'}</div>
+                    </div>
+
+                    {job.status === 'active' ? (
+                      <div className="w-32 hidden sm:block flex-shrink-0 ml-4">
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>Progress</span>
+                          <span className="text-[11px] font-bold font-mono" style={{ color: '#2a6e45' }}>{job.progress_percent}%</span>
+                        </div>
+                        <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
+                          <div className="h-full rounded-full" style={{ width: `${job.progress_percent}%`, backgroundColor: '#2a6e45' }} />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="w-32 hidden sm:block flex-shrink-0 ml-4"></div>
+                    )}
+                    
+                    <ChevronRight className={cn("w-4 h-4 flex-shrink-0 transition-all", selected === job.id ? "opacity-100 text-[#1b5e78] rotate-90" : "opacity-0 group-hover:opacity-100 text-[#7a7469]")} />
+                  </div>
+                ))}
+              </div>
+            )}
           </Panel>
         </div>
 
         {selectedJob && (
-          <div>
+          <div className="sticky top-6">
             <Panel actions={
-              <button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>
+              <button onClick={() => setSelected(null)} className="p-1 rounded-md hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>
             }>
-              <div className="space-y-5">
+              <div className="space-y-6">
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{selectedJob.job_number}</span>
+                  <div className="flex items-center gap-2.5 mb-2">
+                    <span className="text-xs font-mono font-medium px-2 py-0.5 rounded bg-[#e8e4dd]" style={{ color: '#4a4540' }}>{selectedJob.job_number}</span>
                     <Badge status={selectedJob.status} />
                   </div>
-                  <h3 className="text-base font-semibold leading-snug" style={{ color: '#181410' }}>{selectedJob.title}</h3>
+                  <h3 className="text-lg font-semibold leading-tight tracking-tight" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>{selectedJob.title}</h3>
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Status</p>
+                  <p className="text-[11px] font-bold uppercase tracking-widest mb-2.5" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Status Workflow</p>
                   <div className="flex flex-wrap gap-1.5">
                     {JOB_STATUSES.map(s => (
                       <button
                         key={s}
                         onClick={() => updateStatus(selectedJob.id, s)}
-                        className="px-2.5 py-1 rounded text-xs transition-colors capitalize"
+                        className="px-3 py-1.5 rounded text-xs transition-colors capitalize font-medium"
                         style={selectedJob.status === s
-                          ? { backgroundColor: '#1b5e78', color: '#ffffff', fontWeight: 600 }
-                          : { backgroundColor: '#f5f1ec', color: '#7a7469', border: '1px solid #d9d4ce' }}
+                          ? { backgroundColor: '#1b5e78', color: '#ffffff', border: '1px solid #1b5e78' }
+                          : { backgroundColor: '#fafaf8', color: '#7a7469', border: '1px solid #d9d4ce' }}
                       >
                         {s.replace('_', ' ')}
                       </button>
@@ -255,43 +299,51 @@ export function JobsPage() {
                 </div>
 
                 {selectedJob.status === 'active' && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Progress — {selectedJob.progress_percent}%</p>
-                    <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-neutral-400 cursor-pointer" />
-                    <div className="mt-2 h-1 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
+                  <div className="p-4 rounded-lg bg-[#fafaf8]" style={{ border: '1px solid #e8e4dd' }}>
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Job Progress</p>
+                      <span className="text-sm font-bold font-mono text-[#2a6e45]">{selectedJob.progress_percent}%</span>
+                    </div>
+                    <input type="range" min="0" max="100" step="5" value={selectedJob.progress_percent} onChange={e => updateProgress(selectedJob.id, parseInt(e.target.value))} className="w-full accent-[#1b5e78] cursor-pointer" />
+                    <div className="mt-3 h-2 rounded-full overflow-hidden" style={{ backgroundColor: '#e8e4dd' }}>
                       <div className="h-full rounded-full transition-all" style={{ width: `${selectedJob.progress_percent}%`, backgroundColor: '#2a6e45' }} />
                     </div>
                   </div>
                 )}
 
-                <div className="space-y-3 pt-1" style={{ borderTop: '1px solid #d9d4ce' }}>
-                  {[
-                    { label: 'Client', value: selectedJob.client?.company_name ?? '—' },
-                    { label: 'Type', value: selectedJob.type ?? '—' },
-                    { label: 'Site', value: selectedJob.site_address ?? '—' },
-                    { label: 'Value', value: selectedJob.value ? formatCurrency(selectedJob.value) : '—' },
-                    { label: 'Start', value: formatDate(selectedJob.start_date) },
-                    { label: 'Foreman', value: selectedJob.foreman ?? '—' },
-                    { label: 'Crew', value: selectedJob.crew_count ? `${selectedJob.crew_count} ops` : '—' },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #ece8e3' }}>
-                      <span className="text-xs" style={{ color: '#7a7469', flexShrink: 0 }}>{label}</span>
-                      <span className="text-sm text-right capitalize" style={{ color: '#181410' }}>{value}</span>
-                    </div>
-                  ))}
+                <div className="pt-2">
+                  <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Job Details</p>
+                  <div className="space-y-0 text-sm" style={{ border: '1px solid #e8e4dd', borderRadius: '8px', overflow: 'hidden' }}>
+                    {[
+                      { label: 'Client', value: selectedJob.client?.company_name ?? '—' },
+                      { label: 'Type', value: selectedJob.type ? <span className="capitalize">{selectedJob.type.replace('_', ' ')}</span> : '—' },
+                      { label: 'Site Address', value: selectedJob.site_address ?? '—' },
+                      { label: 'Contract Value', value: selectedJob.value ? <span className="font-mono tnum font-medium">{formatCurrency(selectedJob.value)}</span> : '—' },
+                      { label: 'Start Date', value: selectedJob.start_date ? <span className="font-mono">{formatDate(selectedJob.start_date)}</span> : '—' },
+                      { label: 'Foreman', value: selectedJob.foreman ?? '—' },
+                      { label: 'Crew Size', value: selectedJob.crew_count ? <span className="font-mono">{selectedJob.crew_count} operatives</span> : '—' },
+                    ].map(({ label, value }, idx) => (
+                      <div key={label} className="flex justify-between items-baseline gap-4 px-4 py-2.5" style={{ backgroundColor: idx % 2 === 0 ? '#fafaf8' : '#f5f1ec' }}>
+                        <span style={{ color: '#7a7469', flexShrink: 0 }}>{label}</span>
+                        <span className="text-right font-medium" style={{ color: '#181410' }}>{value}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {selectedJob.nrswa_required && (
-                  <div className="p-3 rounded-md text-xs" style={{ backgroundColor: '#f5f1ec', border: '1px solid #d9d4ce' }}>
-                    <div className="font-semibold mb-0.5" style={{ color: '#1b5e78' }}>NRSWA Street Works</div>
-                    <div style={{ color: '#7a7469' }}>Permit: {selectedJob.permit_number ?? '—'}</div>
+                  <div className="p-3 rounded-md text-sm flex items-start gap-3" style={{ backgroundColor: '#e8f3f7', border: '1px solid #1b5e78' }}>
+                    <div className="flex-1">
+                      <div className="font-semibold text-[#1b5e78] mb-0.5">NRSWA Street Works Required</div>
+                      <div className="text-[#4a4540]">Permit Ref: <span className="font-mono font-medium text-[#181410]">{selectedJob.permit_number ?? 'Not supplied'}</span></div>
+                    </div>
                   </div>
                 )}
 
                 {selectedJob.description && (
-                  <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Description</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#8a8377' }}>{selectedJob.description}</p>
+                  <div className="pt-2">
+                    <p className="text-[11px] font-bold uppercase tracking-widest mb-2" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Scope of Works</p>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap p-4 rounded-lg bg-[#fafaf8]" style={{ color: '#4a4540', border: '1px solid #e8e4dd' }}>{selectedJob.description}</p>
                   </div>
                 )}
               </div>

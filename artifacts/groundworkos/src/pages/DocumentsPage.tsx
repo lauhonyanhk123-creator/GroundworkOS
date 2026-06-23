@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Search, AlertTriangle, FolderOpen, X } from 'lucide-react';
+import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
+import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
@@ -108,37 +109,30 @@ export function DocumentsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Documents</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>RAMS, compliance certs, permits & insurance</p>
+          <h1 className="text-2xl font-bold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Documents</h1>
+          <p className="text-sm mt-1" style={{ color: '#7a7469' }}>RAMS, compliance certs, permits & insurance</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Document</Btn>
       </div>
 
-      <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
-        {[
-          { label: 'Total', value: documents.length },
-          { label: 'Valid', value: valid.length },
-          { label: 'Expiring', value: expiring.length },
-          { label: 'Expired', value: expired.length },
-        ].map(({ label, value }, i) => (
-          <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #d9d4ce' } : undefined}>
-            <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
-            <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif", color: i === 3 && expired.length > 0 ? '#c13a2a' : i === 2 && expiring.length > 0 ? '#e07b39' : '#181410' }}>{value}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Total Documents" value={documents.length} sub="All records" />
+        <StatCard label="Valid" value={valid.length} sub="Up to date" accent />
+        <StatCard label="Expiring Soon" value={expiring.length} sub="Needs attention" danger={expiring.length > 0} />
+        <StatCard label="Expired" value={expired.length} sub="Action required" danger={expired.length > 0} />
       </div>
 
       {(expired.length > 0 || expiring.length > 0) && (
-        <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
-          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#e07b39' }} />
+        <div className="flex items-start gap-3 p-4 rounded-xl" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
+          <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: '#c13a2a' }} />
           <div className="flex-1">
-            <p className="text-sm font-medium mb-1.5" style={{ color: '#e07b39' }}>Attention Required</p>
+            <p className="text-sm font-semibold mb-1.5" style={{ color: '#c13a2a' }}>Attention Required</p>
             <div className="flex flex-wrap gap-2">
               {[...expired, ...expiring].map(d => (
-                <span key={d.id} className="text-xs px-2 py-1 rounded" style={{ backgroundColor: '#111', color: d.status === 'expired' ? '#c13a2a' : '#e07b39', fontFamily: "'JetBrains Mono', monospace" }}>
+                <span key={d.id} className="text-xs px-2 py-1 rounded font-mono font-medium" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: d.status === 'expired' ? '#c13a2a' : '#b56918' }}>
                   {d.name} {d.status === 'expired' ? '(Expired)' : `(expires ${formatDate(d.expiry_date)})`}
                 </span>
               ))}
@@ -174,9 +168,9 @@ export function DocumentsPage() {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className={selectedDoc ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <Panel noPad>
+          <Panel title="Document Directory" noPad>
             {filtered.length === 0 ? (
               <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No documents found</p>
             ) : filtered.map((doc, i) => {
@@ -187,7 +181,7 @@ export function DocumentsPage() {
                 <div
                   key={doc.id}
                   onClick={() => setSelected(selected === doc.id ? null : doc.id)}
-                  className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
+                  className="flex items-center gap-4 px-5 py-4 cursor-pointer group transition-colors hover:bg-[#eeeae4]"
                   style={{
                     borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
                     backgroundColor: selected === doc.id ? '#eeeae4' : undefined,
@@ -196,21 +190,22 @@ export function DocumentsPage() {
                 >
                   <div className="w-1.5 h-8 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[doc.type] }} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium truncate" style={{ color: '#181410' }}>{doc.name}</span>
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-sm font-semibold truncate group-hover:text-[#1b5e78] transition-colors" style={{ color: '#181410' }}>{doc.name}</span>
                       {(isExpired || isExpiringSoon) && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: isExpired ? '#c13a2a' : '#e07b39' }} />}
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>
-                      <span>{TYPE_LABELS[doc.type]}</span>
+                    <div className="text-xs" style={{ color: '#7a7469' }}>
+                      <span className="font-medium">{TYPE_LABELS[doc.type]}</span>
                       {doc.related_name && <span> · {doc.related_name}</span>}
                     </div>
                   </div>
                   <Badge status={doc.status} />
-                  <div className="text-right text-xs hidden md:block flex-shrink-0" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace", minWidth: '80px' }}>
+                  <div className="text-right text-xs hidden md:block flex-shrink-0 ml-4 font-mono" style={{ color: '#7a7469', minWidth: '90px' }}>
                     {doc.expiry_date ? (
                       <span style={{ color: isExpired ? '#c13a2a' : isExpiringSoon ? '#e07b39' : '#7a7469' }}>{formatDate(doc.expiry_date)}</span>
                     ) : <span>No expiry</span>}
                   </div>
+                  <ChevronRight className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity ml-2" style={{ color: '#7a7469' }} />
                 </div>
               );
             })}
@@ -238,7 +233,7 @@ export function DocumentsPage() {
                   ].map(({ label, value }) => (
                     <div key={label} className="flex justify-between items-baseline gap-3 pt-3" style={{ borderTop: '1px solid #ece8e3' }}>
                       <span className="text-xs flex-shrink-0 capitalize" style={{ color: '#7a7469' }}>{label}</span>
-                      <span className="text-sm text-right" style={{ color: '#181410' }}>{value}</span>
+                      <span className={`text-sm text-right ${label === 'Issued' || label === 'Expiry' ? 'font-mono' : ''}`} style={{ color: '#181410' }}>{value}</span>
                     </div>
                   ))}
                 </div>
@@ -248,7 +243,7 @@ export function DocumentsPage() {
                   if (days === null) return null;
                   const color = days <= 0 ? '#c13a2a' : days <= 30 ? '#e07b39' : '#2a6e45';
                   return (
-                    <div className="p-3 rounded-md text-xs" style={{ backgroundColor: '#eeeae4', border: `1px solid ${color}30`, color }}>
+                    <div className="p-3 rounded-md text-xs font-mono font-medium" style={{ backgroundColor: '#eeeae4', border: `1px solid ${color}30`, color }}>
                       {days <= 0 ? `Expired ${Math.abs(days)} days ago` : days <= 30 ? `Expires in ${days} days — renew now` : `${days} days remaining`}
                     </div>
                   );

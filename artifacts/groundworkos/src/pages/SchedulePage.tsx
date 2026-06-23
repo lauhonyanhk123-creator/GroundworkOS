@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
+import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { useApp } from '../store/AppContext';
@@ -68,6 +69,9 @@ export function SchedulePage() {
     return d >= start && d <= end;
   });
 
+  const totalCrews = weekEntries.reduce((s, e) => s + e.crew_count, 0);
+  const uniqueJobs = new Set(weekEntries.filter(e => e.job_id).map(e => e.job_id)).size;
+
   function prevWeek() {
     const d = new Date(currentDate);
     d.setDate(d.getDate() - 7);
@@ -118,85 +122,125 @@ export function SchedulePage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-[1600px] mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Schedule</h1>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Schedule</h1>
           <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Crew & plant allocation</p>
         </div>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> Add Entry</Btn>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button onClick={prevWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
-        <span className="text-sm font-medium" style={{ color: '#181410' }}>{weekLabel}</span>
-        <button onClick={nextWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronRight className="w-4 h-4" /></button>
-        <button onClick={() => setCurrentDate(new Date())} className="px-2.5 py-1 text-xs rounded-md" style={{ backgroundColor: '#f5f1ec', color: '#8a8377', border: '1px solid #d9d4ce' }}>Today</button>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard label="Weekly Entries" value={weekEntries.length} sub="Total scheduled items" />
+        <StatCard label="Crews Deployed" value={totalCrews} sub="Total crew count" accent />
+        <StatCard label="Active Sites" value={uniqueJobs} sub="Unique jobs this week" />
       </div>
 
-      <div className="rounded-lg overflow-hidden" style={{ border: '1px solid #d9d4ce' }}>
-        <div className="grid" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', backgroundColor: '#fafaf8', borderBottom: '1px solid #d9d4ce' }}>
-          <div className="p-2" />
-          {weekDays.map((day, i) => {
-            const dateStr = day.toISOString().split('T')[0];
-            const isToday = dateStr === today;
-            const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
-            return (
-              <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #d9d4ce' }}>
-                <div className="text-xs uppercase" style={{ color: isToday ? '#181410' : '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{DAY_LABELS[i]}</div>
-                <div className="text-lg font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: isToday ? '#181410' : '#c0bab4' }}>{day.getDate()}</div>
-                {dayEntries.length > 0 && (
-                  <div className="flex justify-center mt-0.5">
-                    <span className="w-1 h-1 rounded-full" style={{ backgroundColor: isToday ? '#181410' : '#7a7469' }} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {weekDays.map((day, dayIdx) => {
-          const dateStr = day.toISOString().split('T')[0];
-          const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
-          if (dayEntries.length === 0 && dateStr !== today) return null;
-
-          return (
-            <div key={dayIdx} className="grid" style={{ gridTemplateColumns: '72px 1fr', borderBottom: '1px solid #ece8e3' }}>
-              <div className="p-3 flex items-start justify-end" style={{ borderRight: '1px solid #d9d4ce' }}>
-                <span className="text-xs" style={{ color: dateStr === today ? '#181410' : '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>
-                  {DAY_LABELS[dayIdx % 7]}
-                </span>
-              </div>
-              <div className="p-2 space-y-1.5">
-                {dayEntries.length === 0 ? (
-                  <div className="text-xs py-2 text-center" style={{ color: '#222' }}>—</div>
-                ) : dayEntries.map(entry => (
-                  <div key={entry.id} className="flex items-start gap-3 px-3 py-2.5 rounded-md" style={{ backgroundColor: '#eeeae4', borderLeft: `2px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
-                    <span className="text-xs flex-shrink-0 mt-0.5" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>
-                      {new Date(entry.start_datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                    <div className="flex-1">
-                      <div className="text-sm font-medium" style={{ color: '#181410' }}>{entry.title}</div>
-                      <div className="text-xs mt-0.5 flex flex-wrap gap-x-2" style={{ color: '#7a7469' }}>
-                        {entry.job && <span>{entry.job.job_number}</span>}
-                        <span>{entry.crew_count} crew</span>
-                        {entry.plant_assigned && <span>{entry.plant_assigned}</span>}
-                        {entry.foreman && <span>FM: {entry.foreman}</span>}
-                      </div>
+      <Panel 
+        title="Weekly Overview" 
+        noPad 
+        actions={
+          <div className="flex items-center gap-2">
+            <button onClick={prevWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
+            <span className="text-sm font-medium font-mono tnum" style={{ color: '#181410' }}>{weekLabel}</span>
+            <button onClick={nextWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronRight className="w-4 h-4" /></button>
+            <button onClick={() => setCurrentDate(new Date())} className="ml-2 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-[#eeeae4]" style={{ backgroundColor: '#f5f1ec', color: '#8a8377', border: '1px solid #d9d4ce', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600 }}>TODAY</button>
+          </div>
+        }
+      >
+        <div className="flex flex-col">
+          <div className="grid" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', backgroundColor: '#fafaf8', borderBottom: '1px solid #d9d4ce' }}>
+            <div className="p-2" />
+            {weekDays.map((day, i) => {
+              const dateStr = day.toISOString().split('T')[0];
+              const isToday = dateStr === today;
+              const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
+              return (
+                <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #d9d4ce', backgroundColor: isToday ? '#e8f3f7' : 'transparent' }}>
+                  <div className="text-xs uppercase font-bold" style={{ color: isToday ? '#1b5e78' : '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>{DAY_LABELS[i]}</div>
+                  <div className="text-lg font-bold font-mono tnum" style={{ color: isToday ? '#1b5e78' : '#181410' }}>{day.getDate()}</div>
+                  {dayEntries.length > 0 && (
+                    <div className="flex justify-center mt-1">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isToday ? '#1b5e78' : '#7a7469' }} />
                     </div>
-                    <span className="text-xs px-1.5 py-0.5 rounded capitalize" style={{ color: TYPE_COLORS[entry.type] ?? '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{entry.type.replace('_', ' ')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-      <div className="flex items-center gap-5">
+          <div className="divide-y" style={{ borderColor: '#d9d4ce' }}>
+            {weekDays.map((day, dayIdx) => {
+              const dateStr = day.toISOString().split('T')[0];
+              const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
+              if (dayEntries.length === 0 && dateStr !== today) return null;
+
+              return (
+                <div key={dayIdx} className="grid" style={{ gridTemplateColumns: '72px 1fr' }}>
+                  <div className="p-4 flex flex-col items-end justify-start" style={{ borderRight: '1px solid #d9d4ce', backgroundColor: '#fafaf8' }}>
+                    <span className="text-xs font-bold uppercase" style={{ color: dateStr === today ? '#1b5e78' : '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>
+                      {DAY_LABELS[dayIdx % 7]}
+                    </span>
+                    <span className="text-sm font-mono tnum mt-0.5" style={{ color: dateStr === today ? '#1b5e78' : '#181410' }}>
+                      {day.getDate()}
+                    </span>
+                  </div>
+                  <div className="p-3 space-y-2 bg-white">
+                    {dayEntries.length === 0 ? (
+                      <div className="text-xs py-3 text-center italic" style={{ color: '#a8a099' }}>No scheduled entries</div>
+                    ) : dayEntries.map(entry => (
+                      <div key={entry.id} className="flex items-start gap-4 p-3.5 rounded-lg transition-colors hover:bg-[#fafaf8] cursor-pointer group" style={{ border: '1px solid #d9d4ce', borderLeft: `3px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
+                        <div className="text-sm font-bold font-mono tnum flex-shrink-0 mt-0.5" style={{ color: '#181410' }}>
+                          {new Date(entry.start_datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <div className="text-sm font-semibold truncate" style={{ color: '#181410' }}>{entry.title}</div>
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(27,94,120,0.1)', color: '#1b5e78' }}>
+                              {entry.type.replace('_', ' ')}
+                            </span>
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: '#7a7469' }}>
+                            {entry.job && (
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono tnum font-medium" style={{ color: '#4a4540' }}>{entry.job.job_number}</span>
+                                {entry.job.client?.company_name && (
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: '#e8e4dd', color: '#4a4540' }}>
+                                    {entry.job.client.company_name}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {entry.crew_count > 0 && (
+                              <div className="flex items-center gap-1">
+                                <span className="font-mono tnum font-medium" style={{ color: '#4a4540' }}>{entry.crew_count}</span> crew
+                              </div>
+                            )}
+                            {entry.foreman && (
+                              <div>FM: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.foreman}</span></div>
+                            )}
+                            {entry.plant_assigned && (
+                              <div>Plant: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.plant_assigned}</span></div>
+                            )}
+                          </div>
+                        </div>
+                        <ChevronRight className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-2" style={{ color: '#7a7469' }} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Panel>
+
+      <div className="flex items-center justify-center gap-6 py-4">
         {Object.entries(TYPE_COLORS).map(([type, color]) => (
-          <div key={type} className="flex items-center gap-1.5 text-xs">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
+          <div key={type} className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: color }} />
             <span style={{ color: '#7a7469' }}>{type.replace('_', ' ')}</span>
           </div>
         ))}
@@ -209,7 +253,7 @@ export function SchedulePage() {
             {errors.title && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.title}</p>}
           </Field>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Type">
               <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as EntryType }))}>
                 {Object.keys(TYPE_COLORS).map(t => (
@@ -227,21 +271,21 @@ export function SchedulePage() {
             </Field>
           </div>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-3 gap-4">
             <Field label="Date">
-              <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+              <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="font-mono tnum" />
             </Field>
             <Field label="Start Time">
-              <Input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} />
+              <Input type="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} className="font-mono tnum" />
             </Field>
             <Field label="End Time">
-              <Input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} />
+              <Input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className="font-mono tnum" />
             </Field>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <Field label="Crew Count">
-              <Input type="number" value={form.crew_count} onChange={e => setForm(f => ({ ...f, crew_count: e.target.value }))} min="1" />
+              <Input type="number" value={form.crew_count} onChange={e => setForm(f => ({ ...f, crew_count: e.target.value }))} min="1" className="font-mono tnum" />
             </Field>
             <Field label="Foreman">
               <Input value={form.foreman} onChange={e => setForm(f => ({ ...f, foreman: e.target.value }))} placeholder="e.g. Dave Walters" />
@@ -253,7 +297,7 @@ export function SchedulePage() {
           </Field>
 
           <Field label="Notes">
-            <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={2} />
+            <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={3} />
           </Field>
 
           <div className="flex gap-3 pt-2">

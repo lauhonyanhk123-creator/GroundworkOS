@@ -1,5 +1,6 @@
 - [GroundworkOS API bridge](groundworkos-api-bridge.md) — DB/API returns camelCase; frontend types.ts uses snake_case; transform layer required
 - [API server seed pattern](api-server-seed.md) — no tsx available; seed via esbuild build then `node dist/seed.mjs`
+- [Delegated UI typecheck gate](delegated-ui-typecheck.md) — Vite preview hides tsc errors; run typecheck after design-subagent passes; watch case-dup ui files
 - [GroundworkOS design system](groundworkos-design-system.md) — "Technical Survey" light mode; Survey Blue #1b5e78 accent; Space Grotesk + Inter + JetBrains Mono
 - [GroundworkOS preview clipping](groundworkos-preview-clipping.md) — right-edge screenshot clipping is a fixed-width preview render artifact, NOT a CSS overflow bug
 - [Canvas mockup workflow](canvas-mockup-workflow.md) — present design canvas via presentArtifact (skill abbreviates as `n`); mockup preview URL = $REPLIT_DOMAINS/__mockup/preview/{folder}/{Component}, no port

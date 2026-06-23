@@ -11,29 +11,31 @@ interface StatCardProps {
 
 export function StatCard({ label, value, sub, accent, danger, className }: StatCardProps) {
   return (
-    <div className={cn('p-5 rounded-lg', className)} style={{
+    <div className={cn('relative p-5 rounded-xl overflow-hidden gw-shadow', className)} style={{
       backgroundColor: '#fafaf8',
-      border: '1px solid #d9d4ce',
-      borderLeft: danger ? '3px solid #c13a2a' : accent ? '3px solid #1b5e78' : '3px solid #d9d4ce',
+      border: danger ? '1px solid rgba(193,58,42,0.3)' : '1px solid #d9d4ce',
     }}>
+      {danger && <div className="absolute top-0 left-0 w-full" style={{ height: '3px', backgroundColor: '#c13a2a' }} />}
+      {accent && !danger && <div className="absolute top-0 left-0 w-full" style={{ height: '3px', backgroundColor: '#1b5e78' }} />}
       <p style={{
         fontFamily: "'Space Grotesk', sans-serif",
-        fontWeight: 500,
+        fontWeight: 600,
         fontSize: '11px',
         textTransform: 'uppercase',
         letterSpacing: '0.1em',
         color: '#7a7469',
-        marginBottom: '10px',
+        marginBottom: '12px',
       }}>{label}</p>
-      <p style={{
-        fontFamily: "'Space Grotesk', sans-serif",
+      <p className="tnum" style={{
+        fontFamily: "'JetBrains Mono', monospace",
         fontWeight: 700,
         fontSize: '28px',
         lineHeight: 1,
+        letterSpacing: '-0.02em',
         color: danger ? '#c13a2a' : '#181410',
-        marginBottom: sub ? '6px' : 0,
+        marginBottom: sub ? '8px' : 0,
       }}>{value}</p>
-      {sub && <p style={{ fontSize: '12px', color: '#7a7469' }}>{sub}</p>}
+      {sub && <p style={{ fontSize: '12px', color: '#7a7469', fontWeight: 500 }}>{sub}</p>}
     </div>
   );
 }

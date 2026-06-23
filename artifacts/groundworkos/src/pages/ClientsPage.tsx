@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Plus, Search, Mail, Phone, X } from 'lucide-react';
+import { Plus, Search, Mail, Phone, X, ChevronRight, Building2, MapPin } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
+import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency } from '../lib/utils';
@@ -29,6 +30,7 @@ export function ClientsPage() {
 
   const selectedClient = selected ? clients.find(c => c.id === selected) : null;
   const totalValue = clients.reduce((s, c) => s + c.total_value, 0);
+  const totalJobs = clients.reduce((s, c) => s + c.total_jobs, 0);
 
   function openNew() {
     setForm(emptyForm);
@@ -65,113 +67,142 @@ export function ClientsPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Clients</h1>
-          <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>{clients.length} clients · {formatCurrency(totalValue)} total value</p>
-        </div>
+    <div className="max-w-[1600px] mx-auto space-y-6">
+      <div className="flex items-center justify-between mb-2">
+        <h1 className="text-2xl font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410', letterSpacing: '-0.02em' }}>Clients</h1>
         <Btn onClick={openNew}><Plus className="w-4 h-4" /> New Client</Btn>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard accent label="Total Clients" value={clients.length} sub="Active directory" />
+        <StatCard label="Total Jobs" value={totalJobs} sub="Across all clients" />
+        <StatCard label="Total Value" value={formatCurrency(totalValue)} sub="All-time revenue" />
+      </div>
+
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4" style={{ color: '#7a7469' }} />
         <input
           type="text"
           placeholder="Search clients..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="pl-9 pr-4 py-2 rounded-md text-sm w-64 focus:outline-none"
+          className="pl-9 pr-4 py-2 w-full max-w-sm rounded-lg focus:outline-none transition-colors"
           style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#181410' }}
-          onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+          onFocus={e => (e.target.style.borderColor = '#1b5e78')}
           onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         <div className={selectedClient ? 'xl:col-span-2' : 'xl:col-span-3'}>
-          <Panel noPad>
+          <Panel title="Client Directory" badge={filtered.length} noPad>
             {filtered.length === 0 ? (
-              <p className="text-center py-12 text-sm" style={{ color: '#c0bab4' }}>No clients found</p>
-            ) : filtered.map((client, i) => (
-              <div
-                key={client.id}
-                onClick={() => setSelected(selected === client.id ? null : client.id)}
-                className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4]"
-                style={{
-                  borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
-                  backgroundColor: selected === client.id ? '#eeeae4' : undefined,
-                  borderLeft: selected === client.id ? '2px solid #1b5e78' : '2px solid transparent',
-                }}
-              >
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#8a8377', border: '1px solid #d9d4ce' }}>
-                  {client.company_name[0]}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium" style={{ color: '#181410' }}>{client.company_name}</div>
-                  <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{client.contact_name ?? '—'}</div>
-                </div>
-                <div className="text-right hidden sm:block flex-shrink-0">
-                  <div className="text-sm font-medium" style={{ color: '#181410' }}>{client.total_jobs} jobs</div>
-                  <div className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(client.total_value)}</div>
-                </div>
-                {client.email && (
-                  <div className="hidden md:flex items-center gap-1.5 text-xs" style={{ color: '#7a7469' }}>
-                    <Mail className="w-3 h-3" />
-                    <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{client.email}</span>
+              <p className="text-center py-12 text-sm" style={{ color: '#a8a099' }}>No clients found</p>
+            ) : (
+              <div>
+                {filtered.map((client, i) => (
+                  <div
+                    key={client.id}
+                    onClick={() => setSelected(selected === client.id ? null : client.id)}
+                    className={cn(
+                      "flex items-center gap-5 px-5 py-4 cursor-pointer transition-colors group",
+                      selected === client.id ? "bg-[#eeeae4]" : "hover:bg-[#eeeae4]"
+                    )}
+                    style={{
+                      borderBottom: i < filtered.length - 1 ? '1px solid #d9d4ce' : 'none',
+                      borderLeft: selected === client.id ? '3px solid #1b5e78' : '3px solid transparent',
+                    }}
+                  >
+                    <div className="w-10 h-10 rounded flex items-center justify-center text-sm font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#4a4540', border: '1px solid #d9d4ce' }}>
+                      {client.company_name[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate" style={{ color: '#181410' }}>{client.company_name}</div>
+                      <div className="text-xs mt-0.5 truncate" style={{ color: '#7a7469' }}>{client.contact_name ?? 'No contact'}</div>
+                    </div>
+                    {client.email && (
+                      <div className="hidden md:flex items-center gap-1.5 w-48 flex-shrink-0 text-xs" style={{ color: '#7a7469' }}>
+                        <Mail className="w-3.5 h-3.5" />
+                        <span className="truncate font-mono">{client.email}</span>
+                      </div>
+                    )}
+                    <div className="text-right hidden sm:block w-28 flex-shrink-0">
+                      <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#7a7469' }}>Jobs</div>
+                      <div className="text-sm font-medium font-mono tnum" style={{ color: '#181410' }}>{client.total_jobs}</div>
+                    </div>
+                    <div className="text-right hidden sm:block w-28 flex-shrink-0">
+                      <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#7a7469' }}>Value</div>
+                      <div className="text-sm font-medium font-mono tnum" style={{ color: '#181410' }}>{formatCurrency(client.total_value)}</div>
+                    </div>
+                    <ChevronRight className={cn("w-4 h-4 flex-shrink-0 transition-opacity ml-2", selected === client.id ? "opacity-100" : "opacity-0 group-hover:opacity-100")} style={{ color: '#7a7469' }} />
                   </div>
-                )}
+                ))}
               </div>
-            ))}
+            )}
           </Panel>
         </div>
 
         {selectedClient && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
-              <div className="space-y-5">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#181410', border: '1px solid #d9d4ce' }}>
+            <Panel actions={
+              <button onClick={() => setSelected(null)} className="hover:bg-[#e8e4dd] p-1.5 rounded transition-colors" style={{ color: '#7a7469' }}>
+                <X className="w-4 h-4" />
+              </button>
+            }>
+              <div className="space-y-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-12 h-12 rounded flex items-center justify-center text-lg font-bold flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#181410', border: '1px solid #d9d4ce' }}>
                     {selectedClient.company_name[0]}
                   </div>
-                  <div>
-                    <div className="font-semibold leading-snug" style={{ color: '#181410' }}>{selectedClient.company_name}</div>
-                    <div className="text-sm" style={{ color: '#7a7469' }}>{selectedClient.contact_name ?? '—'}</div>
-                  </div>
-                </div>
-
-                <div className="flex gap-4 py-4" style={{ borderTop: '1px solid #d9d4ce', borderBottom: '1px solid #d9d4ce' }}>
-                  <div className="flex-1 text-center">
-                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{selectedClient.total_jobs}</div>
-                    <div className="text-xs" style={{ color: '#7a7469' }}>Jobs</div>
-                  </div>
-                  <div className="flex-1 text-center" style={{ borderLeft: '1px solid #d9d4ce' }}>
-                    <div className="text-2xl font-bold mb-0.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{formatCurrency(selectedClient.total_value)}</div>
-                    <div className="text-xs" style={{ color: '#7a7469' }}>Value</div>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  {[
-                    { label: 'Email', value: selectedClient.email, icon: <Mail className="w-3 h-3" /> },
-                    { label: 'Phone', value: selectedClient.phone, icon: <Phone className="w-3 h-3" /> },
-                    { label: 'Address', value: selectedClient.address, icon: null },
-                    { label: 'VAT No', value: selectedClient.vat_number, icon: null },
-                  ].map(({ label, value, icon }) => (
-                    <div key={label} className="flex justify-between items-start gap-3 pt-3" style={{ borderTop: '1px solid #ece8e3' }}>
-                      <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>{label}</span>
-                      <span className="text-sm text-right flex items-center gap-1.5" style={{ color: value ? '#181410' : '#c0bab4' }}>
-                        {icon && <span style={{ color: '#7a7469' }}>{icon}</span>}
-                        {value ?? '—'}
-                      </span>
+                  <div className="pt-1">
+                    <h2 className="text-xl font-bold leading-none mb-1.5" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{selectedClient.company_name}</h2>
+                    <div className="flex items-center gap-2 text-sm" style={{ color: '#7a7469' }}>
+                      <span className="font-medium">{selectedClient.contact_name ?? 'No contact'}</span>
                     </div>
-                  ))}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
+                    <div className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: '#7a7469' }}>Total Jobs</div>
+                    <div className="text-2xl font-bold font-mono tnum" style={{ color: '#181410' }}>{selectedClient.total_jobs}</div>
+                  </div>
+                  <div className="p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
+                    <div className="text-[11px] font-bold uppercase tracking-widest mb-1" style={{ color: '#7a7469' }}>Total Value</div>
+                    <div className="text-2xl font-bold font-mono tnum" style={{ color: '#1b5e78' }}>{formatCurrency(selectedClient.total_value)}</div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Contact Details</h3>
+                  <div className="space-y-3" style={{ borderTop: '1px solid #d9d4ce', paddingTop: '12px' }}>
+                    {[
+                      { label: 'Email', value: selectedClient.email, icon: <Mail className="w-3.5 h-3.5" /> },
+                      { label: 'Phone', value: selectedClient.phone, icon: <Phone className="w-3.5 h-3.5" /> },
+                      { label: 'Address', value: selectedClient.address, icon: <MapPin className="w-3.5 h-3.5" /> },
+                      { label: 'VAT No', value: selectedClient.vat_number, icon: <Building2 className="w-3.5 h-3.5" /> },
+                    ].map(({ label, value, icon }) => (
+                      <div key={label} className="flex gap-3">
+                        <div className="w-6 flex-shrink-0 flex items-center justify-center mt-0.5" style={{ color: '#7a7469' }}>{icon}</div>
+                        <div className="min-w-0">
+                          <div className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#7a7469' }}>{label}</div>
+                          {value ? (
+                            <div className="text-sm font-medium truncate" style={{ color: '#181410', fontFamily: label === 'Email' || label === 'Phone' || label === 'VAT No' ? "'JetBrains Mono', monospace" : "inherit" }}>{value}</div>
+                          ) : (
+                            <div className="text-sm italic" style={{ color: '#a8a099' }}>Not provided</div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {selectedClient.notes && (
                   <div>
-                    <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
-                    <p className="text-sm leading-relaxed" style={{ color: '#8a8377' }}>{selectedClient.notes}</p>
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Notes</h3>
+                    <div className="p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#4a4540' }}>
+                      {selectedClient.notes}
+                    </div>
                   </div>
                 )}
               </div>
@@ -191,15 +222,15 @@ export function ClientsPage() {
               <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. John Smith" />
             </Field>
             <Field label="VAT Number">
-              <Input value={form.vat_number} onChange={e => setForm(f => ({ ...f, vat_number: e.target.value }))} placeholder="e.g. GB123456789" />
+              <Input value={form.vat_number} onChange={e => setForm(f => ({ ...f, vat_number: e.target.value }))} placeholder="e.g. GB123456789" className="font-mono" />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Email">
-              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@company.co.uk" />
+              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="john@company.co.uk" className="font-mono" />
             </Field>
             <Field label="Phone">
-              <Input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="07700 900000" />
+              <Input type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="07700 900000" className="font-mono" />
             </Field>
           </div>
           <Field label="Address">

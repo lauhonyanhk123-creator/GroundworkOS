@@ -9,7 +9,7 @@ interface BtnProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 export function Btn({ variant = 'primary', size = 'md', loading, children, className, disabled, ...props }: BtnProps) {
-  const base = 'inline-flex items-center gap-1.5 rounded transition-colors disabled:opacity-40 disabled:cursor-not-allowed';
+  const base = 'inline-flex items-center gap-1.5 rounded-md transition-all duration-100 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed';
   const sizes = {
     sm: 'px-3 py-1.5 text-xs',
     md: 'px-4 py-2 text-sm',

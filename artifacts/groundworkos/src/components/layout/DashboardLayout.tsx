@@ -36,7 +36,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
 
   const currentItem = navigation.find(
-    item => 'href' in item && (location === item.href || (item.href !== '/' && location.startsWith(item.href)))
+    item => 'href' in item && typeof item.href === 'string' && (location === item.href || (item.href !== '/' && location.startsWith(item.href)))
   );
   const pageTitle = currentItem && 'name' in currentItem ? currentItem.name : 'Dashboard';
 
@@ -147,7 +147,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-12 flex items-center justify-between px-6 flex-shrink-0" style={{
+        <header className="h-14 flex items-center justify-between px-6 flex-shrink-0" style={{
           backgroundColor: '#fafaf8',
           borderBottom: '1px solid #d9d4ce',
         }}>
@@ -158,7 +158,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <span style={{
               fontFamily: "'Space Grotesk', sans-serif",
               fontWeight: 600,
-              fontSize: '15px',
+              fontSize: '17px',
+              letterSpacing: '-0.01em',
               color: '#181410',
             }}>{pageTitle}</span>
           </div>

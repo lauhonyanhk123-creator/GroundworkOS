@@ -68,9 +68,15 @@ body {
 
 /* Tabular figures keep numeric columns aligned across rows */
 [style*="JetBrains Mono"],
-.font-mono {
+.font-mono,
+.tnum {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
+}
+
+/* Soft architectural card shadow — subtle depth without drift from the flat survey aesthetic */
+.gw-shadow {
+  box-shadow: 0 1px 2px rgba(24, 20, 16, 0.04), 0 1px 3px rgba(24, 20, 16, 0.035);
 }
 
 h1, h2, h3 {

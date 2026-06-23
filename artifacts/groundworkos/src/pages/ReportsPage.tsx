@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, ChevronRight } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, CartesianGrid, Legend,
 } from 'recharts';
 import { Panel } from '../components/ui/Panel';
+import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { RATE_BOOK } from '../data/mock';
@@ -12,23 +13,26 @@ import { useApp } from '../store/AppContext';
 
 type ReportTab = 'overview' | 'cis' | 'ratebook';
 
-const CHART_INVOICED = '#1b5e78';
 const YELLOW = '#1b5e78';
 const RED = '#c13a2a';
 const GREEN = '#2a6e45';
-const ORANGE = '#fb923c';
+const ORANGE = '#b56918';
 const BLUE = '#1b5e78';
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="px-3 py-2 rounded text-xs" style={{ backgroundColor: '#eeeae4', border: '1px solid #c0bab4', fontFamily: "'JetBrains Mono', monospace" }}>
-      <div className="font-bold mb-1" style={{ color: '#181410' }}>{label}</div>
+    <div className="px-3 py-2.5 rounded-lg gw-shadow text-xs" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+      <div className="font-medium mb-1.5" style={{ color: '#181410', fontFamily: "'Inter', sans-serif" }}>{label}</div>
       {payload.map((p: any) => (
-        <div key={p.name} className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
-          <span style={{ color: '#888888' }}>{p.name}: </span>
-          <span style={{ color: '#181410' }}>{typeof p.value === 'number' && p.value > 100 ? formatCurrency(p.value) : p.value}</span>
+        <div key={p.name} className="flex items-center justify-between gap-4 mb-0.5">
+          <div className="flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ backgroundColor: p.color }} />
+            <span style={{ color: '#7a7469' }}>{p.name}</span>
+          </div>
+          <span className="tnum" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace" }}>
+            {typeof p.value === 'number' && p.value > 100 ? formatCurrency(p.value) : p.value}
+          </span>
         </div>
       ))}
     </div>
@@ -46,7 +50,8 @@ export function ReportsPage() {
   const totalRevenue = paidInvoices.reduce((s, i) => s + i.total_amount, 0);
   const totalOutstanding = invoices.filter(i => i.status !== 'paid' && i.status !== 'credited').reduce((s, i) => s + i.total_amount, 0);
   const totalPipeline = jobs.filter(j => j.status !== 'cancelled').reduce((s, j) => s + (j.value ?? 0), 0);
-  const overdueTotal = invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + i.total_amount, 0);
+  const overdueInvoices = invoices.filter(i => i.status === 'overdue');
+  const overdueTotal = overdueInvoices.reduce((s, i) => s + i.total_amount, 0);
 
   const monthMap = new Map<string, { invoiced: number; collected: number; month: string }>();
   for (let i = 5; i >= 0; i--) {
@@ -91,7 +96,7 @@ export function ReportsPage() {
   ).map(([name, count]) => ({ name: name.charAt(0).toUpperCase() + name.slice(1), value: count }))
    .sort((a, b) => b.value - a.value);
 
-  const TYPE_COLORS = ['#1b5e78', '#fb923c', '#2a6e45', '#a78bfa', '#f472b6', '#34d399', '#b56918', '#94a3b8'];
+  const TYPE_COLORS = ['#1b5e78', '#b56918', '#2a6e45', '#4a4540', '#7a7469', '#d9d4ce', '#c13a2a', '#e8e4dd'];
 
   const agingBuckets = [
     { label: '0–30 days', invoices: invoices.filter(i => (i.status === 'sent' || i.status === 'overdue') && daysOld(i.due_date) <= 30) },
@@ -109,10 +114,10 @@ export function ReportsPage() {
   const collectionRate = totalRevenue + totalOutstanding > 0 ? Math.round((totalRevenue / (totalRevenue + totalOutstanding)) * 100) : 0;
 
   return (
-    <div className="space-y-5">
+    <div className="max-w-[1600px] mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-semibold" style={{ color: '#181410' }}>Reports</h1>
+          <h1 className="text-xl font-semibold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Reports</h1>
           <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Financial reports, CIS returns & rate book</p>
         </div>
         <Btn variant="outline" size="sm"><Download className="w-3.5 h-3.5" /> Export</Btn>
@@ -138,43 +143,35 @@ export function ReportsPage() {
       </div>
 
       {tab === 'overview' && (
-        <>
-          <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
-            {[
-              { label: 'Revenue Collected', value: formatCurrency(totalRevenue), sub: `${paidInvoices.length} paid` },
-              { label: 'Outstanding', value: formatCurrency(totalOutstanding), sub: `${invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length} unpaid` },
-              { label: 'Overdue', value: formatCurrency(overdueTotal), sub: `${invoices.filter(i => i.status === 'overdue').length} invoices` },
-              { label: 'Collection Rate', value: `${collectionRate}%`, sub: 'of total invoiced' },
-            ].map(({ label, value, sub }, i) => (
-              <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #d9d4ce' } : undefined}>
-                <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
-                <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{value}</p>
-                <p className="text-xs mt-1" style={{ color: '#c0bab4' }}>{sub}</p>
-              </div>
-            ))}
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatCard accent label="Revenue Collected" value={formatCurrency(totalRevenue)} sub={`${paidInvoices.length} paid`} />
+            <StatCard label="Outstanding" value={formatCurrency(totalOutstanding)} sub={`${invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length} unpaid`} />
+            <StatCard danger={overdueTotal > 0} label="Overdue" value={formatCurrency(overdueTotal)} sub={`${overdueInvoices.length} invoices`} />
+            <StatCard label="Collection Rate" value={`${collectionRate}%`} sub="of total invoiced" />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
               <Panel title="Revenue vs Invoiced — Last 6 Months">
-                <div style={{ height: 240 }}>
+                <div style={{ height: 240 }} className="mt-1">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueData} barGap={4} barCategoryGap="35%">
-                      <CartesianGrid vertical={false} stroke="#e8e4dd" />
-                      <XAxis dataKey="month" tick={{ fill: '#555555', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} />
-                      <YAxis tick={{ fill: '#555555', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={42} />
-                      <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                      <Bar dataKey="invoiced" name="Invoiced" fill={YELLOW} fillOpacity={0.35} radius={[2, 2, 0, 0]} />
-                      <Bar dataKey="collected" name="Collected" fill={GREEN} radius={[2, 2, 0, 0]} />
+                    <BarChart data={revenueData} barGap={6} barCategoryGap="30%" margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="#e8e4dd" strokeDasharray="3 3" />
+                      <XAxis dataKey="month" tick={{ fill: '#7a7469', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} dy={6} />
+                      <YAxis tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={40} />
+                      <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eeeae4', opacity: 0.5 }} />
+                      <Bar dataKey="invoiced" name="Invoiced" fill="#e0dbd5" radius={[4, 4, 0, 0]} maxBarSize={44} />
+                      <Bar dataKey="collected" name="Collected" fill="#2a6e45" radius={[4, 4, 0, 0]} maxBarSize={44} />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="flex items-center gap-4 mt-1">
-                  <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: '#7a7469' }}>
-                    <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: YELLOW, opacity: 0.4 }} /> Invoiced
+                <div className="flex items-center gap-6 mt-5 pt-4" style={{ borderTop: '1px solid #d9d4ce' }}>
+                  <div className="flex items-center gap-2 text-xs" style={{ color: '#7a7469' }}>
+                    <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#e0dbd5' }} /> Invoiced
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-mono" style={{ color: '#7a7469' }}>
-                    <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: GREEN }} /> Collected
+                  <div className="flex items-center gap-2 text-xs" style={{ color: '#7a7469' }}>
+                    <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#2a6e45' }} /> Collected
                   </div>
                 </div>
               </Panel>
@@ -184,65 +181,65 @@ export function ReportsPage() {
               <div style={{ height: 240 }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={jobTypeData} cx="50%" cy="45%" outerRadius={75} paddingAngle={2} dataKey="value" label={({ name, percent }) => percent > 0.08 ? `${name}` : ''} labelLine={false} fontSize={10}>
+                    <Pie data={jobTypeData} cx="50%" cy="45%" outerRadius={75} innerRadius={45} paddingAngle={2} dataKey="value" labelLine={false}>
                       {jobTypeData.map((_, i) => <Cell key={i} fill={TYPE_COLORS[i % TYPE_COLORS.length]} stroke="none" />)}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-              <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1">
+              <div className="flex flex-wrap gap-x-4 gap-y-2 mt-2">
                 {jobTypeData.map((d, i) => (
-                  <div key={d.name} className="flex items-center gap-1.5 text-xs font-mono">
+                  <div key={d.name} className="flex items-center gap-2 text-[11px] uppercase tracking-widest font-medium">
                     <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: TYPE_COLORS[i % TYPE_COLORS.length] }} />
-                    <span style={{ color: '#7a7469' }}>{d.name} ({d.value})</span>
+                    <span style={{ color: '#7a7469' }}>{d.name} <span className="font-mono ml-0.5" style={{ color: '#181410' }}>({d.value})</span></span>
                   </div>
                 ))}
               </div>
             </Panel>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Panel title="Cumulative Revenue">
-              <div style={{ height: 200 }}>
+              <div style={{ height: 200 }} className="mt-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={cumulativeData}>
+                  <AreaChart data={cumulativeData} margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="revGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor={GREEN} stopOpacity={0.3} />
                         <stop offset="95%" stopColor={GREEN} stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid vertical={false} stroke="#e8e4dd" />
-                    <XAxis dataKey="month" tick={{ fill: '#555555', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#555555', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={42} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#c0bab4' }} />
-                    <Area type="monotone" dataKey="cumulative" name="Cumulative" stroke={GREEN} strokeWidth={2} fill="url(#revGrad)" dot={{ fill: GREEN, r: 3, strokeWidth: 0 }} />
+                    <CartesianGrid vertical={false} stroke="#e8e4dd" strokeDasharray="3 3" />
+                    <XAxis dataKey="month" tick={{ fill: '#7a7469', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} dy={6} />
+                    <YAxis tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={40} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#c0bab4', strokeDasharray: '4 4' }} />
+                    <Area type="monotone" dataKey="cumulative" name="Cumulative" stroke={GREEN} strokeWidth={2} fill="url(#revGrad)" dot={{ fill: GREEN, r: 3, strokeWidth: 2, stroke: '#fafaf8' }} activeDot={{ r: 5, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </Panel>
 
             <Panel title="Aged Debtors">
-              <div style={{ height: 200 }}>
+              <div style={{ height: 200 }} className="mt-1">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={agingBuckets} barCategoryGap="35%">
-                    <CartesianGrid vertical={false} stroke="#e8e4dd" />
-                    <XAxis dataKey="label" tick={{ fill: '#555555', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fill: '#555555', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={42} />
-                    <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.03)' }} />
-                    <Bar dataKey="value" name="Outstanding" radius={[2, 2, 0, 0]}>
+                  <BarChart data={agingBuckets} barCategoryGap="30%" margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                    <CartesianGrid vertical={false} stroke="#e8e4dd" strokeDasharray="3 3" />
+                    <XAxis dataKey="label" tick={{ fill: '#7a7469', fontSize: 11, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} dy={6} />
+                    <YAxis tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={40} />
+                    <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eeeae4', opacity: 0.5 }} />
+                    <Bar dataKey="value" name="Outstanding" radius={[4, 4, 0, 0]} maxBarSize={44}>
                       {agingBuckets.map((_, i) => <Cell key={i} fill={[GREEN, YELLOW, ORANGE, RED][i]} />)}
                     </Bar>
                   </BarChart>
                 </ResponsiveContainer>
               </div>
-              <div className="grid grid-cols-4 gap-2 mt-2">
+              <div className="grid grid-cols-4 gap-2 mt-5 pt-4" style={{ borderTop: '1px solid #d9d4ce' }}>
                 {agingBuckets.map((b, i) => (
                   <div key={b.label} className="text-center">
-                    <div className="text-xs font-mono" style={{ color: '#555555' }}>{b.label}</div>
-                    <div className="text-sm font-bold" style={{ fontFamily: "'Space Grotesk', sans-serif", color: [GREEN, YELLOW, ORANGE, RED][i] }}>{b.count > 0 ? formatCurrency(b.value) : '—'}</div>
-                    <div className="text-xs font-mono" style={{ color: '#7a7469' }}>{b.count > 0 ? `${b.count} inv` : ''}</div>
+                    <div className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>{b.label}</div>
+                    <div className="text-sm font-mono tnum mt-1" style={{ color: [GREEN, YELLOW, ORANGE, RED][i] }}>{b.count > 0 ? formatCurrency(b.value) : '—'}</div>
+                    <div className="text-[10px] mt-0.5" style={{ color: '#7a7469' }}>{b.count > 0 ? `${b.count} inv` : ''}</div>
                   </div>
                 ))}
               </div>
@@ -254,138 +251,148 @@ export function ReportsPage() {
               {pipelineByStatus.map(({ label, color, count, value }) => {
                 const pct = totalPipeline > 0 ? Math.round((value / totalPipeline) * 100) : 0;
                 return (
-                  <div key={label}>
-                    <div className="flex items-center gap-2 mb-2">
+                  <div key={label} className="p-4 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+                    <div className="flex items-center gap-2 mb-3">
                       <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }} />
-                      <span className="text-xs font-mono uppercase" style={{ color: '#7a7469' }}>{label}</span>
+                      <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>{label}</span>
                     </div>
-                    <div className="text-3xl font-bold mb-1" style={{ fontFamily: "'Space Grotesk', sans-serif", color }}>{formatCurrency(value)}</div>
-                    <div className="text-xs font-mono mb-2" style={{ color: '#555555' }}>{count} jobs · {pct}% of pipeline</div>
+                    <div className="text-2xl font-bold mb-1 font-mono tnum" style={{ color }}>{formatCurrency(value)}</div>
+                    <div className="text-xs mb-3 font-mono" style={{ color: '#7a7469' }}>{count} jobs · {pct}% of pipeline</div>
                     <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: '#eeeae4' }}>
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: color }} />
+                      <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: color }} />
                     </div>
                   </div>
                 );
               })}
             </div>
           </Panel>
-        </>
+        </div>
       )}
 
       {tab === 'cis' && (
-        <>
-          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
+        <div className="space-y-6">
+          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ backgroundColor: '#e8f3f7', border: '1px solid rgba(27,94,120,0.2)' }}>
             <div className="flex-1">
-              <p className="text-xs font-medium mb-1" style={{ color: '#8a8377' }}>Construction Industry Scheme (CIS)</p>
-              <p className="text-xs leading-relaxed" style={{ color: '#7a7469' }}>Monthly returns must be filed with HMRC by the 19th of the following tax month. Deductions must be made from subcontractors verified as "net" or "unverified".</p>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#1b5e78' }}>Construction Industry Scheme (CIS)</p>
+              <p className="text-sm leading-relaxed" style={{ color: '#4a4540' }}>Monthly returns must be filed with HMRC by the 19th of the following tax month. Deductions must be made from subcontractors verified as "net" or "unverified".</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 py-4 px-5 rounded-lg" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
-            {[
-              { label: 'Deductions Filed', value: formatCurrency(cisTotalDeductions) },
-              { label: 'Pending Submission', value: String(cisPending.length) },
-              { label: 'Pending Deductions', value: formatCurrency(cisPending.reduce((s, r) => s + r.deduction_amount, 0)) },
-            ].map(({ label, value }, i) => (
-              <div key={label} className={i > 0 ? 'pl-6' : ''} style={i > 0 ? { borderLeft: '1px solid #d9d4ce' } : undefined}>
-                <p className="text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>{label}</p>
-                <p className="text-2xl font-bold leading-none" style={{ fontFamily: "'Space Grotesk', sans-serif", color: '#181410' }}>{value}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <StatCard label="Deductions Filed" value={formatCurrency(cisTotalDeductions)} />
+            <StatCard label="Pending Submission" value={cisPending.length} />
+            <StatCard danger={cisPending.length > 0} label="Pending Deductions" value={formatCurrency(cisPending.reduce((s, r) => s + r.deduction_amount, 0))} />
           </div>
 
-          {taxMonths.map(month => {
-            const monthReturns = cisReturns.filter(r => r.tax_month === month);
-            if (monthReturns.length === 0) return null;
-            const submitted = monthReturns.every(r => r.submitted);
-            return (
-              <Panel key={month} title={`Tax Month: ${new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`} actions={
-                submitted
-                  ? <span className="text-xs font-mono px-2 py-1 rounded" style={{ backgroundColor: '#0d1f0d', color: GREEN, border: '1px solid rgba(74,222,128,0.3)' }}>SUBMITTED</span>
-                  : <Btn size="sm">Submit Return</Btn>
-              }>
-                <div className="overflow-x-auto">
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #d9d4ce' }}>
-                        {['Subcontractor', 'UTR', 'Rate', 'Gross', 'Deduction', 'Net'].map(h => (
-                          <th key={h} className="text-left py-2 px-3 text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthReturns.map(r => (
-                        <tr key={r.id} style={{ borderBottom: '1px solid #ece8e3' }}>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#181410' }}>{r.subcontractor_name}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>—</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#8a8377', fontFamily: "'JetBrains Mono', monospace" }}>{r.deduction_rate}%</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#8a8377', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(r.gross_payment)}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#c13a2a', fontFamily: "'JetBrains Mono', monospace" }}>-{formatCurrency(r.deduction_amount)}</td>
-                          <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(r.net_payment)}</td>
+          <div className="space-y-6">
+            {taxMonths.map(month => {
+              const monthReturns = cisReturns.filter(r => r.tax_month === month);
+              if (monthReturns.length === 0) return null;
+              const submitted = monthReturns.every(r => r.submitted);
+              return (
+                <Panel key={month} noPad title={`Tax Month: ${new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`} actions={
+                  submitted
+                    ? <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{ backgroundColor: 'rgba(42,110,69,0.1)', color: GREEN }}>Submitted</span>
+                    : <Btn size="sm">Submit Return</Btn>
+                }>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #d9d4ce', backgroundColor: '#fafaf8' }}>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>Subcontractor</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>UTR</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Rate</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Gross</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Deduction</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Net</th>
                         </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      <tr style={{ borderTop: '1px solid #d9d4ce' }}>
-                        <td colSpan={3} className="py-2.5 px-3 text-xs uppercase" style={{ color: '#7a7469' }}>Total</td>
-                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#8a8377', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.gross_payment, 0))}</td>
-                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#c13a2a', fontFamily: "'JetBrains Mono', monospace" }}>-{formatCurrency(monthReturns.reduce((s, r) => s + r.deduction_amount, 0))}</td>
-                        <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace" }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.net_payment, 0))}</td>
-                      </tr>
-                    </tfoot>
-                  </table>
-                </div>
-              </Panel>
-            );
-          })}
-        </>
+                      </thead>
+                      <tbody>
+                        {monthReturns.map((r, i) => (
+                          <tr key={r.id} className="transition-colors hover:bg-[#eeeae4] group" style={{ borderBottom: i < monthReturns.length - 1 ? '1px solid #e8e4dd' : 'none' }}>
+                            <td className="py-3 px-4 text-sm font-medium" style={{ color: '#181410' }}>{r.subcontractor_name}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum" style={{ color: '#7a7469' }}>—</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum text-right" style={{ color: '#7a7469' }}>{r.deduction_rate}%</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum text-right" style={{ color: '#181410' }}>{formatCurrency(r.gross_payment)}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum text-right" style={{ color: '#c13a2a' }}>-{formatCurrency(r.deduction_amount)}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum font-bold text-right" style={{ color: '#181410' }}>{formatCurrency(r.net_payment)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr style={{ borderTop: '1px solid #d9d4ce', backgroundColor: '#fafaf8' }}>
+                          <td colSpan={3} className="py-3 px-4 text-xs font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Total</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum font-bold text-right" style={{ color: '#181410' }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.gross_payment, 0))}</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum font-bold text-right" style={{ color: '#c13a2a' }}>-{formatCurrency(monthReturns.reduce((s, r) => s + r.deduction_amount, 0))}</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum font-bold text-right" style={{ color: '#181410' }}>{formatCurrency(monthReturns.reduce((s, r) => s + r.net_payment, 0))}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </Panel>
+              );
+            })}
+          </div>
+        </div>
       )}
 
       {tab === 'ratebook' && (
-        <>
-          <div className="flex items-center gap-3">
-            <select value={rateCategory} onChange={e => setRateCategory(e.target.value)} className="py-1.5 px-3 rounded-md text-sm focus:outline-none" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#8a8377' }}>
-              {rateCategories.map(c => <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>)}
-            </select>
-            <span className="text-xs" style={{ color: '#c0bab4' }}>{filteredRates.length} rates</span>
+        <div className="space-y-6">
+          <div className="flex items-center justify-between p-4 rounded-lg gw-shadow" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-medium" style={{ color: '#4a4540' }}>Category:</span>
+              <select value={rateCategory} onChange={e => setRateCategory(e.target.value)} className="py-1.5 px-3 rounded-md text-sm font-medium focus:outline-none" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce', color: '#181410' }}>
+                {rateCategories.map(c => <option key={c} value={c}>{c === 'all' ? 'All Categories' : c}</option>)}
+              </select>
+            </div>
+            <span className="text-xs font-mono" style={{ color: '#7a7469' }}>{filteredRates.length} rates</span>
           </div>
 
-          {rateCategories.filter(c => c !== 'all').map(cat => {
-            const catRates = filteredRates.filter(r => r.category === cat);
-            if (catRates.length === 0) return null;
-            const avgTotal = catRates.reduce((s, r) => s + r.total_rate, 0) / catRates.length;
-            return (
-              <Panel key={cat} title={cat} actions={<span className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>avg £{avgTotal.toFixed(2)}/unit</span>}>
-                <div className="overflow-x-auto">
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ borderBottom: '1px solid #d9d4ce' }}>
-                        {['Description', 'Unit', 'Labour', 'Material', 'Plant', 'Total'].map(h => (
-                          <th key={h} className="text-left py-2 px-3 text-xs font-medium uppercase tracking-widest" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>{h}</th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {catRates.map(r => (
-                        <tr key={r.id} style={{ borderBottom: '1px solid #ece8e3' }} className="hover:bg-[#eeeae4] transition-colors">
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#181410' }}>
-                            {r.description}
-                            {r.notes && <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{r.notes}</div>}
-                          </td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{r.unit}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#8a8377', fontFamily: "'JetBrains Mono', monospace" }}>£{r.labour_rate.toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#8a8377', fontFamily: "'JetBrains Mono', monospace" }}>£{r.material_rate.toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-sm" style={{ color: '#8a8377', fontFamily: "'JetBrains Mono', monospace" }}>£{r.plant_rate.toFixed(2)}</td>
-                          <td className="py-2.5 px-3 text-sm font-medium" style={{ color: '#181410', fontFamily: "'JetBrains Mono', monospace" }}>£{r.total_rate.toFixed(2)}</td>
+          <div className="space-y-6">
+            {rateCategories.filter(c => c !== 'all').map(cat => {
+              const catRates = filteredRates.filter(r => r.category === cat);
+              if (catRates.length === 0) return null;
+              const avgTotal = catRates.reduce((s, r) => s + r.total_rate, 0) / catRates.length;
+              return (
+                <Panel key={cat} noPad title={cat} actions={<span className="text-xs font-mono px-2 py-1 rounded" style={{ backgroundColor: '#eeeae4', color: '#4a4540' }}>Avg £{avgTotal.toFixed(2)}/unit</span>}>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #d9d4ce', backgroundColor: '#fafaf8' }}>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>Description</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>Unit</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Labour</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Material</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Plant</th>
+                          <th className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest text-right" style={{ color: '#7a7469' }}>Total</th>
+                          <th className="py-2.5 px-2 w-8"></th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </Panel>
-            );
-          })}
-        </>
+                      </thead>
+                      <tbody>
+                        {catRates.map((r, i) => (
+                          <tr key={r.id} className="transition-colors hover:bg-[#eeeae4] group cursor-pointer" style={{ borderBottom: i < catRates.length - 1 ? '1px solid #e8e4dd' : 'none' }}>
+                            <td className="py-3 px-4">
+                              <div className="text-sm font-medium" style={{ color: '#181410' }}>{r.description}</div>
+                              {r.notes && <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{r.notes}</div>}
+                            </td>
+                            <td className="py-3 px-4 text-sm font-mono" style={{ color: '#7a7469' }}>{r.unit}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum text-right" style={{ color: '#7a7469' }}>£{r.labour_rate.toFixed(2)}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum text-right" style={{ color: '#7a7469' }}>£{r.material_rate.toFixed(2)}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum text-right" style={{ color: '#7a7469' }}>£{r.plant_rate.toFixed(2)}</td>
+                            <td className="py-3 px-4 text-sm font-mono tnum font-bold text-right" style={{ color: '#181410' }}>£{r.total_rate.toFixed(2)}</td>
+                            <td className="py-3 px-2 text-right">
+                              <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: '#7a7469' }} />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </Panel>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -395,3 +402,4 @@ function daysOld(dateStr: string | null): number {
   if (!dateStr) return 0;
   return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000));
 }
+
