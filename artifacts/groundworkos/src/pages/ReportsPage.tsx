@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Download, ChevronRight } from 'lucide-react';
+import { Download, ChevronRight, FileDown } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, AreaChart, Area, CartesianGrid, Legend,
@@ -17,6 +17,21 @@ const RED = '#c13a2a';
 const GREEN = '#2a6e45';
 const ORANGE = '#b56918';
 const BLUE = '#1b5e78';
+
+function downloadCSV(filename: string, headers: string[], rows: (string | number)[][]) {
+  const escape = (v: string | number) => {
+    const s = String(v ?? '');
+    return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const csv = [headers, ...rows].map(row => row.map(escape).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -112,6 +127,62 @@ export function ReportsPage() {
 
   const collectionRate = totalRevenue + totalOutstanding > 0 ? Math.round((totalRevenue / (totalRevenue + totalOutstanding)) * 100) : 0;
 
+  function exportCurrentTab() {
+    if (tab === 'overview') {
+      downloadCSV('revenue-summary.csv',
+        ['Month', 'Invoiced (£)', 'Collected (£)', 'Cumulative (£)'],
+        cumulativeData.map(d => [d.month, d.invoiced.toFixed(2), d.collected.toFixed(2), d.cumulative.toFixed(2)])
+      );
+    } else if (tab === 'pl') {
+      const activeJobs = jobs.filter(j => j.status !== 'cancelled');
+      const rows = activeJobs.map(j => {
+        const jobInvoices = invoices.filter(i => i.job_id === j.id);
+        const invoiced = jobInvoices.reduce((s, i) => s + i.total_amount, 0);
+        const collected = jobInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total_amount, 0);
+        const labour = timesheets.filter(t => t.job_id === j.id).reduce((s, t) => s + t.cost, 0);
+        const materials = purchaseOrders.filter(o => o.job_id === j.id).reduce((s, o) => s + o.total_amount, 0);
+        const totalCost = labour + materials;
+        const contractValue = j.value ?? 0;
+        const margin = contractValue > 0 ? ((contractValue - totalCost) / contractValue) * 100 : 0;
+        return [j.job_number ?? '', j.title, j.status, contractValue.toFixed(2), invoiced.toFixed(2), collected.toFixed(2), labour.toFixed(2), materials.toFixed(2), totalCost.toFixed(2), margin.toFixed(1)];
+      });
+      downloadCSV(`job-pl-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Job Number', 'Title', 'Status', 'Contract Value (£)', 'Invoiced (£)', 'Collected (£)', 'Labour Cost (£)', 'Materials Cost (£)', 'Total Cost (£)', 'Margin (%)'],
+        rows
+      );
+    } else if (tab === 'cis') {
+      exportCIS300(cisReturns, 'cis300-all.csv');
+    } else if (tab === 'ratebook') {
+      downloadCSV(`rate-book-${new Date().toISOString().slice(0, 10)}.csv`,
+        ['Category', 'Description', 'Unit', 'Labour Rate (£)', 'Material Rate (£)', 'Plant Rate (£)', 'Total Rate (£)', 'Notes'],
+        (rateBook as any[]).map(r => [r.category, r.description, r.unit, r.labour_rate.toFixed(2), r.material_rate.toFixed(2), r.plant_rate.toFixed(2), r.total_rate.toFixed(2), r.notes ?? ''])
+      );
+    }
+  }
+
+  function exportCIS300(returns: typeof cisReturns, filename: string) {
+    downloadCSV(filename,
+      ['Tax Month', 'Subcontractor Name', 'UTR Number', 'Gross Payment (£)', 'CIS Tax Deducted (£)', 'Net Payment (£)', 'Deduction Rate (%)', 'Submitted'],
+      returns.map(r => [
+        r.tax_month,
+        r.subcontractor_name,
+        '',
+        r.gross_payment.toFixed(2),
+        r.deduction_amount.toFixed(2),
+        r.net_payment.toFixed(2),
+        r.deduction_rate,
+        r.submitted ? 'Yes' : 'No',
+      ])
+    );
+  }
+
+  const exportLabel: Record<ReportTab, string> = {
+    overview: 'Revenue CSV',
+    pl: 'P&L CSV',
+    cis: 'CIS300 CSV',
+    ratebook: 'Rate Book CSV',
+  };
+
   return (
     <div className="max-w-[1600px] mx-auto space-y-6">
       <div className="flex items-center justify-between">
@@ -119,7 +190,9 @@ export function ReportsPage() {
           <h1 className="text-xl font-semibold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Reports</h1>
           <p className="text-sm mt-0.5" style={{ color: '#7a7469' }}>Financial reports, CIS returns & rate book</p>
         </div>
-        <Btn variant="outline" size="sm"><Download className="w-3.5 h-3.5" /> Export</Btn>
+        <Btn variant="outline" size="sm" onClick={exportCurrentTab}>
+          <Download className="w-3.5 h-3.5" /> Export {exportLabel[tab]}
+        </Btn>
       </div>
 
       <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #d9d4ce' }}>
@@ -416,11 +489,23 @@ export function ReportsPage() {
               const monthReturns = cisReturns.filter(r => r.tax_month === month);
               if (monthReturns.length === 0) return null;
               const submitted = monthReturns.every(r => r.submitted);
+              const monthLabel = new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
               return (
-                <Panel key={month} noPad title={`Tax Month: ${new Date(month + '-01').toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}`} actions={
-                  submitted
-                    ? <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{ backgroundColor: 'rgba(42,110,69,0.1)', color: GREEN }}>Submitted</span>
-                    : <Btn size="sm">Submit Return</Btn>
+                <Panel key={month} noPad title={`Tax Month: ${monthLabel}`} actions={
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => exportCIS300(monthReturns, `CIS300-${month}.csv`)}
+                      className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded transition-colors hover:bg-[#e8e4dd]"
+                      style={{ color: '#1b5e78', border: '1px solid #d9d4ce' }}
+                      title="Download CIS300 CSV for HMRC submission"
+                    >
+                      <FileDown className="w-3.5 h-3.5" /> CIS300
+                    </button>
+                    {submitted
+                      ? <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{ backgroundColor: 'rgba(42,110,69,0.1)', color: GREEN }}>Submitted</span>
+                      : <Btn size="sm">Submit Return</Btn>
+                    }
+                  </div>
                 }>
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
@@ -529,4 +614,3 @@ function daysOld(dateStr: string | null): number {
   if (!dateStr) return 0;
   return Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 86400000));
 }
-

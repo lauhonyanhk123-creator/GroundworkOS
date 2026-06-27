@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Briefcase, FileText, Receipt, Calendar,
   Users, HardHat, FolderOpen, BarChart3, Settings,
   Menu, Bell, X, Truck, Search, LogOut, Clock, ShoppingCart,
-  Upload, ScrollText, FileWarning, AlertTriangle, Wrench,
+  Upload, ScrollText, FileWarning, AlertTriangle, Wrench, Server,
 } from 'lucide-react';
 import { useAlerts } from '../../hooks/useAlerts';
 import { GlobalSearch } from '../ui/GlobalSearch';
@@ -30,6 +30,7 @@ const ALL_NAV = [
   { name: 'Reports',         href: '/reports',         icon: BarChart3,       minRole: 'manager' as Role },
   { name: 'Import',          href: '/import',          icon: Upload,          minRole: 'manager' as Role },
   { name: 'Audit Log',       href: '/audit',           icon: ScrollText,      minRole: 'admin' as Role },
+  { name: 'Deploy Guide',    href: '/deploy',          icon: Server,          minRole: 'admin' as Role },
   { name: 'Settings',        href: '/settings',        icon: Settings,        minRole: 'manager' as Role },
   { name: 'Users',           href: '/settings/users',  icon: Users,           minRole: 'admin' as Role },
 ];

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, ShieldAlert, Clock, ArrowRight, ChevronRight, MapPin, Briefcase, Users, Truck, FileWarning } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, Clock, ArrowRight, ChevronRight, MapPin, Briefcase, Users, Truck, FileWarning, Activity, PlusCircle, Edit2, Trash2 } from 'lucide-react';
 import { Link } from 'wouter';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Panel } from '../components/ui/Panel';
@@ -15,6 +15,16 @@ interface DashboardStats {
   activeSubcons: number;
   plantCount: number;
   docAlerts: number;
+}
+
+interface AuditEntry {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  changes: Record<string, any> | null;
+  user_name: string | null;
+  created_at: string;
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
@@ -35,16 +45,61 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   );
 };
 
+const ENTITY_LABELS: Record<string, string> = {
+  job: 'Job', quote: 'Quote', invoice: 'Invoice', client: 'Client',
+  subcontractor: 'Subcon', document: 'Document', plant: 'Plant',
+  timesheet: 'Timesheet', purchase_order: 'Purchase Order',
+};
+
+const ACTION_ICON: Record<string, React.ReactNode> = {
+  create: <PlusCircle className="w-3.5 h-3.5" style={{ color: '#2a6e45' }} />,
+  update: <Edit2 className="w-3.5 h-3.5" style={{ color: '#1b5e78' }} />,
+  delete: <Trash2 className="w-3.5 h-3.5" style={{ color: '#c13a2a' }} />,
+};
+
+const ACTION_COLOR: Record<string, string> = {
+  create: '#2a6e45',
+  update: '#1b5e78',
+  delete: '#c13a2a',
+};
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
+function getChangeSummary(action: string, changes: Record<string, any> | null): string {
+  if (action === 'delete') return 'deleted';
+  if (!changes || typeof changes !== 'object') return action === 'create' ? 'created' : 'updated';
+  const keys = Object.keys(changes).filter(k => !['id', 'created_at', 'updated_at'].includes(k));
+  if (keys.length === 0) return action === 'create' ? 'created' : 'updated';
+  if (action === 'create') return `created`;
+  return `updated ${keys.slice(0, 2).join(', ')}${keys.length > 2 ? ` +${keys.length - 2}` : ''}`;
+}
+
 export function DashboardPage() {
   const { state } = useApp();
   const { jobs, invoices, documents } = state;
 
   const [extraStats, setExtraStats] = useState<DashboardStats | null>(null);
+  const [activityFeed, setActivityFeed] = useState<AuditEntry[]>([]);
 
   useEffect(() => {
     fetch(`${BASE}/api/dashboard`)
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data) setExtraStats(data); })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch(`${BASE}/api/audit-logs?limit=10&days=30`)
+      .then(r => r.ok ? r.json() : null)
+      .then((data: AuditEntry[] | null) => { if (data) setActivityFeed(data); })
       .catch(() => {});
   }, []);
 
@@ -272,6 +327,48 @@ export function DashboardPage() {
                     </Link>
                   ))}
                 </div>
+              </div>
+            )}
+          </Panel>
+
+          <Panel title="Recent Activity" actions={
+            <Link href="/audit"><Btn variant="ghost" size="sm">Full log <ArrowRight className="w-3 h-3" /></Btn></Link>
+          }>
+            {activityFeed.length === 0 ? (
+              <p className="text-sm text-center py-6" style={{ color: '#a8a099' }}>No recent activity</p>
+            ) : (
+              <div className="space-y-0 -mx-5 -mb-5">
+                {activityFeed.map((entry, i) => {
+                  const icon = ACTION_ICON[entry.action] ?? <Activity className="w-3.5 h-3.5" style={{ color: '#7a7469' }} />;
+                  const color = ACTION_COLOR[entry.action] ?? '#7a7469';
+                  const entityLabel = ENTITY_LABELS[entry.entity_type] ?? entry.entity_type;
+                  const summary = getChangeSummary(entry.action, entry.changes);
+                  return (
+                    <div
+                      key={entry.id}
+                      className="flex items-start gap-3 px-5 py-3 transition-colors hover:bg-[#eeeae4]"
+                      style={{ borderTop: i > 0 ? '1px solid #e8e4dd' : 'none' }}
+                    >
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5" style={{ backgroundColor: `${color}18` }}>
+                        {icon}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-baseline gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" style={{ backgroundColor: '#eeeae4', color: '#4a4540' }}>
+                            {entityLabel}
+                          </span>
+                          <span className="text-sm" style={{ color: '#4a4540' }}>{summary}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {entry.user_name && (
+                            <span className="text-xs font-medium" style={{ color: '#7a7469' }}>{entry.user_name}</span>
+                          )}
+                          <span className="text-xs font-mono" style={{ color: '#a8a099' }}>{timeAgo(entry.created_at)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </Panel>

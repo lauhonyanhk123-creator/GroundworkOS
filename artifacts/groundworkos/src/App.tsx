@@ -28,6 +28,7 @@ import { useRole } from "./hooks/useRole";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { ImportPage } from "./pages/ImportPage";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import { DeployPage } from "./pages/DeployPage";
 import { useApp } from "./store/AppContext";
 
 const queryClient = new QueryClient();
@@ -260,6 +261,7 @@ function AppRoutes() {
             <Route path="/reports" component={ReportsPage} />
             <Route path="/import" component={ImportPage} />
             <Route path="/audit" component={AuditLogPage} />
+            <Route path="/deploy" component={DeployPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/settings/users" component={UsersPage} />
             <Route>
