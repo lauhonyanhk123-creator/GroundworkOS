@@ -124,6 +124,7 @@ export interface Document {
   related_id: string | null;
   related_name: string | null;
   notes: string | null;
+  file_path: string | null;
   created_at: string;
 }
 

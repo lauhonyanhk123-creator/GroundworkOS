@@ -1,4 +1,5 @@
-import { AlertTriangle, ShieldAlert, Clock, ArrowRight, ChevronRight, MapPin } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { AlertTriangle, ShieldAlert, Clock, ArrowRight, ChevronRight, MapPin, Briefcase, Users, Truck, FileWarning } from 'lucide-react';
 import { Link } from 'wouter';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Panel } from '../components/ui/Panel';
@@ -6,6 +7,15 @@ import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { useApp } from '../store/AppContext';
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+interface DashboardStats {
+  pendingQuotes: number;
+  activeSubcons: number;
+  plantCount: number;
+  docAlerts: number;
+}
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (!active || !payload?.length) return null;
@@ -28,6 +38,15 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export function DashboardPage() {
   const { state } = useApp();
   const { jobs, invoices, documents } = state;
+
+  const [extraStats, setExtraStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    fetch(`${BASE}/api/dashboard`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data) setExtraStats(data); })
+      .catch(() => {});
+  }, []);
 
   const activeJobs = jobs.filter(j => j.status === 'active');
   const outstandingInvoices = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
@@ -71,6 +90,61 @@ export function DashboardPage() {
         <StatCard label="Collected" value={formatCurrency(totalCollected)} sub={`${paidInvoices.length} paid invoices`} />
         <StatCard label="Outstanding" value={formatCurrency(totalOutstanding)} sub={`${outstandingInvoices.length} invoices`} />
         <StatCard danger={overdueInvoices.length > 0} label="Overdue" value={formatCurrency(totalOverdue)} sub={`${overdueInvoices.length} overdue`} />
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/jobs">
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#e8f3f7' }}>
+              <Briefcase className="w-4 h-4" style={{ color: '#1b5e78' }} />
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-widest mb-0.5" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Quotes Pending</div>
+              <div className="text-xl font-bold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {extraStats ? extraStats.pendingQuotes : jobs.filter(j => j.status === 'quoted').length}
+              </div>
+            </div>
+          </div>
+        </Link>
+        <Link href="/subcontractors">
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#f0fdf4' }}>
+              <Users className="w-4 h-4" style={{ color: '#2a6e45' }} />
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-widest mb-0.5" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Active Subcons</div>
+              <div className="text-xl font-bold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {extraStats?.activeSubcons ?? '—'}
+              </div>
+            </div>
+          </div>
+        </Link>
+        <Link href="/plant">
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: '#fef9f0' }}>
+              <Truck className="w-4 h-4" style={{ color: '#b56918' }} />
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-widest mb-0.5" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Plant Items</div>
+              <div className="text-xl font-bold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {extraStats?.plantCount ?? '—'}
+              </div>
+            </div>
+          </div>
+        </Link>
+        <Link href="/documents">
+          <div className="flex items-center gap-3 px-4 py-3.5 rounded-xl cursor-pointer transition-colors hover:opacity-80" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: complianceDocs.length > 0 ? '#fff5f5' : '#f0fdf4' }}>
+              <FileWarning className="w-4 h-4" style={{ color: complianceDocs.length > 0 ? '#c13a2a' : '#2a6e45' }} />
+            </div>
+            <div>
+              <div className="text-xs font-medium uppercase tracking-widest mb-0.5" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Doc Alerts</div>
+              <div className="text-xl font-bold" style={{ color: complianceDocs.length > 0 ? '#c13a2a' : '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {complianceDocs.length}
+              </div>
+            </div>
+          </div>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

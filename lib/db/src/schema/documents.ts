@@ -13,6 +13,7 @@ export const documentsTable = pgTable("documents", {
   relatedId: text("related_id"),
   relatedName: text("related_name"),
   notes: text("notes"),
+  filePath: text("file_path"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

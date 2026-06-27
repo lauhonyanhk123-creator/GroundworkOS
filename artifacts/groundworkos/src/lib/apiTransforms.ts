@@ -130,6 +130,7 @@ export function toDocument(r: DocumentRecord): Document {
     related_id: r.relatedId ?? null,
     related_name: r.relatedName ?? null,
     notes: r.notes ?? null,
+    file_path: (r as any).filePath ?? null,
     created_at: r.createdAt,
   };
 }

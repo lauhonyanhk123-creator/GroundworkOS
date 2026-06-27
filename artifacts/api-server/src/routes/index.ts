@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
 import { getAuth } from "@clerk/express";
 import healthRouter from "./health";
+import storageRouter from "./storage";
 import clientsRouter from "./clients";
 import jobsRouter from "./jobs";
 import quotesRouter from "./quotes";
@@ -36,6 +37,7 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 
 router.use(requireAuth);
 
+router.use(storageRouter);
 router.use(healthRouter);
 router.use(clientsRouter);
 router.use(jobsRouter);

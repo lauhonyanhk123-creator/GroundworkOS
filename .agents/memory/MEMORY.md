@@ -6,3 +6,4 @@
 - [Canvas mockup workflow](canvas-mockup-workflow.md) — present design canvas via presentArtifact (skill abbreviates as `n`); mockup preview URL = $REPLIT_DOMAINS/__mockup/preview/{folder}/{Component}, no port
 - [GroundworkOS role system](groundworkos-roles.md) — Clerk publicMetadata.role: admin/manager/foreman; useRole hook in hooks/useRole.ts; nav filtered in DashboardLayout; foreman redirect in ForemanRedirect in App.tsx
 - [GroundworkOS DB migrations](groundworkos-db-migrations.md) — drizzle-kit push requires TTY for interactive prompts; use executeSql (code_execution) to apply columns directly when push hangs on ALTER TABLE
+- [Object storage setup quirks](object-storage-quirks.md) — api-server needs zod installed explicitly; pnpm override $react fails if react not in root package.json; React 19 already satisfies Uppy v5 peer dep >=19 so no override needed

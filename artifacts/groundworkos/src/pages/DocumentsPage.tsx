@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight, Trash2 } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight, Trash2, Paperclip, Download, Upload } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
@@ -8,9 +8,12 @@ import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatDate, daysUntil } from '../lib/utils';
 import { useApp } from '../store/AppContext';
 import { createDocument, deleteDocument } from '@workspace/api-client-react';
+import { useUpload } from '@workspace/object-storage-web';
 import { toDocument } from '../lib/apiTransforms';
 import { toast } from 'sonner';
 import type { DocumentType, DocumentRelatedTo } from '../types';
+
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
 const TYPE_LABELS: Record<DocumentType, string> = {
   rams: 'RAMS',
@@ -52,6 +55,12 @@ export function DocumentsPage() {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { uploadFile, isUploading, progress } = useUpload({
+    basePath: `${BASE}/api/storage`,
+  });
 
   const filtered = documents.filter(d => {
     if (filterType !== 'all' && d.type !== filterType) return false;
@@ -71,6 +80,7 @@ export function DocumentsPage() {
   function openNew() {
     setForm(emptyForm);
     setErrors({});
+    setSelectedFile(null);
     setShowModal(true);
   }
 
@@ -85,6 +95,18 @@ export function DocumentsPage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     try {
+      let filePath: string | undefined;
+
+      if (selectedFile) {
+        const uploadResult = await uploadFile(selectedFile);
+        if (!uploadResult) {
+          toast.error('File upload failed');
+          setSaving(false);
+          return;
+        }
+        filePath = uploadResult.objectPath;
+      }
+
       const result = await createDocument({
         name: form.name.trim(),
         type: form.type,
@@ -93,9 +115,11 @@ export function DocumentsPage() {
         issuedDate: form.issued_date || undefined,
         expiryDate: form.expiry_date || undefined,
         notes: form.notes || undefined,
-      });
+        ...(filePath ? { filePath } : {}),
+      } as any);
       dispatch({ type: 'ADD_DOCUMENT', doc: toDocument(result) });
       setShowModal(false);
+      setSelectedFile(null);
       toast.success(`${result.name} added`);
     } catch {
       toast.error('Failed to add document');
@@ -115,6 +139,11 @@ export function DocumentsPage() {
       toast.error('Failed to delete document');
     }
   }
+
+  const isBusy = saving || isUploading;
+  const busyLabel = isUploading
+    ? `Uploading… ${progress}%`
+    : saving ? 'Saving…' : 'Add Document';
 
   return (
     <div className="space-y-6">
@@ -201,6 +230,7 @@ export function DocumentsPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold truncate group-hover:text-[#1b5e78] transition-colors" style={{ color: '#181410' }}>{doc.name}</span>
                       {(isExpired || isExpiringSoon) && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: isExpired ? '#c13a2a' : '#e07b39' }} />}
+                      {doc.file_path && <Paperclip className="w-3 h-3 flex-shrink-0" style={{ color: '#a8a099' }} title="File attached" />}
                     </div>
                     <div className="text-xs" style={{ color: '#7a7469' }}>
                       <span className="font-medium">{TYPE_LABELS[doc.type]}</span>
@@ -264,6 +294,19 @@ export function DocumentsPage() {
                   );
                 })()}
 
+                {selectedDoc.file_path && (
+                  <a
+                    href={`${BASE}/api/storage${selectedDoc.file_path}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:opacity-80"
+                    style={{ backgroundColor: '#e8f3f7', color: '#1b5e78', border: '1px solid #b8d8e8' }}
+                  >
+                    <Download className="w-4 h-4 flex-shrink-0" />
+                    View / Download File
+                  </a>
+                )}
+
                 {selectedDoc.notes && (
                   <div>
                     <p className="text-xs font-medium uppercase tracking-widest mb-2" style={{ color: '#7a7469', letterSpacing: '0.08em' }}>Notes</p>
@@ -311,9 +354,42 @@ export function DocumentsPage() {
           <Field label="Notes">
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={2} />
           </Field>
+
+          <Field label="Attach File" hint="PDF, image, or document (optional)">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg,.gif,.webp"
+              className="hidden"
+              onChange={e => setSelectedFile(e.target.files?.[0] ?? null)}
+            />
+            {selectedFile ? (
+              <div className="flex items-center justify-between px-3 py-2.5 rounded-lg" style={{ backgroundColor: '#e8f3f7', border: '1px solid #b8d8e8' }}>
+                <div className="flex items-center gap-2 min-w-0">
+                  <Paperclip className="w-3.5 h-3.5 flex-shrink-0" style={{ color: '#1b5e78' }} />
+                  <span className="text-sm truncate font-medium" style={{ color: '#1b5e78' }}>{selectedFile.name}</span>
+                  <span className="text-xs flex-shrink-0" style={{ color: '#7a7469' }}>({(selectedFile.size / 1024).toFixed(0)} KB)</span>
+                </div>
+                <button onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} className="ml-2 flex-shrink-0" style={{ color: '#7a7469' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg text-sm transition-colors hover:opacity-80"
+                style={{ backgroundColor: '#f5f3ef', border: '1px dashed #c0bab4', color: '#7a7469' }}
+              >
+                <Upload className="w-4 h-4" />
+                Click to attach a file
+              </button>
+            )}
+          </Field>
+
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
-              {saving ? 'Adding…' : 'Add Document'}
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={isBusy}>
+              {busyLabel}
             </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
