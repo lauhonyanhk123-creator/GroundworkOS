@@ -17,7 +17,7 @@ router.post("/rate-book", async (req, res) => {
 router.patch("/rate-book/:id", async (req, res) => {
   const [entry] = await db.update(rateBookTable).set(req.body).where(eq(rateBookTable.id, req.params.id)).returning();
   if (!entry) return res.status(404).json({ error: "Not found" });
-  res.json(entry);
+  return res.json(entry);
 });
 
 router.delete("/rate-book/:id", async (req, res) => {

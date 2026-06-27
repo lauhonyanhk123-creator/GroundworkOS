@@ -34,7 +34,7 @@ router.post("/invoices", async (req, res) => {
 router.get("/invoices/:id", async (req, res) => {
   const [inv] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, req.params.id));
   if (!inv) return res.status(404).json({ error: "Not found" });
-  res.json(await enrichInvoice(inv));
+  return res.json(await enrichInvoice(inv));
 });
 
 router.patch("/invoices/:id", async (req, res) => {
@@ -42,7 +42,7 @@ router.patch("/invoices/:id", async (req, res) => {
   const [inv] = await db.update(invoicesTable).set(data).where(eq(invoicesTable.id, req.params.id)).returning();
   if (!inv) return res.status(404).json({ error: "Not found" });
   await logAudit("invoice", req.params.id, "update", data, req);
-  res.json(await enrichInvoice(inv));
+  return res.json(await enrichInvoice(inv));
 });
 
 router.delete("/invoices/:id", async (req, res) => {

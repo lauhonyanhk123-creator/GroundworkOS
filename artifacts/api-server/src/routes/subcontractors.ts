@@ -20,13 +20,13 @@ router.post("/subcontractors", async (req, res) => {
 router.get("/subcontractors/:id", async (req, res) => {
   const [sub] = await db.select().from(subcontractorsTable).where(eq(subcontractorsTable.id, req.params.id));
   if (!sub) return res.status(404).json({ error: "Not found" });
-  res.json(sub);
+  return res.json(sub);
 });
 
 router.patch("/subcontractors/:id", async (req, res) => {
   const [sub] = await db.update(subcontractorsTable).set(req.body).where(eq(subcontractorsTable.id, req.params.id)).returning();
   if (!sub) return res.status(404).json({ error: "Not found" });
-  res.json(sub);
+  return res.json(sub);
 });
 
 router.delete("/subcontractors/:id", async (req, res) => {

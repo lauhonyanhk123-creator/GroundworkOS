@@ -29,7 +29,7 @@ router.patch("/plant/:id", async (req, res) => {
   const { currentJobTitle: _cjt, ...data } = req.body;
   const [item] = await db.update(plantTable).set(data).where(eq(plantTable.id, req.params.id)).returning();
   if (!item) return res.status(404).json({ error: "Not found" });
-  res.json(await enrichPlant(item));
+  return res.json(await enrichPlant(item));
 });
 
 router.delete("/plant/:id", async (req, res) => {

@@ -22,7 +22,7 @@ router.get("/portal/:token", async (req, res) => {
   const data = await getQuoteByToken(req.params.token);
   if (!data) return res.status(404).json({ error: "Quote not found or link expired" });
   const { quote, lineItems, client, settings } = data;
-  res.json({
+  return res.json({
     id: quote.id,
     quoteNumber: quote.quoteNumber,
     title: quote.title,
@@ -55,7 +55,7 @@ router.post("/portal/:token/approve", async (req, res) => {
   await db.update(quotesTable)
     .set({ status: "approved", approvedByName: name.trim(), approvedAt: new Date() })
     .where(eq(quotesTable.shareToken, req.params.token));
-  res.json({ ok: true, message: "Quote approved" });
+  return res.json({ ok: true, message: "Quote approved" });
 });
 
 router.post("/portal/:token/decline", async (req, res) => {
@@ -65,7 +65,7 @@ router.post("/portal/:token/decline", async (req, res) => {
   await db.update(quotesTable)
     .set({ status: "declined" })
     .where(eq(quotesTable.shareToken, req.params.token));
-  res.json({ ok: true, message: "Quote declined" });
+  return res.json({ ok: true, message: "Quote declined" });
 });
 
 router.post("/quotes/:id/share", async (req, res) => {
@@ -78,7 +78,7 @@ router.post("/quotes/:id/share", async (req, res) => {
   }
   const baseUrl = process.env.APP_URL ?? req.headers.origin ?? "https://example.com";
   const url = `${baseUrl}/portal/${token}`;
-  res.json({ token, url });
+  return res.json({ token, url });
 });
 
 export default router;

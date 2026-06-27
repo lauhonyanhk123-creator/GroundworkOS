@@ -35,7 +35,7 @@ router.post("/jobs", async (req, res) => {
 router.get("/jobs/:id", async (req, res) => {
   const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, req.params.id));
   if (!job) return res.status(404).json({ error: "Not found" });
-  res.json(await withClient(job));
+  return res.json(await withClient(job));
 });
 
 router.patch("/jobs/:id", async (req, res) => {
@@ -43,7 +43,7 @@ router.patch("/jobs/:id", async (req, res) => {
   const [job] = await db.update(jobsTable).set(data).where(eq(jobsTable.id, req.params.id)).returning();
   if (!job) return res.status(404).json({ error: "Not found" });
   await logAudit("job", req.params.id, "update", data, req);
-  res.json(await withClient(job));
+  return res.json(await withClient(job));
 });
 
 router.delete("/jobs/:id", async (req, res) => {

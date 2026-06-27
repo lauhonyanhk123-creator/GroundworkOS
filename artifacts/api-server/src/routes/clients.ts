@@ -43,7 +43,7 @@ router.get("/clients/:id", async (req, res) => {
     })
     .from(jobsTable)
     .where(eq(jobsTable.clientId, req.params.id));
-  res.json({ ...client, totalJobs: stats?.totalJobs ?? 0, totalValue: stats?.totalValue ?? 0 });
+  return res.json({ ...client, totalJobs: stats?.totalJobs ?? 0, totalValue: stats?.totalValue ?? 0 });
 });
 
 router.patch("/clients/:id", async (req, res) => {
@@ -54,7 +54,7 @@ router.patch("/clients/:id", async (req, res) => {
     .returning();
   if (!client) return res.status(404).json({ error: "Not found" });
   await logAudit("client", req.params.id, "update", req.body, req);
-  res.json({ ...client, totalJobs: 0, totalValue: 0 });
+  return res.json({ ...client, totalJobs: 0, totalValue: 0 });
 });
 
 router.delete("/clients/:id", async (req, res) => {

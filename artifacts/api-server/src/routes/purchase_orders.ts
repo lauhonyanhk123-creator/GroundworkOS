@@ -50,7 +50,7 @@ router.patch("/purchase-orders/:id", async (req, res) => {
   }
   const [row] = await db.update(purchaseOrdersTable).set(data).where(eq(purchaseOrdersTable.id, req.params.id)).returning();
   if (!row) return res.status(404).json({ error: "Not found" });
-  res.json(await withJob(row));
+  return res.json(await withJob(row));
 });
 
 router.delete("/purchase-orders/:id", async (req, res) => {

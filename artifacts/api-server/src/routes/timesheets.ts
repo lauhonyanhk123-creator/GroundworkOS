@@ -44,7 +44,7 @@ router.patch("/timesheets/:id", async (req, res) => {
   }
   const [row] = await db.update(timesheetsTable).set(updates).where(eq(timesheetsTable.id, req.params.id)).returning();
   if (!row) return res.status(404).json({ error: "Not found" });
-  res.json({ ...row, jobNumber: null, jobTitle: null });
+  return res.json({ ...row, jobNumber: null, jobTitle: null });
 });
 
 router.delete("/timesheets/:id", async (req, res) => {

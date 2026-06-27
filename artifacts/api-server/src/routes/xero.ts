@@ -18,14 +18,14 @@ router.get("/xero/status", async (_req, res) => {
   try {
     const conn = await xero.getConnection();
     if (!conn) return res.json({ connected: false });
-    res.json({
+    return res.json({
       connected: true,
       tenantName: conn.tenantName,
       connectedAt: conn.connectedAt,
       updatedAt: conn.updatedAt,
     });
   } catch (err) {
-    res.status(500).json({ error: String(err) });
+    return res.status(500).json({ error: String(err) });
   }
 });
 

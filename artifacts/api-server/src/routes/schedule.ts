@@ -42,7 +42,7 @@ router.patch("/schedule/:id", async (req, res) => {
   const { jobNumber: _jn, jobTitle: _jt, clientName: _cn, ...data } = req.body;
   const [entry] = await db.update(scheduleEntriesTable).set(data).where(eq(scheduleEntriesTable.id, req.params.id)).returning();
   if (!entry) return res.status(404).json({ error: "Not found" });
-  res.json(await enrichEntry(entry));
+  return res.json(await enrichEntry(entry));
 });
 
 router.delete("/schedule/:id", async (req, res) => {

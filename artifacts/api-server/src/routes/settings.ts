@@ -8,9 +8,10 @@ let settingsCache: Record<string, unknown> = {};
 
 router.get("/settings/company", async (_req, res) => {
   try {
-    const [row] = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT data FROM company_settings WHERE id = 1
     `);
+    const row = (result as any).rows?.[0] ?? (result as any)[0];
     res.json((row as any)?.data ?? settingsCache);
   } catch {
     res.json(settingsCache);

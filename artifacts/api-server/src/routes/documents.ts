@@ -43,7 +43,7 @@ router.patch("/documents/:id", async (req, res) => {
     .where(eq(documentsTable.id, req.params.id))
     .returning();
   if (!doc) return res.status(404).json({ error: "Not found" });
-  res.json(doc);
+  return res.json(doc);
 });
 
 router.delete("/documents/:id", async (req, res) => {

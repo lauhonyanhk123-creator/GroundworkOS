@@ -35,7 +35,7 @@ router.post("/quotes", async (req, res) => {
 router.get("/quotes/:id", async (req, res) => {
   const [quote] = await db.select().from(quotesTable).where(eq(quotesTable.id, req.params.id));
   if (!quote) return res.status(404).json({ error: "Not found" });
-  res.json(await enrichQuote(quote));
+  return res.json(await enrichQuote(quote));
 });
 
 router.patch("/quotes/:id", async (req, res) => {
@@ -49,7 +49,7 @@ router.patch("/quotes/:id", async (req, res) => {
     }
   }
   await logAudit("quote", req.params.id, "update", data, req);
-  res.json(await enrichQuote(quote));
+  return res.json(await enrichQuote(quote));
 });
 
 router.delete("/quotes/:id", async (req, res) => {

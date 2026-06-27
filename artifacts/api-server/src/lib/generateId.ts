@@ -11,7 +11,8 @@ export async function nextSeqNumber(
   prefix: string
 ): Promise<string> {
   const year = new Date().getFullYear();
-  const [row] = await db.execute(sql.raw(`SELECT COUNT(*) AS cnt FROM "${tableName}"`));
+  const result = await db.execute(sql.raw(`SELECT COUNT(*) AS cnt FROM "${tableName}"`));
+  const row = (result as any).rows?.[0] ?? {};
   const cnt = Number((row as any).cnt ?? (row as any).count ?? 0);
   const n = (cnt + 1).toString().padStart(3, "0");
   return `${prefix}-${year}-${n}`;

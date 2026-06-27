@@ -47,9 +47,9 @@ router.patch("/admin/users/:id/role", async (req, res) => {
     await clerkClient.users.updateUserMetadata(req.params.id, {
       publicMetadata: { role },
     });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err: any) {
-    res.status(500).json({ error: err.message ?? "Failed to update role" });
+    return res.status(500).json({ error: err.message ?? "Failed to update role" });
   }
 });
 

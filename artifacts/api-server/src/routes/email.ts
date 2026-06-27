@@ -148,9 +148,9 @@ router.post("/email/send-quote", async (req, res) => {
 
     await db.update(quotesTable).set({ status: "sent", sentAt: new Date().toISOString() } as any).where(eq(quotesTable.id, quoteId));
 
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err: any) {
-    res.status(500).json({ error: err?.message ?? "Failed to send email" });
+    return res.status(500).json({ error: err?.message ?? "Failed to send email" });
   }
 });
 
@@ -183,9 +183,9 @@ router.post("/email/send-invoice", async (req, res) => {
 
     await db.update(invoicesTable).set({ status: "sent" } as any).where(eq(invoicesTable.id, invoiceId));
 
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err: any) {
-    res.status(500).json({ error: err?.message ?? "Failed to send email" });
+    return res.status(500).json({ error: err?.message ?? "Failed to send email" });
   }
 });
 
