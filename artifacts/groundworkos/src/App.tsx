@@ -226,7 +226,14 @@ function ForemanRedirect({ children }: { children: React.ReactNode }) {
 
 function AppRoutes() {
   const { state } = useApp();
-  const [wizardDone, setWizardDone] = useState(false);
+  const [wizardDone, setWizardDone] = useState(() => {
+    try { return !!localStorage.getItem('gw_onboarding_done'); } catch { return false; }
+  });
+
+  function completeWizard() {
+    try { localStorage.setItem('gw_onboarding_done', '1'); } catch {}
+    setWizardDone(true);
+  }
 
   const needsOnboarding = state.settingsLoaded && (
     !state.settings.companyName || state.settings.companyName === 'GroundworkOS Ltd'
@@ -234,7 +241,7 @@ function AppRoutes() {
 
   return (
     <>
-      {needsOnboarding && <OnboardingWizard onComplete={() => setWizardDone(true)} />}
+      {needsOnboarding && <OnboardingWizard onComplete={completeWizard} />}
       <ForemanRedirect>
         <DashboardLayout>
           <Switch>

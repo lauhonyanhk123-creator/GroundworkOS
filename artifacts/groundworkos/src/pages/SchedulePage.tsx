@@ -160,32 +160,35 @@ export function SchedulePage() {
         noPad
         actions={
           <div className="flex items-center gap-2">
-            <button onClick={prevWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
+            <button onClick={prevWeek} className="p-2 sm:p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
             <span className="text-sm font-medium font-mono tnum" style={{ color: '#181410' }}>{weekLabel}</span>
-            <button onClick={nextWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronRight className="w-4 h-4" /></button>
-            <button onClick={() => setCurrentDate(new Date())} className="ml-2 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-[#eeeae4]" style={{ backgroundColor: '#f5f1ec', color: '#8a8377', border: '1px solid #d9d4ce', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600 }}>TODAY</button>
+            <button onClick={nextWeek} className="p-2 sm:p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronRight className="w-4 h-4" /></button>
+            <button onClick={() => setCurrentDate(new Date())} className="ml-1 px-2.5 py-1 text-xs rounded-md transition-colors hover:bg-[#eeeae4]" style={{ backgroundColor: '#f5f1ec', color: '#8a8377', border: '1px solid #d9d4ce', fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600 }}>TODAY</button>
           </div>
         }
       >
         <div className="flex flex-col">
-          <div className="grid" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', backgroundColor: '#fafaf8', borderBottom: '1px solid #d9d4ce' }}>
-            <div className="p-2" />
-            {weekDays.map((day, i) => {
-              const dateStr = day.toISOString().split('T')[0];
-              const isToday = dateStr === today;
-              const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
-              return (
-                <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #d9d4ce', backgroundColor: isToday ? '#e8f3f7' : 'transparent' }}>
-                  <div className="text-xs uppercase font-bold" style={{ color: isToday ? '#1b5e78' : '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>{DAY_LABELS[i]}</div>
-                  <div className="text-lg font-bold font-mono tnum" style={{ color: isToday ? '#1b5e78' : '#181410' }}>{day.getDate()}</div>
-                  {dayEntries.length > 0 && (
-                    <div className="flex justify-center mt-1">
-                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isToday ? '#1b5e78' : '#7a7469' }} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          {/* 7-day mini calendar — scrolls horizontally on narrow screens */}
+          <div className="overflow-x-auto">
+            <div className="grid min-w-[480px]" style={{ gridTemplateColumns: '72px repeat(7, 1fr)', backgroundColor: '#fafaf8', borderBottom: '1px solid #d9d4ce' }}>
+              <div className="p-2" />
+              {weekDays.map((day, i) => {
+                const dateStr = day.toISOString().split('T')[0];
+                const isToday = dateStr === today;
+                const dayEntries = weekEntries.filter(e => e.start_datetime.startsWith(dateStr));
+                return (
+                  <div key={i} className="p-2 text-center" style={{ borderLeft: '1px solid #d9d4ce', backgroundColor: isToday ? '#e8f3f7' : 'transparent' }}>
+                    <div className="text-xs uppercase font-bold" style={{ color: isToday ? '#1b5e78' : '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>{DAY_LABELS[i]}</div>
+                    <div className="text-lg font-bold font-mono tnum" style={{ color: isToday ? '#1b5e78' : '#181410' }}>{day.getDate()}</div>
+                    {dayEntries.length > 0 && (
+                      <div className="flex justify-center mt-1">
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isToday ? '#1b5e78' : '#7a7469' }} />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="divide-y" style={{ borderColor: '#d9d4ce' }}>
@@ -208,23 +211,23 @@ export function SchedulePage() {
                     {dayEntries.length === 0 ? (
                       <div className="text-xs py-3 text-center italic" style={{ color: '#a8a099' }}>No scheduled entries</div>
                     ) : dayEntries.map(entry => (
-                      <div key={entry.id} className="flex items-start gap-4 p-3.5 rounded-lg transition-colors hover:bg-[#fafaf8] group" style={{ border: '1px solid #d9d4ce', borderLeft: `3px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
+                      <div key={entry.id} className="flex items-start gap-3 sm:gap-4 p-4 sm:p-3.5 rounded-lg transition-colors hover:bg-[#fafaf8] group" style={{ border: '1px solid #d9d4ce', borderLeft: `3px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
                         <div className="text-sm font-bold font-mono tnum flex-shrink-0 mt-0.5" style={{ color: '#181410' }}>
                           {new Date(entry.start_datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1.5">
                             <div className="text-sm font-semibold truncate" style={{ color: '#181410' }}>{entry.title}</div>
-                            <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded" style={{ backgroundColor: 'rgba(27,94,120,0.1)', color: '#1b5e78' }}>
+                            <span className="text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded hidden sm:inline" style={{ backgroundColor: 'rgba(27,94,120,0.1)', color: '#1b5e78' }}>
                               {entry.type.replace('_', ' ')}
                             </span>
                           </div>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: '#7a7469' }}>
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-xs" style={{ color: '#7a7469' }}>
                             {entry.job && (
                               <div className="flex items-center gap-1.5">
                                 <span className="font-mono tnum font-medium" style={{ color: '#4a4540' }}>{entry.job.job_number}</span>
                                 {entry.job.client?.company_name && (
-                                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider" style={{ backgroundColor: '#e8e4dd', color: '#4a4540' }}>
+                                  <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider hidden sm:inline" style={{ backgroundColor: '#e8e4dd', color: '#4a4540' }}>
                                     {entry.job.client.company_name}
                                   </span>
                                 )}
@@ -235,16 +238,17 @@ export function SchedulePage() {
                                 <span className="font-mono tnum font-medium" style={{ color: '#4a4540' }}>{entry.crew_count}</span> crew
                               </div>
                             )}
-                            {entry.foreman && <div>FM: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.foreman}</span></div>}
-                            {entry.plant_assigned && <div>Plant: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.plant_assigned}</span></div>}
+                            {entry.foreman && <div className="hidden sm:block">FM: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.foreman}</span></div>}
+                            {entry.plant_assigned && <div className="hidden sm:block">Plant: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.plant_assigned}</span></div>}
                           </div>
                         </div>
+                        {/* Always visible on mobile (touch), hover-only on desktop */}
                         <button
                           onClick={e => { e.stopPropagation(); handleDelete(entry.id, entry.title); }}
-                          className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                          className="flex-shrink-0 p-2 sm:p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-red-50"
                           style={{ color: '#c13a2a' }}
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                         </button>
                       </div>
                     ))}

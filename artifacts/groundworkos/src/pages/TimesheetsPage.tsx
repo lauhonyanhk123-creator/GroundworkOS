@@ -249,21 +249,21 @@ export function TimesheetsPage() {
                       <div
                         key={entry.id}
                         onClick={() => setSelected(selected === entry.id ? null : entry.id)}
-                        className="flex items-center gap-4 px-5 py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4] group"
+                        className="flex items-center gap-3 sm:gap-4 px-4 sm:px-5 py-4 sm:py-3.5 cursor-pointer transition-colors hover:bg-[#eeeae4] group min-h-[64px]"
                         style={{
                           borderBottom: i < entries.length - 1 ? '1px solid #ece8e3' : 'none',
                           backgroundColor: selected === entry.id ? '#eeeae4' : undefined,
                           borderLeft: selected === entry.id ? '3px solid #1b5e78' : '3px solid transparent',
                         }}
                       >
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold" style={{ backgroundColor: '#e8f3f7', color: '#1b5e78', fontFamily: "'Space Grotesk', sans-serif" }}>
+                        <div className="w-10 h-10 sm:w-8 sm:h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold" style={{ backgroundColor: '#e8f3f7', color: '#1b5e78', fontFamily: "'Space Grotesk', sans-serif" }}>
                           {entry.worker_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="text-sm font-semibold" style={{ color: '#181410' }}>{entry.worker_name}</span>
                             {entry.job_title && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0" style={{ backgroundColor: '#e8e4dd', color: '#4a4540' }}>
+                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded flex-shrink-0 hidden sm:inline" style={{ backgroundColor: '#e8e4dd', color: '#4a4540' }}>
                                 {entry.job_number}
                               </span>
                             )}
@@ -283,7 +283,7 @@ export function TimesheetsPage() {
                             <div className="text-xs font-mono" style={{ color: '#7a7469' }}>{formatCurrency(entry.cost)}</div>
                           )}
                         </div>
-                        <ChevronRight className="w-4 h-4 flex-shrink-0 opacity-30 group-hover:opacity-60 transition-opacity" style={{ color: '#1b5e78' }} />
+                        <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4 flex-shrink-0 opacity-40 group-hover:opacity-70 transition-opacity" style={{ color: '#1b5e78' }} />
                       </div>
                     ))}
                   </Panel>
