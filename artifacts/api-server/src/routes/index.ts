@@ -17,6 +17,7 @@ import settingsRouter from "./settings";
 import cisRouter from "./cis";
 import portalRouter from "./portal";
 import adminRouter from "./admin";
+import timesheetsRouter from "./timesheets";
 
 const router: IRouter = Router();
 
@@ -54,5 +55,6 @@ router.use(settingsRouter);
 router.use(cisRouter);
 router.use(portalRouter);
 router.use(adminRouter);
+router.use(timesheetsRouter);
 
 export default router;

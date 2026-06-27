@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
-import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant, CISReturn } from '../types';
+import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant, CISReturn, Timesheet } from '../types';
 
 export interface CompanySettings {
   companyName: string;
@@ -48,6 +48,7 @@ export interface AppState {
   plant: Plant[];
   cisReturns: CISReturn[];
   rateBook: any[];
+  timesheets: Timesheet[];
   settings: CompanySettings;
 }
 
@@ -62,7 +63,11 @@ export type AppAction =
   | { type: 'INIT_PLANT'; plant: Plant[] }
   | { type: 'INIT_RATE_BOOK'; rateBook: any[] }
   | { type: 'INIT_CIS_RETURNS'; cisReturns: CISReturn[] }
+  | { type: 'INIT_TIMESHEETS'; timesheets: Timesheet[] }
   | { type: 'INIT_SETTINGS'; settings: Partial<CompanySettings> }
+  | { type: 'ADD_TIMESHEET'; timesheet: Timesheet }
+  | { type: 'UPDATE_TIMESHEET'; id: string; updates: Partial<Timesheet> }
+  | { type: 'REMOVE_TIMESHEET'; id: string }
   | { type: 'ADD_JOB'; job: Job }
   | { type: 'UPDATE_JOB'; id: string; updates: Partial<Job> }
   | { type: 'REMOVE_JOB'; id: string }
@@ -98,6 +103,7 @@ const initialState: AppState = {
   plant: [],
   cisReturns: [],
   rateBook: [],
+  timesheets: [],
   settings: DEFAULT_SETTINGS,
 };
 
@@ -113,7 +119,11 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'INIT_PLANT': return { ...state, plant: action.plant };
     case 'INIT_RATE_BOOK': return { ...state, rateBook: action.rateBook };
     case 'INIT_CIS_RETURNS': return { ...state, cisReturns: action.cisReturns };
+    case 'INIT_TIMESHEETS': return { ...state, timesheets: action.timesheets };
     case 'INIT_SETTINGS': return { ...state, settings: { ...state.settings, ...action.settings } };
+    case 'ADD_TIMESHEET': return { ...state, timesheets: [action.timesheet, ...state.timesheets] };
+    case 'UPDATE_TIMESHEET': return { ...state, timesheets: state.timesheets.map(t => t.id === action.id ? { ...t, ...action.updates } : t) };
+    case 'REMOVE_TIMESHEET': return { ...state, timesheets: state.timesheets.filter(t => t.id !== action.id) };
     case 'ADD_JOB': return { ...state, jobs: [action.job, ...state.jobs] };
     case 'UPDATE_JOB': return { ...state, jobs: state.jobs.map(j => j.id === action.id ? { ...j, ...action.updates } : j) };
     case 'REMOVE_JOB': return { ...state, jobs: state.jobs.filter(j => j.id !== action.id) };

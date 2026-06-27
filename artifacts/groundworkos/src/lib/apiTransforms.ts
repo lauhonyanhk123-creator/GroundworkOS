@@ -5,8 +5,25 @@ import type {
 } from '@workspace/api-client-react';
 import type {
   Client, Job, Quote, Invoice, Subcontractor, Document,
-  ScheduleEntry, Plant, RateBookEntry,
+  ScheduleEntry, Plant, RateBookEntry, Timesheet,
 } from '../types';
+
+export function toTimesheet(r: Record<string, any>): Timesheet {
+  return {
+    id: r.id,
+    job_id: r.jobId ?? null,
+    job_number: r.jobNumber ?? null,
+    job_title: r.jobTitle ?? null,
+    worker_name: r.workerName,
+    work_date: r.workDate,
+    hours_worked: Number(r.hoursWorked ?? 8),
+    day_rate: r.dayRate != null ? Number(r.dayRate) : null,
+    cost: r.cost != null ? Number(r.cost) : null,
+    description: r.description ?? null,
+    created_by: r.createdBy ?? null,
+    created_at: r.createdAt,
+  };
+}
 
 export function toClient(r: ClientRecord): Client {
   return {

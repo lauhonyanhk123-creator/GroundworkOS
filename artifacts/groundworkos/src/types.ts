@@ -175,6 +175,21 @@ export interface RateBookEntry {
   notes: string | null;
 }
 
+export interface Timesheet {
+  id: string;
+  job_id: string | null;
+  job_number: string | null;
+  job_title: string | null;
+  worker_name: string;
+  work_date: string;
+  hours_worked: number;
+  day_rate: number | null;
+  cost: number | null;
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
 export interface CISReturn {
   id: string;
   tax_month: string;

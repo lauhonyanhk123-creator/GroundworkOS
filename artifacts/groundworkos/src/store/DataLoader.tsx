@@ -7,7 +7,7 @@ import {
 import { useApp } from './AppContext';
 import {
   toClient, toJob, toQuote, toInvoice, toSubcontractor,
-  toDocument, toScheduleEntry, toPlant,
+  toDocument, toScheduleEntry, toPlant, toTimesheet,
 } from '../lib/apiTransforms';
 import type { CISReturn } from '../types';
 
@@ -76,6 +76,17 @@ export function DataLoader() {
   useEffect(() => {
     if (rateBook) dispatch({ type: 'INIT_RATE_BOOK', rateBook });
   }, [rateBook, dispatch]);
+
+  useEffect(() => {
+    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
+    fetch(`${BASE}/api/timesheets`)
+      .then(r => r.json())
+      .then((rows: Record<string, unknown>[]) => {
+        if (!Array.isArray(rows)) return;
+        dispatch({ type: 'INIT_TIMESHEETS', timesheets: rows.map(toTimesheet) });
+      })
+      .catch(() => {});
+  }, [dispatch]);
 
   useEffect(() => {
     fetch('/api/cis/returns')

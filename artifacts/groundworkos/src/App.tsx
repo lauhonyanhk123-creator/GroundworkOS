@@ -19,6 +19,7 @@ import { SubcontractorsPage } from "./pages/SubcontractorsPage";
 import { DocumentsPage } from "./pages/DocumentsPage";
 import { PlantPage } from "./pages/PlantPage";
 import { ReportsPage } from "./pages/ReportsPage";
+import { TimesheetsPage } from "./pages/TimesheetsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { PortalPage } from "./pages/PortalPage";
@@ -235,6 +236,7 @@ function AuthenticatedApp() {
             <Route path="/subcontractors" component={SubcontractorsPage} />
             <Route path="/documents" component={DocumentsPage} />
             <Route path="/plant" component={PlantPage} />
+            <Route path="/timesheets" component={TimesheetsPage} />
             <Route path="/reports" component={ReportsPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/settings/users" component={UsersPage} />
