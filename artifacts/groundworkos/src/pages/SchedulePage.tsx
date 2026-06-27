@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2, Pencil } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { useApp } from '../store/AppContext';
-import { createScheduleEntry, deleteScheduleEntry } from '@workspace/api-client-react';
+import { createScheduleEntry, updateScheduleEntry, deleteScheduleEntry } from '@workspace/api-client-react';
+import type { ScheduleEntry } from '../types';
 import { toScheduleEntry } from '../lib/apiTransforms';
 import { toast } from 'sonner';
 
@@ -40,6 +41,7 @@ export function SchedulePage() {
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -91,7 +93,28 @@ export function SchedulePage() {
   const weekLabel = `${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`;
 
   function openNew() {
+    setEditingId(null);
     setForm(emptyForm);
+    setErrors({});
+    setShowModal(true);
+  }
+
+  function openEdit(entry: ScheduleEntry) {
+    setEditingId(entry.id);
+    const d = new Date(entry.start_datetime);
+    const dEnd = new Date(entry.end_datetime);
+    setForm({
+      title: entry.title,
+      job_id: entry.job_id ?? '',
+      type: entry.type as EntryType,
+      date: d.toISOString().split('T')[0],
+      time: d.toTimeString().slice(0, 5),
+      end_time: dEnd.toTimeString().slice(0, 5),
+      crew_count: String(entry.crew_count),
+      foreman: entry.foreman ?? '',
+      plant_assigned: entry.plant_assigned ?? '',
+      notes: entry.notes ?? '',
+    });
     setErrors({});
     setShowModal(true);
   }
@@ -107,22 +130,39 @@ export function SchedulePage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     try {
-      const result = await createScheduleEntry({
-        jobId: form.job_id || undefined,
-        title: form.title.trim(),
-        startDatetime: `${form.date}T${form.time}:00`,
-        endDatetime: `${form.date}T${form.end_time}:00`,
-        crewCount: parseInt(form.crew_count) || 1,
-        foreman: form.foreman || undefined,
-        plantAssigned: form.plant_assigned || undefined,
-        notes: form.notes || undefined,
-        type: form.type,
-      });
-      dispatch({ type: 'ADD_SCHEDULE', entry: toScheduleEntry(result) });
-      setShowModal(false);
-      toast.success('Schedule entry added');
+      if (editingId) {
+        const result = await updateScheduleEntry(editingId, {
+          jobId: form.job_id || undefined,
+          title: form.title.trim(),
+          startDatetime: `${form.date}T${form.time}:00`,
+          endDatetime: `${form.date}T${form.end_time}:00`,
+          crewCount: parseInt(form.crew_count) || 1,
+          foreman: form.foreman || undefined,
+          plantAssigned: form.plant_assigned || undefined,
+          notes: form.notes || undefined,
+          type: form.type,
+        });
+        dispatch({ type: 'UPDATE_SCHEDULE', id: editingId, updates: toScheduleEntry(result) });
+        setShowModal(false);
+        toast.success('Schedule entry updated');
+      } else {
+        const result = await createScheduleEntry({
+          jobId: form.job_id || undefined,
+          title: form.title.trim(),
+          startDatetime: `${form.date}T${form.time}:00`,
+          endDatetime: `${form.date}T${form.end_time}:00`,
+          crewCount: parseInt(form.crew_count) || 1,
+          foreman: form.foreman || undefined,
+          plantAssigned: form.plant_assigned || undefined,
+          notes: form.notes || undefined,
+          type: form.type,
+        });
+        dispatch({ type: 'ADD_SCHEDULE', entry: toScheduleEntry(result) });
+        setShowModal(false);
+        toast.success('Schedule entry added');
+      }
     } catch {
-      toast.error('Failed to add schedule entry');
+      toast.error(editingId ? 'Failed to update entry' : 'Failed to add schedule entry');
     } finally {
       setSaving(false);
     }
@@ -242,7 +282,14 @@ export function SchedulePage() {
                             {entry.plant_assigned && <div className="hidden sm:block">Plant: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.plant_assigned}</span></div>}
                           </div>
                         </div>
-                        {/* Always visible on mobile (touch), hover-only on desktop */}
+                        {/* Edit button — always visible on mobile, hover-only on desktop */}
+                        <button
+                          onClick={e => { e.stopPropagation(); openEdit(entry); }}
+                          className="flex-shrink-0 p-2 sm:p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-[#eeeae4]"
+                          style={{ color: '#7a7469' }}
+                        >
+                          <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+                        </button>
                         <button
                           onClick={e => { e.stopPropagation(); handleDelete(entry.id, entry.title); }}
                           className="flex-shrink-0 p-2 sm:p-1 rounded sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-red-50"
@@ -269,7 +316,7 @@ export function SchedulePage() {
         ))}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Schedule Entry">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? 'Edit Schedule Entry' : 'Add Schedule Entry'}>
         <div className="space-y-4">
           <Field label="Title" required>
             <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage excavation — Phase 1" />
@@ -319,7 +366,7 @@ export function SchedulePage() {
           </Field>
           <div className="flex gap-3 pt-2">
             <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
-              {saving ? 'Adding…' : 'Add to Schedule'}
+              {saving ? (editingId ? 'Saving…' : 'Adding…') : (editingId ? 'Save Changes' : 'Add to Schedule')}
             </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>

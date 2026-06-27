@@ -1,13 +1,14 @@
 import { useState } from 'react';
-import { Plus, Search, Mail, Phone, X, ChevronRight, Building2, MapPin, Trash2 } from 'lucide-react';
+import { Plus, Search, Mail, Phone, X, ChevronRight, Building2, MapPin, Trash2, Pencil } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency } from '../lib/utils';
 import { useApp } from '../store/AppContext';
-import { createClient, deleteClient } from '@workspace/api-client-react';
+import { createClient, updateClient, deleteClient } from '@workspace/api-client-react';
 import { toClient } from '../lib/apiTransforms';
+import type { Client } from '../types';
 import { toast } from 'sonner';
 
 const emptyForm = {
@@ -22,6 +23,7 @@ export function ClientsPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -37,7 +39,23 @@ export function ClientsPage() {
   const totalJobs = clients.reduce((s, c) => s + c.total_jobs, 0);
 
   function openNew() {
+    setEditingId(null);
     setForm(emptyForm);
+    setErrors({});
+    setShowModal(true);
+  }
+
+  function openEdit(client: Client) {
+    setEditingId(client.id);
+    setForm({
+      company_name: client.company_name,
+      contact_name: client.contact_name ?? '',
+      email: client.email ?? '',
+      phone: client.phone ?? '',
+      address: client.address ?? '',
+      vat_number: client.vat_number ?? '',
+      notes: client.notes ?? '',
+    });
     setErrors({});
     setShowModal(true);
   }
@@ -53,20 +71,35 @@ export function ClientsPage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     try {
-      const result = await createClient({
-        companyName: form.company_name.trim(),
-        contactName: form.contact_name || undefined,
-        email: form.email || undefined,
-        phone: form.phone || undefined,
-        address: form.address || undefined,
-        vatNumber: form.vat_number || undefined,
-        notes: form.notes || undefined,
-      });
-      dispatch({ type: 'ADD_CLIENT', client: toClient(result) });
-      setShowModal(false);
-      toast.success(`${result.companyName} added`);
+      if (editingId) {
+        const result = await updateClient(editingId, {
+          companyName: form.company_name.trim(),
+          contactName: form.contact_name || undefined,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          address: form.address || undefined,
+          vatNumber: form.vat_number || undefined,
+          notes: form.notes || undefined,
+        });
+        dispatch({ type: 'UPDATE_CLIENT', id: editingId, updates: toClient(result) });
+        setShowModal(false);
+        toast.success('Client updated');
+      } else {
+        const result = await createClient({
+          companyName: form.company_name.trim(),
+          contactName: form.contact_name || undefined,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          address: form.address || undefined,
+          vatNumber: form.vat_number || undefined,
+          notes: form.notes || undefined,
+        });
+        dispatch({ type: 'ADD_CLIENT', client: toClient(result) });
+        setShowModal(false);
+        toast.success(`${result.companyName} added`);
+      }
     } catch {
-      toast.error('Failed to add client');
+      toast.error(editingId ? 'Failed to update client' : 'Failed to add client');
     } finally {
       setSaving(false);
     }
@@ -164,6 +197,9 @@ export function ClientsPage() {
           <div>
             <Panel actions={
               <div className="flex items-center gap-1">
+                <button onClick={() => openEdit(selectedClient)} className="p-1.5 rounded transition-colors hover:bg-[#e8e4dd]" style={{ color: '#7a7469' }} title="Edit client">
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button onClick={() => handleDelete(selectedClient.id, selectedClient.company_name)} className="p-1.5 rounded transition-colors hover:bg-red-50" style={{ color: '#c13a2a' }} title="Delete client">
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -234,7 +270,7 @@ export function ClientsPage() {
         )}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="New Client">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? 'Edit Client' : 'New Client'}>
         <div className="space-y-4">
           <Field label="Company Name" required>
             <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Midlands Groundworks Ltd" />
@@ -264,7 +300,7 @@ export function ClientsPage() {
           </Field>
           <div className="flex gap-3 pt-2">
             <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
-              {saving ? 'Adding…' : 'Add Client'}
+              {saving ? (editingId ? 'Saving…' : 'Adding…') : (editingId ? 'Save Changes' : 'Add Client')}
             </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>

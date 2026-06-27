@@ -90,6 +90,7 @@ export type AppAction =
   | { type: 'UPDATE_SUBCONTRACTOR'; id: string; updates: Partial<Subcontractor> }
   | { type: 'REMOVE_SUBCONTRACTOR'; id: string }
   | { type: 'ADD_DOCUMENT'; doc: Document }
+  | { type: 'UPDATE_DOCUMENT'; id: string; updates: Partial<Document> }
   | { type: 'REMOVE_DOCUMENT'; id: string }
   | { type: 'ADD_PLANT'; plant: Plant }
   | { type: 'UPDATE_PLANT'; id: string; updates: Partial<Plant> }
@@ -152,6 +153,7 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'UPDATE_SUBCONTRACTOR': return { ...state, subcontractors: state.subcontractors.map(s => s.id === action.id ? { ...s, ...action.updates } : s) };
     case 'REMOVE_SUBCONTRACTOR': return { ...state, subcontractors: state.subcontractors.filter(s => s.id !== action.id) };
     case 'ADD_DOCUMENT': return { ...state, documents: [action.doc, ...state.documents] };
+    case 'UPDATE_DOCUMENT': return { ...state, documents: state.documents.map(d => d.id === action.id ? { ...d, ...action.updates } : d) };
     case 'REMOVE_DOCUMENT': return { ...state, documents: state.documents.filter(d => d.id !== action.id) };
     case 'ADD_PLANT': return { ...state, plant: [action.plant, ...state.plant] };
     case 'UPDATE_PLANT': return { ...state, plant: state.plant.map(p => p.id === action.id ? { ...p, ...action.updates } : p) };

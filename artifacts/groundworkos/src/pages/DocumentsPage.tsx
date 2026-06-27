@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight, Trash2, Paperclip, Download, Upload } from 'lucide-react';
+import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight, Trash2, Paperclip, Download, Upload, Pencil } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
@@ -7,11 +7,11 @@ import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatDate, daysUntil } from '../lib/utils';
 import { useApp } from '../store/AppContext';
-import { createDocument, deleteDocument } from '@workspace/api-client-react';
+import { createDocument, updateDocument, deleteDocument } from '@workspace/api-client-react';
 import { useUpload } from '@workspace/object-storage-web';
 import { toDocument } from '../lib/apiTransforms';
 import { toast } from 'sonner';
-import type { DocumentType, DocumentRelatedTo } from '../types';
+import type { DocumentType, DocumentRelatedTo, Document as Doc } from '../types';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -52,6 +52,7 @@ export function DocumentsPage() {
   const [filterRelatedTo, setFilterRelatedTo] = useState<DocumentRelatedTo | 'all'>('all');
   const [selected, setSelected] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -78,7 +79,24 @@ export function DocumentsPage() {
   const selectedDoc = selected ? documents.find(d => d.id === selected) : null;
 
   function openNew() {
+    setEditingId(null);
     setForm(emptyForm);
+    setErrors({});
+    setSelectedFile(null);
+    setShowModal(true);
+  }
+
+  function openEdit(doc: Doc) {
+    setEditingId(doc.id);
+    setForm({
+      name: doc.name,
+      type: doc.type,
+      related_to: doc.related_to,
+      related_name: doc.related_name ?? '',
+      issued_date: doc.issued_date ?? '',
+      expiry_date: doc.expiry_date ?? '',
+      notes: doc.notes ?? '',
+    });
     setErrors({});
     setSelectedFile(null);
     setShowModal(true);
@@ -95,34 +113,47 @@ export function DocumentsPage() {
     if (Object.keys(e).length) { setErrors(e); return; }
     setSaving(true);
     try {
-      let filePath: string | undefined;
-
-      if (selectedFile) {
-        const uploadResult = await uploadFile(selectedFile);
-        if (!uploadResult) {
-          toast.error('File upload failed');
-          setSaving(false);
-          return;
+      if (editingId) {
+        const result = await updateDocument(editingId, {
+          name: form.name.trim(),
+          type: form.type,
+          relatedTo: form.related_to,
+          relatedName: form.related_name || undefined,
+          issuedDate: form.issued_date || undefined,
+          expiryDate: form.expiry_date || undefined,
+          notes: form.notes || undefined,
+        });
+        dispatch({ type: 'UPDATE_DOCUMENT', id: editingId, updates: toDocument(result) });
+        setShowModal(false);
+        toast.success('Document updated');
+      } else {
+        let filePath: string | undefined;
+        if (selectedFile) {
+          const uploadResult = await uploadFile(selectedFile);
+          if (!uploadResult) {
+            toast.error('File upload failed');
+            setSaving(false);
+            return;
+          }
+          filePath = uploadResult.objectPath;
         }
-        filePath = uploadResult.objectPath;
+        const result = await createDocument({
+          name: form.name.trim(),
+          type: form.type,
+          relatedTo: form.related_to,
+          relatedName: form.related_name || undefined,
+          issuedDate: form.issued_date || undefined,
+          expiryDate: form.expiry_date || undefined,
+          notes: form.notes || undefined,
+          ...(filePath ? { filePath } : {}),
+        } as any);
+        dispatch({ type: 'ADD_DOCUMENT', doc: toDocument(result) });
+        setShowModal(false);
+        setSelectedFile(null);
+        toast.success(`${result.name} added`);
       }
-
-      const result = await createDocument({
-        name: form.name.trim(),
-        type: form.type,
-        relatedTo: form.related_to,
-        relatedName: form.related_name || undefined,
-        issuedDate: form.issued_date || undefined,
-        expiryDate: form.expiry_date || undefined,
-        notes: form.notes || undefined,
-        ...(filePath ? { filePath } : {}),
-      } as any);
-      dispatch({ type: 'ADD_DOCUMENT', doc: toDocument(result) });
-      setShowModal(false);
-      setSelectedFile(null);
-      toast.success(`${result.name} added`);
     } catch {
-      toast.error('Failed to add document');
+      toast.error(editingId ? 'Failed to update document' : 'Failed to add document');
     } finally {
       setSaving(false);
     }
@@ -254,6 +285,9 @@ export function DocumentsPage() {
           <div>
             <Panel actions={
               <div className="flex items-center gap-1">
+                <button onClick={() => openEdit(selectedDoc)} className="p-1 rounded transition-colors hover:bg-[#e8e4dd]" style={{ color: '#7a7469' }} title="Edit document">
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button onClick={() => handleDelete(selectedDoc.id, selectedDoc.name)} className="p-1 rounded transition-colors hover:bg-red-50" style={{ color: '#c13a2a' }}>
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -319,7 +353,7 @@ export function DocumentsPage() {
         )}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Document">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? 'Edit Document' : 'Add Document'}>
         <div className="space-y-4">
           <Field label="Document Name" required>
             <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. RAMS — Drain Installation Plot 4" />

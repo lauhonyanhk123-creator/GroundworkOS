@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, AlertTriangle, X, ChevronRight, Trash2 } from 'lucide-react';
+import { Plus, Search, AlertTriangle, X, ChevronRight, Trash2, Pencil } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -7,10 +7,10 @@ import { StatCard } from '../components/ui/StatCard';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatDate, daysUntil } from '../lib/utils';
 import { useApp } from '../store/AppContext';
-import { createSubcontractor, deleteSubcontractor } from '@workspace/api-client-react';
+import { createSubcontractor, updateSubcontractor, deleteSubcontractor } from '@workspace/api-client-react';
 import { toSubcontractor } from '../lib/apiTransforms';
 import { toast } from 'sonner';
-import type { CISStatus } from '../types';
+import type { CISStatus, Subcontractor } from '../types';
 
 const CIS_STATUSES: CISStatus[] = ['gross', 'net', 'unverified'];
 
@@ -29,6 +29,7 @@ export function SubcontractorsPage() {
   const [selected, setSelected] = useState<string | null>(null);
   const [tab, setTab] = useState<'all' | 'active' | 'inactive'>('all');
   const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -55,7 +56,28 @@ export function SubcontractorsPage() {
   }
 
   function openNew() {
+    setEditingId(null);
     setForm(emptyForm);
+    setErrors({});
+    setShowModal(true);
+  }
+
+  function openEdit(sub: Subcontractor) {
+    setEditingId(sub.id);
+    setForm({
+      company_name: sub.company_name,
+      contact_name: sub.contact_name ?? '',
+      trade: sub.trade ?? '',
+      email: sub.email ?? '',
+      phone: sub.phone ?? '',
+      utr_number: sub.utr_number ?? '',
+      cis_status: sub.cis_status,
+      nrswa_card_number: sub.nrswa_card_number ?? '',
+      public_liability_expiry: sub.public_liability_expiry ?? '',
+      cscs_card_expiry: sub.cscs_card_expiry ?? '',
+      nrswa_expiry: sub.nrswa_expiry ?? '',
+      notes: sub.notes ?? '',
+    });
     setErrors({});
     setShowModal(true);
   }
@@ -72,26 +94,47 @@ export function SubcontractorsPage() {
     setSaving(true);
     try {
       const deductionRate = form.cis_status === 'gross' ? 0 : form.cis_status === 'net' ? 20 : 30;
-      const result = await createSubcontractor({
-        companyName: form.company_name.trim(),
-        contactName: form.contact_name || undefined,
-        trade: form.trade || undefined,
-        email: form.email || undefined,
-        phone: form.phone || undefined,
-        utrNumber: form.utr_number || undefined,
-        cisStatus: form.cis_status,
-        cisDeductionRate: deductionRate,
-        nrswaCardNumber: form.nrswa_card_number || undefined,
-        nrswaExpiry: form.nrswa_expiry || undefined,
-        publicLiabilityExpiry: form.public_liability_expiry || undefined,
-        cscsCardExpiry: form.cscs_card_expiry || undefined,
-        notes: form.notes || undefined,
-      });
-      dispatch({ type: 'ADD_SUBCONTRACTOR', sub: toSubcontractor(result) });
-      setShowModal(false);
-      toast.success(`${result.companyName} added`);
+      if (editingId) {
+        const result = await updateSubcontractor(editingId, {
+          companyName: form.company_name.trim(),
+          contactName: form.contact_name || undefined,
+          trade: form.trade || undefined,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          utrNumber: form.utr_number || undefined,
+          cisStatus: form.cis_status,
+          cisDeductionRate: deductionRate,
+          nrswaCardNumber: form.nrswa_card_number || undefined,
+          nrswaExpiry: form.nrswa_expiry || undefined,
+          publicLiabilityExpiry: form.public_liability_expiry || undefined,
+          cscsCardExpiry: form.cscs_card_expiry || undefined,
+          notes: form.notes || undefined,
+        });
+        dispatch({ type: 'UPDATE_SUBCONTRACTOR', id: editingId, updates: toSubcontractor(result) });
+        setShowModal(false);
+        toast.success('Subcontractor updated');
+      } else {
+        const result = await createSubcontractor({
+          companyName: form.company_name.trim(),
+          contactName: form.contact_name || undefined,
+          trade: form.trade || undefined,
+          email: form.email || undefined,
+          phone: form.phone || undefined,
+          utrNumber: form.utr_number || undefined,
+          cisStatus: form.cis_status,
+          cisDeductionRate: deductionRate,
+          nrswaCardNumber: form.nrswa_card_number || undefined,
+          nrswaExpiry: form.nrswa_expiry || undefined,
+          publicLiabilityExpiry: form.public_liability_expiry || undefined,
+          cscsCardExpiry: form.cscs_card_expiry || undefined,
+          notes: form.notes || undefined,
+        });
+        dispatch({ type: 'ADD_SUBCONTRACTOR', sub: toSubcontractor(result) });
+        setShowModal(false);
+        toast.success(`${result.companyName} added`);
+      }
     } catch {
-      toast.error('Failed to add subcontractor');
+      toast.error(editingId ? 'Failed to update subcontractor' : 'Failed to add subcontractor');
     } finally {
       setSaving(false);
     }
@@ -205,6 +248,9 @@ export function SubcontractorsPage() {
           <div className="space-y-6">
             <Panel actions={
               <div className="flex items-center gap-1">
+                <button onClick={() => openEdit(selectedSub)} className="p-1 rounded hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }} title="Edit subcontractor">
+                  <Pencil className="w-4 h-4" />
+                </button>
                 <button onClick={() => handleDelete(selectedSub.id, selectedSub.company_name)} className="p-1 rounded hover:bg-red-50 transition-colors" style={{ color: '#c13a2a' }}>
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -285,7 +331,7 @@ export function SubcontractorsPage() {
         )}
       </div>
 
-      <Modal open={showModal} onClose={() => setShowModal(false)} title="Add Subcontractor">
+      <Modal open={showModal} onClose={() => setShowModal(false)} title={editingId ? 'Edit Subcontractor' : 'Add Subcontractor'}>
         <div className="space-y-5">
           <Field label="Company Name" required>
             <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Smith Groundworks Ltd" />
@@ -342,7 +388,7 @@ export function SubcontractorsPage() {
           </Field>
           <div className="flex gap-3 pt-4 border-t border-[#d9d4ce]">
             <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
-              {saving ? 'Adding…' : 'Add Subcontractor'}
+              {saving ? (editingId ? 'Saving…' : 'Adding…') : (editingId ? 'Save Changes' : 'Add Subcontractor')}
             </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
