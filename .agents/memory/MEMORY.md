@@ -4,3 +4,5 @@
 - [GroundworkOS design system](groundworkos-design-system.md) — "Technical Survey" light mode; Survey Blue #1b5e78 accent; Space Grotesk + Inter + JetBrains Mono
 - [GroundworkOS preview clipping](groundworkos-preview-clipping.md) — right-edge screenshot clipping is a fixed-width preview render artifact, NOT a CSS overflow bug
 - [Canvas mockup workflow](canvas-mockup-workflow.md) — present design canvas via presentArtifact (skill abbreviates as `n`); mockup preview URL = $REPLIT_DOMAINS/__mockup/preview/{folder}/{Component}, no port
+- [GroundworkOS role system](groundworkos-roles.md) — Clerk publicMetadata.role: admin/manager/foreman; useRole hook in hooks/useRole.ts; nav filtered in DashboardLayout; foreman redirect in ForemanRedirect in App.tsx
+- [GroundworkOS DB migrations](groundworkos-db-migrations.md) — drizzle-kit push requires TTY for interactive prompts; use executeSql (code_execution) to apply columns directly when push hangs on ALTER TABLE

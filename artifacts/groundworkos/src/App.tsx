@@ -20,6 +20,9 @@ import { DocumentsPage } from "./pages/DocumentsPage";
 import { PlantPage } from "./pages/PlantPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { UsersPage } from "./pages/UsersPage";
+import { PortalPage } from "./pages/PortalPage";
+import { useRole } from "./hooks/useRole";
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -204,32 +207,46 @@ function LandingPage() {
   );
 }
 
+function ForemanRedirect({ children }: { children: React.ReactNode }) {
+  const role = useRole();
+  const [location, setLocation] = useLocation();
+  const FOREMAN_ALLOWED = ["/", "/jobs", "/schedule"];
+  if (role === "foreman" && !FOREMAN_ALLOWED.some(p => location === p || (p !== "/" && location.startsWith(p)))) {
+    setLocation("/");
+    return null;
+  }
+  return <>{children}</>;
+}
+
 function AuthenticatedApp() {
   return (
     <AppProvider>
       <DataLoader />
-      <DashboardLayout>
-        <Switch>
-          <Route path="/" component={DashboardPage} />
-          <Route path="/jobs" component={JobsPage} />
-          <Route path="/jobs/:id" component={JobsPage} />
-          <Route path="/quotes" component={QuotesPage} />
-          <Route path="/invoices" component={InvoicesPage} />
-          <Route path="/schedule" component={SchedulePage} />
-          <Route path="/clients" component={ClientsPage} />
-          <Route path="/subcontractors" component={SubcontractorsPage} />
-          <Route path="/documents" component={DocumentsPage} />
-          <Route path="/plant" component={PlantPage} />
-          <Route path="/reports" component={ReportsPage} />
-          <Route path="/settings" component={SettingsPage} />
-          <Route>
-            <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-              <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#1b5e78", fontSize: 60, fontWeight: 700 }}>404</div>
-              <p style={{ color: "#7a7469", fontSize: 14 }}>Page not found</p>
-            </div>
-          </Route>
-        </Switch>
-      </DashboardLayout>
+      <ForemanRedirect>
+        <DashboardLayout>
+          <Switch>
+            <Route path="/" component={DashboardPage} />
+            <Route path="/jobs" component={JobsPage} />
+            <Route path="/jobs/:id" component={JobsPage} />
+            <Route path="/quotes" component={QuotesPage} />
+            <Route path="/invoices" component={InvoicesPage} />
+            <Route path="/schedule" component={SchedulePage} />
+            <Route path="/clients" component={ClientsPage} />
+            <Route path="/subcontractors" component={SubcontractorsPage} />
+            <Route path="/documents" component={DocumentsPage} />
+            <Route path="/plant" component={PlantPage} />
+            <Route path="/reports" component={ReportsPage} />
+            <Route path="/settings" component={SettingsPage} />
+            <Route path="/settings/users" component={UsersPage} />
+            <Route>
+              <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
+                <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#1b5e78", fontSize: 60, fontWeight: 700 }}>404</div>
+                <p style={{ color: "#7a7469", fontSize: 14 }}>Page not found</p>
+              </div>
+            </Route>
+          </Switch>
+        </DashboardLayout>
+      </ForemanRedirect>
     </AppProvider>
   );
 }
@@ -271,6 +288,7 @@ function ClerkProviderWithRoutes() {
         <Switch>
           <Route path="/sign-in/*?" component={SignInPage} />
           <Route path="/sign-up/*?" component={SignUpPage} />
+          <Route path="/portal/:token" component={PortalPage} />
           <Route component={RouteGuard} />
         </Switch>
       </QueryClientProvider>

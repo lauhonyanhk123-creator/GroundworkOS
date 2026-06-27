@@ -8,24 +8,32 @@ import {
 } from 'lucide-react';
 import { GlobalSearch } from '../ui/GlobalSearch';
 import { useUser, useClerk } from '@clerk/react';
+import { useRole, isAtLeast, ROLE_LABELS, type Role } from '../../hooks/useRole';
 
-const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
+const ALL_NAV = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, minRole: 'foreman' as Role },
   { gap: true },
-  { name: 'Jobs', href: '/jobs', icon: Briefcase },
-  { name: 'Quotes', href: '/quotes', icon: FileText },
-  { name: 'Invoices', href: '/invoices', icon: Receipt },
-  { name: 'Schedule', href: '/schedule', icon: Calendar },
+  { name: 'Jobs', href: '/jobs', icon: Briefcase, minRole: 'foreman' as Role },
+  { name: 'Quotes', href: '/quotes', icon: FileText, minRole: 'manager' as Role },
+  { name: 'Invoices', href: '/invoices', icon: Receipt, minRole: 'manager' as Role },
+  { name: 'Schedule', href: '/schedule', icon: Calendar, minRole: 'foreman' as Role },
   { gap: true },
-  { name: 'Clients', href: '/clients', icon: Users },
-  { name: 'Subcontractors', href: '/subcontractors', icon: HardHat },
+  { name: 'Clients', href: '/clients', icon: Users, minRole: 'manager' as Role },
+  { name: 'Subcontractors', href: '/subcontractors', icon: HardHat, minRole: 'manager' as Role },
   { gap: true },
-  { name: 'Documents', href: '/documents', icon: FolderOpen },
-  { name: 'Plant', href: '/plant', icon: Truck },
+  { name: 'Documents', href: '/documents', icon: FolderOpen, minRole: 'manager' as Role },
+  { name: 'Plant', href: '/plant', icon: Truck, minRole: 'manager' as Role },
   { gap: true },
-  { name: 'Reports', href: '/reports', icon: BarChart3 },
-  { name: 'Settings', href: '/settings', icon: Settings },
+  { name: 'Reports', href: '/reports', icon: BarChart3, minRole: 'manager' as Role },
+  { name: 'Settings', href: '/settings', icon: Settings, minRole: 'manager' as Role },
+  { name: 'Users', href: '/settings/users', icon: Users, minRole: 'admin' as Role },
 ];
+
+const ROLE_BADGE: Record<Role, { label: string; bg: string; color: string }> = {
+  admin: { label: 'Admin', bg: '#fef3c7', color: '#92400e' },
+  manager: { label: 'Manager', bg: '#e8f3f7', color: '#1b5e78' },
+  foreman: { label: 'Foreman', bg: '#f0ede8', color: '#7a7469' },
+};
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -37,6 +45,19 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [searchOpen, setSearchOpen] = useState(false);
   const { user } = useUser();
   const { signOut } = useClerk();
+  const role = useRole();
+
+  const navigation = ALL_NAV.filter(item => {
+    if ('gap' in item) return true;
+    return isAtLeast(role, item.minRole);
+  }).filter((item, idx, arr) => {
+    if (!('gap' in item)) return true;
+    const prev = arr[idx - 1];
+    const next = arr[idx + 1];
+    if (!prev || 'gap' in prev) return false;
+    if (!next || 'gap' in next) return false;
+    return true;
+  });
 
   const currentItem = navigation.find(
     item => 'href' in item && typeof item.href === 'string' && (location === item.href || (item.href !== '/' && location.startsWith(item.href)))
@@ -52,6 +73,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     : 'Loading…';
 
   const displayEmail = user?.primaryEmailAddress?.emailAddress ?? '';
+  const badge = ROLE_BADGE[role];
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -126,22 +148,29 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         <div className="px-2 py-3" style={{ borderTop: '1px solid #d9d4ce' }}>
-          <div className="flex items-center gap-2.5 px-2 py-2 rounded-md group">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: '#1b5e78', color: '#ffffff', fontFamily: "'Space Grotesk', sans-serif" }}>
-              {initials}
+          <div className="px-2 py-2 rounded-md">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: '#1b5e78', color: '#ffffff', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold truncate" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>{displayName}</p>
+                {displayEmail && <p className="text-[10px] truncate" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{displayEmail}</p>}
+              </div>
+              <button
+                onClick={() => signOut()}
+                title="Sign out"
+                className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
+                style={{ color: '#a8a099' }}
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>{displayName}</p>
-              {displayEmail && <p className="text-[10px] truncate" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{displayEmail}</p>}
+            <div className="mt-2 px-0">
+              <span style={{ display: 'inline-block', padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, fontFamily: "'Space Grotesk', sans-serif", backgroundColor: badge.bg, color: badge.color, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                {badge.label}
+              </span>
             </div>
-            <button
-              onClick={() => signOut()}
-              title="Sign out"
-              className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
-              style={{ color: '#a8a099' }}
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
           </div>
         </div>
       </aside>

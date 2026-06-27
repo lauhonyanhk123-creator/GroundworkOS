@@ -15,6 +15,9 @@ export const quotesTable = pgTable("quotes", {
   validUntil: date("valid_until", { mode: "string" }),
   notes: text("notes"),
   sentAt: timestamp("sent_at", { withTimezone: true }),
+  shareToken: text("share_token").unique(),
+  approvedByName: text("approved_by_name"),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 

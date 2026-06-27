@@ -14,10 +14,12 @@ import dashboardRouter from "./dashboard";
 import xeroRouter from "./xero";
 import settingsRouter from "./settings";
 import cisRouter from "./cis";
+import portalRouter from "./portal";
+import adminRouter from "./admin";
 
 const router: IRouter = Router();
 
-const PUBLIC_PATHS = ["/health", "/xero/callback"];
+const PUBLIC_PATHS = ["/health", "/xero/callback", "/portal"];
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (PUBLIC_PATHS.some((p) => req.path === p || req.path.startsWith(p + "/"))) {
@@ -48,5 +50,7 @@ router.use(dashboardRouter);
 router.use(xeroRouter);
 router.use(settingsRouter);
 router.use(cisRouter);
+router.use(portalRouter);
+router.use(adminRouter);
 
 export default router;

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2, X, ChevronRight, Download } from 'lucide-react';
+import { Plus, Search, Trash2, X, ChevronRight, Download, Share2, Copy } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../lib/pdf/QuotePDF';
 import { Panel } from '../components/ui/Panel';
@@ -156,6 +156,23 @@ export function QuotesPage() {
   }
 
   const [pdfing, setPdfing] = useState(false);
+  const [sharing, setSharing] = useState(false);
+
+  async function shareQuote(id: string) {
+    setSharing(true);
+    try {
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const r = await fetch(`${BASE}/api/quotes/${id}/share`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+      if (!r.ok) throw new Error();
+      const { url } = await r.json();
+      await navigator.clipboard.writeText(url);
+      toast.success('Portal link copied to clipboard');
+    } catch {
+      toast.error('Failed to generate share link');
+    } finally {
+      setSharing(false);
+    }
+  }
 
   async function downloadQuotePdf(q: typeof quotes[0]) {
     setPdfing(true);
@@ -350,6 +367,10 @@ export function QuotesPage() {
                   )}
                   <Btn variant="outline" size="md" className="w-full justify-center" disabled={pdfing} onClick={() => downloadQuotePdf(selectedQuote)}>
                     <Download className="w-3.5 h-3.5" /> {pdfing ? 'Generating…' : 'Download PDF'}
+                  </Btn>
+                  <Btn variant="outline" size="md" className="w-full justify-center" disabled={sharing} onClick={() => shareQuote(selectedQuote.id)}>
+                    {sharing ? <Share2 className="w-3.5 h-3.5 animate-pulse" /> : <Copy className="w-3.5 h-3.5" />}
+                    {sharing ? 'Generating link…' : 'Copy client portal link'}
                   </Btn>
                 </div>
               </div>
