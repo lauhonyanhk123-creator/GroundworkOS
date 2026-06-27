@@ -10,7 +10,7 @@ import { Btn } from '../components/ui/Btn';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { useApp } from '../store/AppContext';
 
-type ReportTab = 'overview' | 'cis' | 'ratebook';
+type ReportTab = 'overview' | 'pl' | 'cis' | 'ratebook';
 
 const YELLOW = '#1b5e78';
 const RED = '#c13a2a';
@@ -40,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function ReportsPage() {
   const { state } = useApp();
-  const { invoices, jobs, cisReturns, rateBook } = state;
+  const { invoices, jobs, cisReturns, rateBook, timesheets, purchaseOrders } = state;
 
   const [tab, setTab] = useState<ReportTab>('overview');
   const [rateCategory, setRateCategory] = useState('all');
@@ -125,6 +125,7 @@ export function ReportsPage() {
       <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #d9d4ce' }}>
         {([
           { id: 'overview', label: 'Overview' },
+          { id: 'pl', label: 'Job P&L' },
           { id: 'cis', label: 'CIS Return' },
           { id: 'ratebook', label: 'Rate Book' },
         ] as { id: ReportTab; label: string }[]).map(t => (
@@ -267,6 +268,133 @@ export function ReportsPage() {
           </Panel>
         </div>
       )}
+
+      {tab === 'pl' && (() => {
+        const activeJobs = jobs.filter(j => j.status !== 'cancelled');
+
+        const jobRows = activeJobs.map(j => {
+          const jobInvoices = invoices.filter(i => i.job_id === j.id);
+          const invoiced = jobInvoices.reduce((s, i) => s + i.total_amount, 0);
+          const collected = jobInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total_amount, 0);
+          const labour = timesheets.filter(t => t.job_id === j.id).reduce((s, t) => s + t.cost, 0);
+          const materials = purchaseOrders.filter(o => o.job_id === j.id).reduce((s, o) => s + o.total_amount, 0);
+          const totalCost = labour + materials;
+          const contractValue = j.value ?? 0;
+          const margin = contractValue > 0 ? ((contractValue - totalCost) / contractValue) * 100 : null;
+          const marginOnInvoiced = invoiced > 0 ? ((invoiced - totalCost) / invoiced) * 100 : null;
+          return { job: j, invoiced, collected, labour, materials, totalCost, contractValue, margin, marginOnInvoiced };
+        }).sort((a, b) => b.contractValue - a.contractValue);
+
+        const totalContractValue = jobRows.reduce((s, r) => s + r.contractValue, 0);
+        const totalLabour = jobRows.reduce((s, r) => s + r.labour, 0);
+        const totalMaterials = jobRows.reduce((s, r) => s + r.materials, 0);
+        const totalCost = totalLabour + totalMaterials;
+        const overallMargin = totalContractValue > 0 ? ((totalContractValue - totalCost) / totalContractValue) * 100 : 0;
+
+        const plChartData = jobRows.slice(0, 8).map(r => ({
+          name: r.job.job_number ?? r.job.title.slice(0, 12),
+          Revenue: r.invoiced,
+          Labour: r.labour,
+          Materials: r.materials,
+        }));
+
+        return (
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <StatCard accent label="Total Contract Value" value={formatCurrency(totalContractValue)} sub={`${activeJobs.length} active jobs`} />
+              <StatCard label="Labour Cost" value={formatCurrency(totalLabour)} sub={`${timesheets.length} timesheet entries`} />
+              <StatCard label="Materials Cost" value={formatCurrency(totalMaterials)} sub={`${purchaseOrders.length} purchase orders`} />
+              <StatCard accent={overallMargin > 20} danger={overallMargin < 0} label="Overall Margin" value={`${overallMargin.toFixed(1)}%`} sub="contract vs total cost" />
+            </div>
+
+            {plChartData.length > 0 && (
+              <Panel title="Revenue vs Cost by Job (top 8)">
+                <div style={{ height: 260 }} className="mt-1">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={plChartData} barGap={4} barCategoryGap="25%" margin={{ top: 8, right: 4, left: 0, bottom: 0 }}>
+                      <CartesianGrid vertical={false} stroke="#e8e4dd" strokeDasharray="3 3" />
+                      <XAxis dataKey="name" tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} dy={6} />
+                      <YAxis tick={{ fill: '#7a7469', fontSize: 10, fontFamily: "'JetBrains Mono', monospace" }} axisLine={false} tickLine={false} tickFormatter={v => v === 0 ? '' : `£${(v / 1000).toFixed(0)}k`} width={42} />
+                      <Tooltip content={<CustomTooltip />} cursor={{ fill: '#eeeae4', opacity: 0.5 }} />
+                      <Bar dataKey="Revenue" fill="#1b5e78" radius={[3, 3, 0, 0]} maxBarSize={36} />
+                      <Bar dataKey="Labour" fill="#b56918" radius={[3, 3, 0, 0]} maxBarSize={36} />
+                      <Bar dataKey="Materials" fill="#4a4540" radius={[3, 3, 0, 0]} maxBarSize={36} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center gap-6 mt-4 pt-4" style={{ borderTop: '1px solid #d9d4ce' }}>
+                  {[['#1b5e78', 'Revenue'], ['#b56918', 'Labour'], ['#4a4540', 'Materials']].map(([color, label]) => (
+                    <div key={label} className="flex items-center gap-2 text-xs" style={{ color: '#7a7469' }}>
+                      <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: color }} /> {label}
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+            )}
+
+            <Panel noPad title="Job-by-Job Breakdown">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #d9d4ce', backgroundColor: '#fafaf8' }}>
+                      {['Job', 'Status', 'Contract Value', 'Invoiced', 'Labour', 'Materials', 'Total Cost', 'Margin'].map(h => (
+                        <th key={h} className="py-2.5 px-4 text-[10px] font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {jobRows.map((r, i) => {
+                      const margin = r.margin;
+                      const marginColor = margin === null ? '#a8a099' : margin >= 20 ? GREEN : margin >= 0 ? ORANGE : RED;
+                      return (
+                        <tr key={r.job.id} className="transition-colors hover:bg-[#eeeae4]"
+                          style={{ borderBottom: i < jobRows.length - 1 ? '1px solid #e8e4dd' : 'none' }}>
+                          <td className="py-3 px-4">
+                            <div className="text-sm font-mono font-semibold" style={{ color: '#1b5e78' }}>{r.job.job_number}</div>
+                            <div className="text-xs mt-0.5 max-w-[180px] truncate" style={{ color: '#7a7469' }}>{r.job.title}</div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded" style={{
+                              backgroundColor: r.job.status === 'active' ? 'rgba(42,110,69,0.1)' : r.job.status === 'complete' ? '#e8f3f7' : '#eeeae4',
+                              color: r.job.status === 'active' ? GREEN : r.job.status === 'complete' ? '#1b5e78' : '#7a7469',
+                            }}>{r.job.status}</span>
+                          </td>
+                          <td className="py-3 px-4 text-sm font-mono tnum font-semibold" style={{ color: '#181410' }}>{r.contractValue > 0 ? formatCurrency(r.contractValue) : '—'}</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum" style={{ color: '#4a4540' }}>{r.invoiced > 0 ? formatCurrency(r.invoiced) : '—'}</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum" style={{ color: r.labour > 0 ? '#b56918' : '#d9d4ce' }}>{r.labour > 0 ? formatCurrency(r.labour) : '—'}</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum" style={{ color: r.materials > 0 ? '#4a4540' : '#d9d4ce' }}>{r.materials > 0 ? formatCurrency(r.materials) : '—'}</td>
+                          <td className="py-3 px-4 text-sm font-mono tnum font-semibold" style={{ color: '#181410' }}>{r.totalCost > 0 ? formatCurrency(r.totalCost) : '—'}</td>
+                          <td className="py-3 px-4">
+                            {margin !== null ? (
+                              <div>
+                                <div className="text-sm font-mono font-bold tnum" style={{ color: marginColor }}>{margin.toFixed(1)}%</div>
+                                <div className="h-1 rounded-full mt-1.5 overflow-hidden" style={{ width: 60, backgroundColor: '#e8e4dd' }}>
+                                  <div className="h-full rounded-full" style={{ width: `${Math.min(100, Math.max(0, margin))}%`, backgroundColor: marginColor }} />
+                                </div>
+                              </div>
+                            ) : <span style={{ color: '#d9d4ce' }}>—</span>}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #d9d4ce', backgroundColor: '#fafaf8' }}>
+                      <td colSpan={2} className="py-3 px-4 text-xs font-bold uppercase tracking-widest" style={{ color: '#7a7469' }}>Totals</td>
+                      <td className="py-3 px-4 text-sm font-mono font-bold tnum" style={{ color: '#181410' }}>{formatCurrency(totalContractValue)}</td>
+                      <td className="py-3 px-4 text-sm font-mono tnum" style={{ color: '#4a4540' }}>{formatCurrency(jobRows.reduce((s, r) => s + r.invoiced, 0))}</td>
+                      <td className="py-3 px-4 text-sm font-mono tnum font-bold" style={{ color: '#b56918' }}>{formatCurrency(totalLabour)}</td>
+                      <td className="py-3 px-4 text-sm font-mono tnum font-bold" style={{ color: '#4a4540' }}>{formatCurrency(totalMaterials)}</td>
+                      <td className="py-3 px-4 text-sm font-mono tnum font-bold" style={{ color: '#181410' }}>{formatCurrency(totalCost)}</td>
+                      <td className="py-3 px-4 text-sm font-mono font-bold tnum" style={{ color: overallMargin >= 20 ? GREEN : overallMargin >= 0 ? ORANGE : RED }}>{overallMargin.toFixed(1)}%</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </Panel>
+          </div>
+        );
+      })()}
 
       {tab === 'cis' && (
         <div className="space-y-6">

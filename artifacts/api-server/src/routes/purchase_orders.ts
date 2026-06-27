@@ -1,0 +1,61 @@
+import { Router } from "express";
+import { db, purchaseOrdersTable, jobsTable } from "@workspace/db";
+import { eq, desc } from "drizzle-orm";
+
+const router = Router();
+
+async function withJob(row: typeof purchaseOrdersTable.$inferSelect) {
+  if (!row.jobId) return { ...row, jobNumber: null, jobTitle: null };
+  const [job] = await db
+    .select({ jobNumber: jobsTable.jobNumber, title: jobsTable.title })
+    .from(jobsTable)
+    .where(eq(jobsTable.id, row.jobId));
+  return { ...row, jobNumber: job?.jobNumber ?? null, jobTitle: job?.title ?? null };
+}
+
+router.get("/purchase-orders", async (req, res) => {
+  const rows = await db.select().from(purchaseOrdersTable).orderBy(desc(purchaseOrdersTable.orderDate), desc(purchaseOrdersTable.createdAt));
+  const jobIds = [...new Set(rows.map(r => r.jobId).filter(Boolean))] as string[];
+  const jobs = jobIds.length
+    ? await db.select({ id: jobsTable.id, jobNumber: jobsTable.jobNumber, title: jobsTable.title }).from(jobsTable)
+    : [];
+  const jobMap = new Map(jobs.map(j => [j.id, j]));
+  res.json(rows.map(r => ({
+    ...r,
+    jobNumber: r.jobId ? (jobMap.get(r.jobId)?.jobNumber ?? null) : null,
+    jobTitle: r.jobId ? (jobMap.get(r.jobId)?.title ?? null) : null,
+  })));
+});
+
+router.post("/purchase-orders", async (req, res) => {
+  const { id: _id, poNumber: _po, jobNumber: _jn, jobTitle: _jt, ...data } = req.body;
+  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
+  const id = generateId();
+  const poNumber = await nextSeqNumber("purchase_orders", "PO");
+  const amount = Number(data.amount ?? 0);
+  const vatAmount = Number(data.vatAmount ?? Math.round(amount * 0.2 * 100) / 100);
+  const totalAmount = Number(data.totalAmount ?? amount + vatAmount);
+  const [row] = await db.insert(purchaseOrdersTable).values({ id, poNumber, ...data, amount, vatAmount, totalAmount }).returning();
+  res.status(201).json(await withJob(row));
+});
+
+router.patch("/purchase-orders/:id", async (req, res) => {
+  const { poNumber: _po, jobNumber: _jn, jobTitle: _jt, ...data } = req.body;
+  if (data.amount !== undefined || data.vatAmount !== undefined) {
+    const amount = Number(data.amount ?? 0);
+    const vatAmount = Number(data.vatAmount ?? Math.round(amount * 0.2 * 100) / 100);
+    data.amount = amount;
+    data.vatAmount = vatAmount;
+    data.totalAmount = amount + vatAmount;
+  }
+  const [row] = await db.update(purchaseOrdersTable).set(data).where(eq(purchaseOrdersTable.id, req.params.id)).returning();
+  if (!row) return res.status(404).json({ error: "Not found" });
+  res.json(await withJob(row));
+});
+
+router.delete("/purchase-orders/:id", async (req, res) => {
+  await db.delete(purchaseOrdersTable).where(eq(purchaseOrdersTable.id, req.params.id));
+  res.status(204).send();
+});
+
+export default router;

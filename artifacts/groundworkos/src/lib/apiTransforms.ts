@@ -5,8 +5,29 @@ import type {
 } from '@workspace/api-client-react';
 import type {
   Client, Job, Quote, Invoice, Subcontractor, Document,
-  ScheduleEntry, Plant, RateBookEntry, Timesheet,
+  ScheduleEntry, Plant, RateBookEntry, Timesheet, PurchaseOrder,
 } from '../types';
+
+export function toPurchaseOrder(r: Record<string, any>): PurchaseOrder {
+  return {
+    id: r.id,
+    po_number: r.poNumber,
+    job_id: r.jobId ?? null,
+    job_number: r.jobNumber ?? null,
+    job_title: r.jobTitle ?? null,
+    supplier: r.supplier,
+    description: r.description,
+    amount: Number(r.amount ?? 0),
+    vat_amount: Number(r.vatAmount ?? 0),
+    total_amount: Number(r.totalAmount ?? 0),
+    status: r.status as PurchaseOrder['status'],
+    order_date: r.orderDate,
+    expected_delivery: r.expectedDelivery ?? null,
+    delivery_date: r.deliveryDate ?? null,
+    notes: r.notes ?? null,
+    created_at: r.createdAt,
+  };
+}
 
 export function toTimesheet(r: Record<string, any>): Timesheet {
   return {

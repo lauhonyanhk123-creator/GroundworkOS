@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Download, X, ChevronRight, Trash2 } from 'lucide-react';
+import { Plus, Download, X, ChevronRight, Trash2, Mail } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { InvoicePDF } from '../lib/pdf/InvoicePDF';
 import { Panel } from '../components/ui/Panel';
@@ -113,6 +113,34 @@ export function InvoicesPage() {
   }
 
   const [pdfing, setPdfing] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTo, setEmailTo] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+
+  async function sendByEmail() {
+    if (!selectedInv || !emailTo.trim()) return;
+    setEmailSending(true);
+    try {
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const r = await fetch(`${BASE}/api/email/send-invoice`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invoiceId: selectedInv.id, to: emailTo.trim(), subject: emailSubject.trim() || undefined }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? 'Failed');
+      dispatch({ type: 'UPDATE_INVOICE', id: selectedInv.id, updates: { status: 'sent' } });
+      toast.success(`Invoice emailed to ${emailTo.trim()}`);
+      setShowEmailModal(false);
+      setEmailTo('');
+      setEmailSubject('');
+    } catch (err: any) {
+      toast.error(err.message ?? 'Failed to send email');
+    } finally {
+      setEmailSending(false);
+    }
+  }
 
   async function downloadInvoicePdf(inv: typeof invoices[0]) {
     setPdfing(true);
@@ -285,6 +313,13 @@ export function InvoicesPage() {
                   <Btn variant="outline" size="sm" className="w-full justify-center" disabled={pdfing} onClick={() => downloadInvoicePdf(selectedInv)}>
                     <Download className="w-3.5 h-3.5" /> {pdfing ? 'Generating…' : 'Download PDF'}
                   </Btn>
+                  <Btn variant="outline" size="sm" className="w-full justify-center" onClick={() => {
+                    setEmailTo('');
+                    setEmailSubject('');
+                    setShowEmailModal(true);
+                  }}>
+                    <Mail className="w-3.5 h-3.5" /> Send by Email
+                  </Btn>
                 </div>
               </div>
             </Panel>
@@ -346,6 +381,53 @@ export function InvoicesPage() {
           </div>
         </div>
       </Modal>
+
+      {showEmailModal && selectedInv && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(24,20,16,0.5)' }}>
+          <div className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #e8e4dd' }}>
+              <div>
+                <h2 className="text-base font-semibold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Send Invoice by Email</h2>
+                <p className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{selectedInv.invoice_number}</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="p-1.5 rounded hover:bg-[#eeeae4]">
+                <X className="w-4 h-4" style={{ color: '#7a7469' }} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#7a7469' }}>Recipient Email *</label>
+                <input
+                  type="email" value={emailTo} onChange={e => setEmailTo(e.target.value)}
+                  placeholder="client@example.com"
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ backgroundColor: '#ffffff', border: '1.5px solid #d9d4ce', color: '#181410' }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#7a7469' }}>Subject (optional)</label>
+                <input
+                  value={emailSubject} onChange={e => setEmailSubject(e.target.value)}
+                  placeholder={`Invoice ${selectedInv.invoice_number}`}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ backgroundColor: '#ffffff', border: '1.5px solid #d9d4ce', color: '#181410' }}
+                />
+              </div>
+              <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ backgroundColor: '#e8f3f7', color: '#1b5e78' }}>
+                <Mail className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span>The invoice breakdown and payment details will be included in the email body. The invoice will be marked as Sent.</span>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #e8e4dd' }}>
+              <Btn variant="outline" className="flex-1" onClick={() => setShowEmailModal(false)}>Cancel</Btn>
+              <Btn className="flex-1" onClick={sendByEmail} disabled={emailSending || !emailTo.trim()}>
+                <Mail className="w-3.5 h-3.5" /> {emailSending ? 'Sending…' : 'Send Invoice'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

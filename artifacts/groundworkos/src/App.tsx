@@ -20,6 +20,7 @@ import { DocumentsPage } from "./pages/DocumentsPage";
 import { PlantPage } from "./pages/PlantPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { TimesheetsPage } from "./pages/TimesheetsPage";
+import { PurchaseOrdersPage } from "./pages/PurchaseOrdersPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { PortalPage } from "./pages/PortalPage";
@@ -237,6 +238,7 @@ function AuthenticatedApp() {
             <Route path="/documents" component={DocumentsPage} />
             <Route path="/plant" component={PlantPage} />
             <Route path="/timesheets" component={TimesheetsPage} />
+            <Route path="/purchase-orders" component={PurchaseOrdersPage} />
             <Route path="/reports" component={ReportsPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/settings/users" component={UsersPage} />

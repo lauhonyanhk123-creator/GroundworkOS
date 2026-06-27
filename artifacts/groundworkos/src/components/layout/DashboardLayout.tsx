@@ -4,7 +4,7 @@ import { cn } from '../../lib/utils';
 import {
   LayoutDashboard, Briefcase, FileText, Receipt, Calendar,
   Users, HardHat, FolderOpen, BarChart3, Settings,
-  Menu, Bell, X, Truck, Search, LogOut, Clock,
+  Menu, Bell, X, Truck, Search, LogOut, Clock, ShoppingCart,
 } from 'lucide-react';
 import { GlobalSearch } from '../ui/GlobalSearch';
 import { useUser, useClerk } from '@clerk/react';
@@ -24,6 +24,7 @@ const ALL_NAV = [
   { name: 'Documents', href: '/documents', icon: FolderOpen, minRole: 'manager' as Role },
   { name: 'Plant', href: '/plant', icon: Truck, minRole: 'manager' as Role },
   { name: 'Timesheets', href: '/timesheets', icon: Clock, minRole: 'foreman' as Role },
+  { name: 'Purchase Orders', href: '/purchase-orders', icon: ShoppingCart, minRole: 'manager' as Role },
   { gap: true },
   { name: 'Reports', href: '/reports', icon: BarChart3, minRole: 'manager' as Role },
   { name: 'Settings', href: '/settings', icon: Settings, minRole: 'manager' as Role },

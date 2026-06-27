@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2, X, ChevronRight, Download, Share2, Copy } from 'lucide-react';
+import { Plus, Search, Trash2, X, ChevronRight, Download, Share2, Copy, Mail } from 'lucide-react';
 import { pdf } from '@react-pdf/renderer';
 import { QuotePDF } from '../lib/pdf/QuotePDF';
 import { Panel } from '../components/ui/Panel';
@@ -161,6 +161,34 @@ export function QuotesPage() {
 
   const [pdfing, setPdfing] = useState(false);
   const [sharing, setSharing] = useState(false);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailTo, setEmailTo] = useState('');
+  const [emailSubject, setEmailSubject] = useState('');
+  const [emailSending, setEmailSending] = useState(false);
+
+  async function sendByEmail() {
+    if (!selectedQuote || !emailTo.trim()) return;
+    setEmailSending(true);
+    try {
+      const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
+      const r = await fetch(`${BASE}/api/email/send-quote`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quoteId: selectedQuote.id, to: emailTo.trim(), subject: emailSubject.trim() || undefined }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? 'Failed');
+      dispatch({ type: 'UPDATE_QUOTE', id: selectedQuote.id, updates: { status: 'sent' } });
+      toast.success(`Quote emailed to ${emailTo.trim()}`);
+      setShowEmailModal(false);
+      setEmailTo('');
+      setEmailSubject('');
+    } catch (err: any) {
+      toast.error(err.message ?? 'Failed to send email');
+    } finally {
+      setEmailSending(false);
+    }
+  }
 
   async function shareQuote(id: string) {
     setSharing(true);
@@ -372,6 +400,13 @@ export function QuotesPage() {
                   <Btn variant="outline" size="md" className="w-full justify-center" disabled={pdfing} onClick={() => downloadQuotePdf(selectedQuote)}>
                     <Download className="w-3.5 h-3.5" /> {pdfing ? 'Generating…' : 'Download PDF'}
                   </Btn>
+                  <Btn variant="outline" size="md" className="w-full justify-center" onClick={() => {
+                    setEmailTo('');
+                    setEmailSubject('');
+                    setShowEmailModal(true);
+                  }}>
+                    <Mail className="w-3.5 h-3.5" /> Send by Email
+                  </Btn>
                   <Btn variant="outline" size="md" className="w-full justify-center" disabled={sharing} onClick={() => shareQuote(selectedQuote.id)}>
                     {sharing ? <Share2 className="w-3.5 h-3.5 animate-pulse" /> : <Copy className="w-3.5 h-3.5" />}
                     {sharing ? 'Generating link…' : 'Copy client portal link'}
@@ -459,6 +494,53 @@ export function QuotesPage() {
           </div>
         </div>
       </Modal>
+
+      {showEmailModal && selectedQuote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(24,20,16,0.5)' }}>
+          <div className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+            <div className="flex items-center justify-between px-6 py-4" style={{ borderBottom: '1px solid #e8e4dd' }}>
+              <div>
+                <h2 className="text-base font-semibold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>Send Quote by Email</h2>
+                <p className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{selectedQuote.quote_number}</p>
+              </div>
+              <button onClick={() => setShowEmailModal(false)} className="p-1.5 rounded hover:bg-[#eeeae4]">
+                <X className="w-4 h-4" style={{ color: '#7a7469' }} />
+              </button>
+            </div>
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#7a7469' }}>Recipient Email *</label>
+                <input
+                  type="email" value={emailTo} onChange={e => setEmailTo(e.target.value)}
+                  placeholder="client@example.com"
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ backgroundColor: '#ffffff', border: '1.5px solid #d9d4ce', color: '#181410' }}
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#7a7469' }}>Subject (optional)</label>
+                <input
+                  value={emailSubject} onChange={e => setEmailSubject(e.target.value)}
+                  placeholder={`Quote ${selectedQuote.quote_number}`}
+                  className="w-full px-3 py-2 rounded-lg text-sm focus:outline-none"
+                  style={{ backgroundColor: '#ffffff', border: '1.5px solid #d9d4ce', color: '#181410' }}
+                />
+              </div>
+              <div className="flex items-start gap-2 p-3 rounded-lg text-xs" style={{ backgroundColor: '#e8f3f7', color: '#1b5e78' }}>
+                <Mail className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                <span>The full quote breakdown will be included in the email body. The quote will be marked as Sent.</span>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #e8e4dd' }}>
+              <Btn variant="outline" className="flex-1" onClick={() => setShowEmailModal(false)}>Cancel</Btn>
+              <Btn className="flex-1" onClick={sendByEmail} disabled={emailSending || !emailTo.trim()}>
+                <Mail className="w-3.5 h-3.5" /> {emailSending ? 'Sending…' : 'Send Quote'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

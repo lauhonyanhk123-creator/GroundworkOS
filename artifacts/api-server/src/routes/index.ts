@@ -18,6 +18,8 @@ import cisRouter from "./cis";
 import portalRouter from "./portal";
 import adminRouter from "./admin";
 import timesheetsRouter from "./timesheets";
+import purchaseOrdersRouter from "./purchase_orders";
+import emailRouter from "./email";
 
 const router: IRouter = Router();
 
@@ -56,5 +58,7 @@ router.use(cisRouter);
 router.use(portalRouter);
 router.use(adminRouter);
 router.use(timesheetsRouter);
+router.use(purchaseOrdersRouter);
+router.use(emailRouter);
 
 export default router;

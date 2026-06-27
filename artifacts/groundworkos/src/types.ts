@@ -175,6 +175,27 @@ export interface RateBookEntry {
   notes: string | null;
 }
 
+export type PurchaseOrderStatus = 'draft' | 'ordered' | 'received' | 'invoiced';
+
+export interface PurchaseOrder {
+  id: string;
+  po_number: string;
+  job_id: string | null;
+  job_number: string | null;
+  job_title: string | null;
+  supplier: string;
+  description: string;
+  amount: number;
+  vat_amount: number;
+  total_amount: number;
+  status: PurchaseOrderStatus;
+  order_date: string;
+  expected_delivery: string | null;
+  delivery_date: string | null;
+  notes: string | null;
+  created_at: string;
+}
+
 export interface Timesheet {
   id: string;
   job_id: string | null;

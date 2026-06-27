@@ -1,5 +1,5 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
-import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant, CISReturn, Timesheet } from '../types';
+import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant, CISReturn, Timesheet, PurchaseOrder } from '../types';
 
 export interface CompanySettings {
   companyName: string;
@@ -49,6 +49,7 @@ export interface AppState {
   cisReturns: CISReturn[];
   rateBook: any[];
   timesheets: Timesheet[];
+  purchaseOrders: PurchaseOrder[];
   settings: CompanySettings;
 }
 
@@ -68,6 +69,10 @@ export type AppAction =
   | { type: 'ADD_TIMESHEET'; timesheet: Timesheet }
   | { type: 'UPDATE_TIMESHEET'; id: string; updates: Partial<Timesheet> }
   | { type: 'REMOVE_TIMESHEET'; id: string }
+  | { type: 'INIT_PURCHASE_ORDERS'; purchaseOrders: PurchaseOrder[] }
+  | { type: 'ADD_PURCHASE_ORDER'; order: PurchaseOrder }
+  | { type: 'UPDATE_PURCHASE_ORDER'; id: string; updates: Partial<PurchaseOrder> }
+  | { type: 'REMOVE_PURCHASE_ORDER'; id: string }
   | { type: 'ADD_JOB'; job: Job }
   | { type: 'UPDATE_JOB'; id: string; updates: Partial<Job> }
   | { type: 'REMOVE_JOB'; id: string }
@@ -104,6 +109,7 @@ const initialState: AppState = {
   cisReturns: [],
   rateBook: [],
   timesheets: [],
+  purchaseOrders: [],
   settings: DEFAULT_SETTINGS,
 };
 
@@ -124,6 +130,10 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'ADD_TIMESHEET': return { ...state, timesheets: [action.timesheet, ...state.timesheets] };
     case 'UPDATE_TIMESHEET': return { ...state, timesheets: state.timesheets.map(t => t.id === action.id ? { ...t, ...action.updates } : t) };
     case 'REMOVE_TIMESHEET': return { ...state, timesheets: state.timesheets.filter(t => t.id !== action.id) };
+    case 'INIT_PURCHASE_ORDERS': return { ...state, purchaseOrders: action.purchaseOrders };
+    case 'ADD_PURCHASE_ORDER': return { ...state, purchaseOrders: [action.order, ...state.purchaseOrders] };
+    case 'UPDATE_PURCHASE_ORDER': return { ...state, purchaseOrders: state.purchaseOrders.map(o => o.id === action.id ? { ...o, ...action.updates } : o) };
+    case 'REMOVE_PURCHASE_ORDER': return { ...state, purchaseOrders: state.purchaseOrders.filter(o => o.id !== action.id) };
     case 'ADD_JOB': return { ...state, jobs: [action.job, ...state.jobs] };
     case 'UPDATE_JOB': return { ...state, jobs: state.jobs.map(j => j.id === action.id ? { ...j, ...action.updates } : j) };
     case 'REMOVE_JOB': return { ...state, jobs: state.jobs.filter(j => j.id !== action.id) };
