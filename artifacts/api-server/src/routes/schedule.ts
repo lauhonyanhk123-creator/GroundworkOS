@@ -31,8 +31,10 @@ router.get("/schedule", async (req, res) => {
 });
 
 router.post("/schedule", async (req, res) => {
-  const { jobNumber: _jn, jobTitle: _jt, clientName: _cn, ...data } = req.body;
-  const [entry] = await db.insert(scheduleEntriesTable).values(data).returning();
+  const { jobNumber: _jn, jobTitle: _jt, clientName: _cn, id: _id, ...data } = req.body;
+  const { generateId } = await import("../lib/generateId.js");
+  const id = generateId();
+  const [entry] = await db.insert(scheduleEntriesTable).values({ id, ...data }).returning();
   res.status(201).json(await enrichEntry(entry));
 });
 

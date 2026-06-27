@@ -22,8 +22,11 @@ router.get("/jobs", async (req, res) => {
 });
 
 router.post("/jobs", async (req, res) => {
-  const { clientName: _cn, ...data } = req.body;
-  const [job] = await db.insert(jobsTable).values(data).returning();
+  const { clientName: _cn, id: _id, jobNumber: _jn, ...data } = req.body;
+  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
+  const id = generateId();
+  const jobNumber = await nextSeqNumber("jobs", "GW");
+  const [job] = await db.insert(jobsTable).values({ id, jobNumber, ...data }).returning();
   res.status(201).json(await withClient(job));
 });
 

@@ -21,8 +21,11 @@ router.get("/invoices", async (req, res) => {
 });
 
 router.post("/invoices", async (req, res) => {
-  const { clientName: _cn, jobTitle: _jt, ...data } = req.body;
-  const [inv] = await db.insert(invoicesTable).values(data).returning();
+  const { clientName: _cn, jobTitle: _jt, id: _id, invoiceNumber: _in, ...data } = req.body;
+  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
+  const id = generateId();
+  const invoiceNumber = await nextSeqNumber("invoices", "INV");
+  const [inv] = await db.insert(invoicesTable).values({ id, invoiceNumber, ...data }).returning();
   res.status(201).json(await enrichInvoice(inv));
 });
 

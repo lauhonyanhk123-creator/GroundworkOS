@@ -10,7 +10,10 @@ router.get("/subcontractors", async (req, res) => {
 });
 
 router.post("/subcontractors", async (req, res) => {
-  const [sub] = await db.insert(subcontractorsTable).values(req.body).returning();
+  const { id: _id, ...data } = req.body;
+  const { generateId } = await import("../lib/generateId.js");
+  const id = generateId();
+  const [sub] = await db.insert(subcontractorsTable).values({ id, ...data }).returning();
   res.status(201).json(sub);
 });
 

@@ -19,8 +19,11 @@ router.get("/quotes", async (req, res) => {
 });
 
 router.post("/quotes", async (req, res) => {
-  const { lineItems, clientName: _cn, ...data } = req.body;
-  const [quote] = await db.insert(quotesTable).values(data).returning();
+  const { lineItems, clientName: _cn, id: _id, quoteNumber: _qn, ...data } = req.body;
+  const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
+  const id = generateId();
+  const quoteNumber = await nextSeqNumber("quotes", "QT");
+  const [quote] = await db.insert(quotesTable).values({ id, quoteNumber, ...data }).returning();
   if (lineItems?.length) {
     await db.insert(lineItemsTable).values(lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({ ...li, quoteId: quote.id })));
   }

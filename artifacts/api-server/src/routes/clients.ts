@@ -24,7 +24,10 @@ router.get("/clients", async (req, res) => {
 });
 
 router.post("/clients", async (req, res) => {
-  const [client] = await db.insert(clientsTable).values(req.body).returning();
+  const { id: _id, ...data } = req.body;
+  const { generateId } = await import("../lib/generateId.js");
+  const id = generateId();
+  const [client] = await db.insert(clientsTable).values({ id, ...data }).returning();
   res.status(201).json({ ...client, totalJobs: 0, totalValue: 0 });
 });
 

@@ -18,8 +18,10 @@ router.get("/plant", async (req, res) => {
 });
 
 router.post("/plant", async (req, res) => {
-  const { currentJobTitle: _cjt, ...data } = req.body;
-  const [item] = await db.insert(plantTable).values(data).returning();
+  const { currentJobTitle: _cjt, id: _id, ...data } = req.body;
+  const { generateId } = await import("../lib/generateId.js");
+  const id = generateId();
+  const [item] = await db.insert(plantTable).values({ id, ...data }).returning();
   res.status(201).json(await enrichPlant(item));
 });
 

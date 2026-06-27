@@ -10,7 +10,10 @@ router.get("/documents", async (req, res) => {
 });
 
 router.post("/documents", async (req, res) => {
-  const [doc] = await db.insert(documentsTable).values(req.body).returning();
+  const { id: _id, ...data } = req.body;
+  const { generateId } = await import("../lib/generateId.js");
+  const id = generateId();
+  const [doc] = await db.insert(documentsTable).values({ id, ...data }).returning();
   res.status(201).json(doc);
 });
 
