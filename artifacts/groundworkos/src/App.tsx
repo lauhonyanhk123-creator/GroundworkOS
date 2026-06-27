@@ -217,7 +217,7 @@ function LandingPage() {
 function ForemanRedirect({ children }: { children: React.ReactNode }) {
   const role = useRole();
   const [location, setLocation] = useLocation();
-  const FOREMAN_ALLOWED = ["/", "/jobs", "/schedule"];
+  const FOREMAN_ALLOWED = ["/", "/jobs", "/schedule", "/timesheets"];
   if (role === "foreman" && !FOREMAN_ALLOWED.some(p => location === p || (p !== "/" && location.startsWith(p)))) {
     setLocation("/");
     return null;
