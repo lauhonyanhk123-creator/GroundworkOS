@@ -1,6 +1,41 @@
 import { createContext, useContext, useReducer, type ReactNode } from 'react';
-import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant } from '../types';
-import type { CISReturn } from '../types';
+import type { Job, Quote, Invoice, Client, Subcontractor, Document, ScheduleEntry, Plant, CISReturn } from '../types';
+
+export interface CompanySettings {
+  companyName: string;
+  companyNumber: string;
+  vatNumber: string;
+  utrNumber: string;
+  cisReference: string;
+  address: string;
+  invoicePrefix: string;
+  quotePrefix: string;
+  jobPrefix: string;
+  paymentTerms: string;
+  streetWorksLicenceRef: string;
+  defaultPermitAuthority: string;
+  bankName: string;
+  sortCode: string;
+  accountNumber: string;
+}
+
+export const DEFAULT_SETTINGS: CompanySettings = {
+  companyName: 'GroundworkOS Ltd',
+  companyNumber: '',
+  vatNumber: '',
+  utrNumber: '',
+  cisReference: '',
+  address: '',
+  invoicePrefix: 'INV',
+  quotePrefix: 'QT',
+  jobPrefix: 'GW',
+  paymentTerms: '30 days',
+  streetWorksLicenceRef: '',
+  defaultPermitAuthority: '',
+  bankName: '',
+  sortCode: '',
+  accountNumber: '',
+};
 
 export interface AppState {
   jobs: Job[];
@@ -12,6 +47,8 @@ export interface AppState {
   schedule: ScheduleEntry[];
   plant: Plant[];
   cisReturns: CISReturn[];
+  rateBook: any[];
+  settings: CompanySettings;
 }
 
 export type AppAction =
@@ -23,20 +60,32 @@ export type AppAction =
   | { type: 'INIT_DOCUMENTS'; documents: Document[] }
   | { type: 'INIT_SCHEDULE'; schedule: ScheduleEntry[] }
   | { type: 'INIT_PLANT'; plant: Plant[] }
+  | { type: 'INIT_RATE_BOOK'; rateBook: any[] }
+  | { type: 'INIT_CIS_RETURNS'; cisReturns: CISReturn[] }
+  | { type: 'INIT_SETTINGS'; settings: Partial<CompanySettings> }
   | { type: 'ADD_JOB'; job: Job }
   | { type: 'UPDATE_JOB'; id: string; updates: Partial<Job> }
+  | { type: 'REMOVE_JOB'; id: string }
   | { type: 'ADD_QUOTE'; quote: Quote }
   | { type: 'UPDATE_QUOTE'; id: string; updates: Partial<Quote> }
+  | { type: 'REMOVE_QUOTE'; id: string }
   | { type: 'ADD_INVOICE'; invoice: Invoice }
   | { type: 'UPDATE_INVOICE'; id: string; updates: Partial<Invoice> }
+  | { type: 'REMOVE_INVOICE'; id: string }
   | { type: 'ADD_CLIENT'; client: Client }
   | { type: 'UPDATE_CLIENT'; id: string; updates: Partial<Client> }
+  | { type: 'REMOVE_CLIENT'; id: string }
   | { type: 'ADD_SUBCONTRACTOR'; sub: Subcontractor }
   | { type: 'UPDATE_SUBCONTRACTOR'; id: string; updates: Partial<Subcontractor> }
+  | { type: 'REMOVE_SUBCONTRACTOR'; id: string }
   | { type: 'ADD_DOCUMENT'; doc: Document }
+  | { type: 'REMOVE_DOCUMENT'; id: string }
   | { type: 'ADD_PLANT'; plant: Plant }
   | { type: 'UPDATE_PLANT'; id: string; updates: Partial<Plant> }
-  | { type: 'ADD_SCHEDULE'; entry: ScheduleEntry };
+  | { type: 'REMOVE_PLANT'; id: string }
+  | { type: 'ADD_SCHEDULE'; entry: ScheduleEntry }
+  | { type: 'UPDATE_SCHEDULE'; id: string; updates: Partial<ScheduleEntry> }
+  | { type: 'REMOVE_SCHEDULE'; id: string };
 
 const initialState: AppState = {
   jobs: [],
@@ -48,6 +97,8 @@ const initialState: AppState = {
   schedule: [],
   plant: [],
   cisReturns: [],
+  rateBook: [],
+  settings: DEFAULT_SETTINGS,
 };
 
 function reducer(state: AppState, action: AppAction): AppState {
@@ -60,36 +111,33 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'INIT_DOCUMENTS': return { ...state, documents: action.documents };
     case 'INIT_SCHEDULE': return { ...state, schedule: action.schedule };
     case 'INIT_PLANT': return { ...state, plant: action.plant };
-    case 'ADD_JOB':
-      return { ...state, jobs: [action.job, ...state.jobs] };
-    case 'UPDATE_JOB':
-      return { ...state, jobs: state.jobs.map(j => j.id === action.id ? { ...j, ...action.updates } : j) };
-    case 'ADD_QUOTE':
-      return { ...state, quotes: [action.quote, ...state.quotes] };
-    case 'UPDATE_QUOTE':
-      return { ...state, quotes: state.quotes.map(q => q.id === action.id ? { ...q, ...action.updates } : q) };
-    case 'ADD_INVOICE':
-      return { ...state, invoices: [action.invoice, ...state.invoices] };
-    case 'UPDATE_INVOICE':
-      return { ...state, invoices: state.invoices.map(i => i.id === action.id ? { ...i, ...action.updates } : i) };
-    case 'ADD_CLIENT':
-      return { ...state, clients: [action.client, ...state.clients] };
-    case 'UPDATE_CLIENT':
-      return { ...state, clients: state.clients.map(c => c.id === action.id ? { ...c, ...action.updates } : c) };
-    case 'ADD_SUBCONTRACTOR':
-      return { ...state, subcontractors: [action.sub, ...state.subcontractors] };
-    case 'UPDATE_SUBCONTRACTOR':
-      return { ...state, subcontractors: state.subcontractors.map(s => s.id === action.id ? { ...s, ...action.updates } : s) };
-    case 'ADD_DOCUMENT':
-      return { ...state, documents: [action.doc, ...state.documents] };
-    case 'ADD_PLANT':
-      return { ...state, plant: [action.plant, ...state.plant] };
-    case 'UPDATE_PLANT':
-      return { ...state, plant: state.plant.map(p => p.id === action.id ? { ...p, ...action.updates } : p) };
-    case 'ADD_SCHEDULE':
-      return { ...state, schedule: [action.entry, ...state.schedule] };
-    default:
-      return state;
+    case 'INIT_RATE_BOOK': return { ...state, rateBook: action.rateBook };
+    case 'INIT_CIS_RETURNS': return { ...state, cisReturns: action.cisReturns };
+    case 'INIT_SETTINGS': return { ...state, settings: { ...state.settings, ...action.settings } };
+    case 'ADD_JOB': return { ...state, jobs: [action.job, ...state.jobs] };
+    case 'UPDATE_JOB': return { ...state, jobs: state.jobs.map(j => j.id === action.id ? { ...j, ...action.updates } : j) };
+    case 'REMOVE_JOB': return { ...state, jobs: state.jobs.filter(j => j.id !== action.id) };
+    case 'ADD_QUOTE': return { ...state, quotes: [action.quote, ...state.quotes] };
+    case 'UPDATE_QUOTE': return { ...state, quotes: state.quotes.map(q => q.id === action.id ? { ...q, ...action.updates } : q) };
+    case 'REMOVE_QUOTE': return { ...state, quotes: state.quotes.filter(q => q.id !== action.id) };
+    case 'ADD_INVOICE': return { ...state, invoices: [action.invoice, ...state.invoices] };
+    case 'UPDATE_INVOICE': return { ...state, invoices: state.invoices.map(i => i.id === action.id ? { ...i, ...action.updates } : i) };
+    case 'REMOVE_INVOICE': return { ...state, invoices: state.invoices.filter(i => i.id !== action.id) };
+    case 'ADD_CLIENT': return { ...state, clients: [action.client, ...state.clients] };
+    case 'UPDATE_CLIENT': return { ...state, clients: state.clients.map(c => c.id === action.id ? { ...c, ...action.updates } : c) };
+    case 'REMOVE_CLIENT': return { ...state, clients: state.clients.filter(c => c.id !== action.id) };
+    case 'ADD_SUBCONTRACTOR': return { ...state, subcontractors: [action.sub, ...state.subcontractors] };
+    case 'UPDATE_SUBCONTRACTOR': return { ...state, subcontractors: state.subcontractors.map(s => s.id === action.id ? { ...s, ...action.updates } : s) };
+    case 'REMOVE_SUBCONTRACTOR': return { ...state, subcontractors: state.subcontractors.filter(s => s.id !== action.id) };
+    case 'ADD_DOCUMENT': return { ...state, documents: [action.doc, ...state.documents] };
+    case 'REMOVE_DOCUMENT': return { ...state, documents: state.documents.filter(d => d.id !== action.id) };
+    case 'ADD_PLANT': return { ...state, plant: [action.plant, ...state.plant] };
+    case 'UPDATE_PLANT': return { ...state, plant: state.plant.map(p => p.id === action.id ? { ...p, ...action.updates } : p) };
+    case 'REMOVE_PLANT': return { ...state, plant: state.plant.filter(p => p.id !== action.id) };
+    case 'ADD_SCHEDULE': return { ...state, schedule: [action.entry, ...state.schedule] };
+    case 'UPDATE_SCHEDULE': return { ...state, schedule: state.schedule.map(s => s.id === action.id ? { ...s, ...action.updates } : s) };
+    case 'REMOVE_SCHEDULE': return { ...state, schedule: state.schedule.filter(s => s.id !== action.id) };
+    default: return state;
   }
 }
 
@@ -109,25 +157,4 @@ export function useApp() {
   const ctx = useContext(AppContext);
   if (!ctx) throw new Error('useApp must be used within AppProvider');
   return ctx;
-}
-
-export function nextJobNumber(jobs: Job[]): string {
-  const year = new Date().getFullYear();
-  const nums = jobs.map(j => parseInt(j.job_number.split('-')[2] ?? '0')).filter(n => !isNaN(n));
-  const next = nums.length ? Math.max(...nums) + 1 : 1;
-  return `GW-${year}-${String(next).padStart(3, '0')}`;
-}
-
-export function nextInvoiceNumber(invoices: Invoice[]): string {
-  const year = new Date().getFullYear();
-  const nums = invoices.map(i => parseInt(i.invoice_number.split('-')[2] ?? '0')).filter(n => !isNaN(n));
-  const next = nums.length ? Math.max(...nums) + 1 : 1;
-  return `INV-${year}-${String(next).padStart(3, '0')}`;
-}
-
-export function nextQuoteNumber(quotes: Quote[]): string {
-  const year = new Date().getFullYear();
-  const nums = quotes.map(q => parseInt(q.quote_number.split('-')[2] ?? '0')).filter(n => !isNaN(n));
-  const next = nums.length ? Math.max(...nums) + 1 : 1;
-  return `QT-${year}-${String(next).padStart(3, '0')}`;
 }

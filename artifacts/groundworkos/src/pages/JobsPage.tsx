@@ -1,16 +1,16 @@
-import { useState } from 'react';
-import { Plus, Search, Filter, Download, X, ChevronRight, MapPin } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Search, Filter, Download, X, ChevronRight, MapPin, Trash2 } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency, formatDate } from '../lib/utils';
-import { useApp, nextJobNumber } from '../store/AppContext';
+import { useApp } from '../store/AppContext';
+import { createJob, updateJob, deleteJob } from '@workspace/api-client-react';
+import { toJob } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 import type { JobType, JobStatus } from '../types';
-
-const YELLOW = '#2a6e45';
-const RED = '#c13a2a';
 
 const TABS: { id: string; label: string }[] = [
   { id: 'all', label: 'All' },
@@ -42,6 +42,8 @@ export function JobsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const progressTimer = useRef<ReturnType<typeof setTimeout>>();
 
   const filtered = jobs.filter(j => {
     if (activeTab !== 'all' && j.status !== activeTab) return false;
@@ -65,34 +67,35 @@ export function JobsPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const client = clients.find(c => c.id === form.client_id);
-    dispatch({
-      type: 'ADD_JOB',
-      job: {
-        id: crypto.randomUUID(),
-        job_number: nextJobNumber(jobs),
+    setSaving(true);
+    try {
+      const result = await createJob({
         title: form.title.trim(),
-        client_id: form.client_id || null,
-        client: client ? { company_name: client.company_name } : null,
-        type: (form.type as JobType) || null,
-        site_address: form.site_address || null,
-        value: form.value ? parseFloat(form.value) : null,
-        start_date: form.start_date || null,
-        end_date: form.end_date || null,
+        clientId: form.client_id || undefined,
+        type: (form.type as JobType) || undefined,
+        siteAddress: form.site_address || undefined,
+        value: form.value ? parseFloat(form.value) : undefined,
+        startDate: form.start_date || undefined,
+        endDate: form.end_date || undefined,
         status: form.status,
-        progress_percent: 0,
-        description: form.description || null,
-        created_at: new Date().toISOString(),
-        foreman: form.foreman || null,
-        crew_count: form.crew_count ? parseInt(form.crew_count) : null,
-        nrswa_required: form.nrswa_required,
-        permit_number: form.permit_number || null,
-      },
-    });
-    setShowModal(false);
+        progressPercent: 0,
+        description: form.description || undefined,
+        foreman: form.foreman || undefined,
+        crewCount: form.crew_count ? parseInt(form.crew_count) : undefined,
+        nrswaRequired: form.nrswa_required,
+        permitNumber: form.permit_number || undefined,
+      });
+      dispatch({ type: 'ADD_JOB', job: toJob(result) });
+      setShowModal(false);
+      toast.success(`Job ${result.jobNumber} created`);
+    } catch {
+      toast.error('Failed to create job');
+    } finally {
+      setSaving(false);
+    }
   }
 
   function handleExport() {
@@ -105,16 +108,40 @@ export function JobsPage() {
     a.click();
   }
 
-  function updateStatus(id: string, status: JobStatus) {
+  async function updateStatus(id: string, status: JobStatus) {
     dispatch({ type: 'UPDATE_JOB', id, updates: { status } });
+    try {
+      await updateJob(id, { status });
+    } catch {
+      toast.error('Failed to update status');
+    }
   }
 
   function updateProgress(id: string, progress_percent: number) {
     dispatch({ type: 'UPDATE_JOB', id, updates: { progress_percent } });
+    clearTimeout(progressTimer.current);
+    progressTimer.current = setTimeout(async () => {
+      try {
+        await updateJob(id, { progressPercent: progress_percent });
+      } catch {
+        toast.error('Failed to save progress');
+      }
+    }, 800);
+  }
+
+  async function handleDelete(id: string, jobNumber: string) {
+    if (!confirm(`Delete job ${jobNumber}? This cannot be undone.`)) return;
+    try {
+      await deleteJob(id);
+      dispatch({ type: 'REMOVE_JOB', id });
+      setSelected(null);
+      toast.success(`Job ${jobNumber} deleted`);
+    } catch {
+      toast.error('Failed to delete job');
+    }
   }
 
   const selectedJob = selected ? jobs.find(j => j.id === selected) : null;
-
   const activeJobs = jobs.filter(j => j.status === 'active');
   const activeValue = activeJobs.reduce((sum, j) => sum + (j.value ?? 0), 0);
   const totalPipeline = jobs.filter(j => j.status !== 'cancelled').reduce((sum, j) => sum + (j.value ?? 0), 0);
@@ -157,7 +184,6 @@ export function JobsPage() {
             </button>
           ))}
         </div>
-
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <div className="relative flex-1 sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: '#c0bab4' }} />
@@ -182,7 +208,7 @@ export function JobsPage() {
       </div>
 
       {showFilters && (
-        <div className="p-4 rounded-xl gw-shadow" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
+        <div className="p-4 rounded-xl" style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce' }}>
           <div className="flex items-center justify-between mb-3">
             <span className="text-[11px] font-bold uppercase tracking-widest" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Filter by type</span>
             {filterTypes.length > 0 && <button className="text-xs hover:text-[#181410] transition-colors" style={{ color: '#8a8377' }} onClick={() => setFilterTypes([])}>Clear all</button>}
@@ -238,12 +264,10 @@ export function JobsPage() {
                         {job.type && <span className="capitalize opacity-80">· {job.type.replace('_', ' ')}</span>}
                       </div>
                     </div>
-
                     <div className="w-28 hidden md:block flex-shrink-0 text-right">
                       <div className="text-[10px] font-bold uppercase tracking-widest mb-1" style={{ color: '#7a7469' }}>Value</div>
                       <div className="text-sm font-medium font-mono tnum" style={{ color: '#181410' }}>{job.value ? formatCurrency(job.value) : '—'}</div>
                     </div>
-
                     {job.status === 'active' ? (
                       <div className="w-32 hidden sm:block flex-shrink-0 ml-4">
                         <div className="flex justify-between items-center mb-1.5">
@@ -255,9 +279,8 @@ export function JobsPage() {
                         </div>
                       </div>
                     ) : (
-                      <div className="w-32 hidden sm:block flex-shrink-0 ml-4"></div>
+                      <div className="w-32 hidden sm:block flex-shrink-0 ml-4" />
                     )}
-                    
                     <ChevronRight className={cn("w-4 h-4 flex-shrink-0 transition-all", selected === job.id ? "opacity-100 text-[#1b5e78] rotate-90" : "opacity-0 group-hover:opacity-100 text-[#7a7469]")} />
                   </div>
                 ))}
@@ -269,7 +292,14 @@ export function JobsPage() {
         {selectedJob && (
           <div className="sticky top-6">
             <Panel actions={
-              <button onClick={() => setSelected(null)} className="p-1 rounded-md hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedJob.id, selectedJob.job_number)} className="p-1 rounded-md hover:bg-red-50 transition-colors" style={{ color: '#c13a2a' }} title="Delete job">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} className="p-1 rounded-md hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             }>
               <div className="space-y-6">
                 <div>
@@ -356,7 +386,7 @@ export function JobsPage() {
         <div className="space-y-4">
           <Field label="Job Title" required>
             <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage Installation — Plot 12" />
-            {errors.title && <p className="mt-1 text-xs" style={{ color: RED }}>{errors.title}</p>}
+            {errors.title && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.title}</p>}
           </Field>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Status">
@@ -414,7 +444,9 @@ export function JobsPage() {
             <Textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Scope of works..." rows={3} />
           </Field>
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Create Job</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Creating…' : 'Create Job'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

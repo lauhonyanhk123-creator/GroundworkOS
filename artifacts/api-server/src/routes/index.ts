@@ -1,4 +1,5 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request, type Response, type NextFunction } from "express";
+import { getAuth } from "@clerk/express";
 import healthRouter from "./health";
 import clientsRouter from "./clients";
 import jobsRouter from "./jobs";
@@ -11,8 +12,27 @@ import plantRouter from "./plant";
 import rateBookRouter from "./rate_book";
 import dashboardRouter from "./dashboard";
 import xeroRouter from "./xero";
+import settingsRouter from "./settings";
+import cisRouter from "./cis";
 
 const router: IRouter = Router();
+
+const PUBLIC_PATHS = ["/health", "/xero/callback"];
+
+function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (PUBLIC_PATHS.some((p) => req.path === p || req.path.startsWith(p + "/"))) {
+    return next();
+  }
+  const auth = getAuth(req);
+  const userId = (auth as any)?.sessionClaims?.userId || (auth as any)?.userId;
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  (req as any).userId = userId;
+  next();
+}
+
+router.use(requireAuth);
 
 router.use(healthRouter);
 router.use(clientsRouter);
@@ -26,5 +46,7 @@ router.use(plantRouter);
 router.use(rateBookRouter);
 router.use(dashboardRouter);
 router.use(xeroRouter);
+router.use(settingsRouter);
+router.use(cisRouter);
 
 export default router;

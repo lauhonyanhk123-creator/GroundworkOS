@@ -4,9 +4,10 @@ import { cn } from '../../lib/utils';
 import {
   LayoutDashboard, Briefcase, FileText, Receipt, Calendar,
   Users, HardHat, FolderOpen, BarChart3, Settings,
-  Menu, Bell, X, Truck, Search,
+  Menu, Bell, X, Truck, Search, LogOut,
 } from 'lucide-react';
 import { GlobalSearch } from '../ui/GlobalSearch';
+import { useUser, useClerk } from '@clerk/react';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -34,11 +35,23 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [location] = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
   const currentItem = navigation.find(
     item => 'href' in item && typeof item.href === 'string' && (location === item.href || (item.href !== '/' && location.startsWith(item.href)))
   );
   const pageTitle = currentItem && 'name' in currentItem ? currentItem.name : 'Dashboard';
+
+  const initials = user
+    ? ((user.firstName?.[0] ?? '') + (user.lastName?.[0] ?? '')).toUpperCase() || user.primaryEmailAddress?.emailAddress?.[0]?.toUpperCase() || 'G'
+    : 'G';
+
+  const displayName = user
+    ? (user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.firstName ?? user.primaryEmailAddress?.emailAddress ?? 'User')
+    : 'Loading…';
+
+  const displayEmail = user?.primaryEmailAddress?.emailAddress ?? '';
 
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
@@ -64,25 +77,10 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
         <div className="h-13 flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #d9d4ce' }}>
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-7 h-7 flex items-center justify-center flex-shrink-0" style={{
-              border: '1.5px solid #1b5e78',
-              borderRadius: '4px',
-            }}>
-              <span style={{
-                fontFamily: "'Space Grotesk', sans-serif",
-                fontWeight: 700,
-                fontSize: '14px',
-                color: '#1b5e78',
-                lineHeight: 1,
-              }}>G</span>
+            <div className="w-7 h-7 flex items-center justify-center flex-shrink-0" style={{ border: '1.5px solid #1b5e78', borderRadius: '4px' }}>
+              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '14px', color: '#1b5e78', lineHeight: 1 }}>G</span>
             </div>
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 700,
-              fontSize: '13px',
-              color: '#181410',
-              letterSpacing: '0.04em',
-            }}>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '13px', color: '#181410', letterSpacing: '0.04em' }}>
               GROUNDWORK<span style={{ color: '#1b5e78' }}>OS</span>
             </span>
           </Link>
@@ -118,9 +116,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r" style={{
-                    width: '3px', height: '16px', backgroundColor: '#1b5e78',
-                  }} />
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 rounded-r" style={{ width: '3px', height: '16px', backgroundColor: '#1b5e78' }} />
                 )}
                 <Icon className="w-4 h-4 flex-shrink-0" style={{ opacity: isActive ? 1 : 0.65 }} />
                 <span>{item.name}</span>
@@ -130,62 +126,43 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         </nav>
 
         <div className="px-2 py-3" style={{ borderTop: '1px solid #d9d4ce' }}>
-          <div className="flex items-center gap-2.5 px-2 py-2">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{
-              backgroundColor: '#1b5e78',
-              color: '#ffffff',
-              fontFamily: "'Space Grotesk', sans-serif",
-            }}>
-              G
+          <div className="flex items-center gap-2.5 px-2 py-2 rounded-md group">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0" style={{ backgroundColor: '#1b5e78', color: '#ffffff', fontFamily: "'Space Grotesk', sans-serif" }}>
+              {initials}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold truncate" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>GroundworkOS Ltd</p>
-              <p className="text-xs" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>Admin</p>
+              <p className="text-xs font-semibold truncate" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>{displayName}</p>
+              {displayEmail && <p className="text-[10px] truncate" style={{ color: '#7a7469', fontFamily: "'JetBrains Mono', monospace" }}>{displayEmail}</p>}
             </div>
+            <button
+              onClick={() => signOut()}
+              title="Sign out"
+              className="flex-shrink-0 p-1 rounded transition-colors hover:bg-[#e8e4dd]"
+              style={{ color: '#a8a099' }}
+            >
+              <LogOut className="w-3.5 h-3.5" />
+            </button>
           </div>
         </div>
       </aside>
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-14 flex items-center justify-between px-6 flex-shrink-0" style={{
-          backgroundColor: '#fafaf8',
-          borderBottom: '1px solid #d9d4ce',
-        }}>
+        <header className="h-14 flex items-center justify-between px-6 flex-shrink-0" style={{ backgroundColor: '#fafaf8', borderBottom: '1px solid #d9d4ce' }}>
           <div className="flex items-center gap-3">
             <button className="lg:hidden p-2 rounded" onClick={() => setSidebarOpen(true)} style={{ color: '#7a7469' }}>
               <Menu className="w-5 h-5" />
             </button>
-            <span style={{
-              fontFamily: "'Space Grotesk', sans-serif",
-              fontWeight: 600,
-              fontSize: '17px',
-              letterSpacing: '-0.01em',
-              color: '#181410',
-            }}>{pageTitle}</span>
+            <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 600, fontSize: '17px', letterSpacing: '-0.01em', color: '#181410' }}>{pageTitle}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
               className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded text-xs transition-colors"
-              style={{
-                backgroundColor: '#eeeae4',
-                border: '1px solid #d9d4ce',
-                color: '#7a7469',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '12px',
-              }}
+              style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce', color: '#7a7469', fontFamily: "'JetBrains Mono', monospace", fontSize: '12px' }}
             >
               <Search className="w-3 h-3" />
               <span>Search</span>
-              <kbd style={{
-                backgroundColor: '#fafaf8',
-                color: '#8a8377',
-                border: '1px solid #d9d4ce',
-                borderRadius: '3px',
-                padding: '1px 5px',
-                fontSize: '10px',
-                fontFamily: 'inherit',
-              }}>⌘K</kbd>
+              <kbd style={{ backgroundColor: '#fafaf8', color: '#8a8377', border: '1px solid #d9d4ce', borderRadius: '3px', padding: '1px 5px', fontSize: '10px', fontFamily: 'inherit' }}>⌘K</kbd>
             </button>
             <button className="relative p-2 rounded transition-colors" style={{ color: '#7a7469' }}>
               <Bell className="w-4 h-4" />

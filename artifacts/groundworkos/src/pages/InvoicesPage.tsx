@@ -1,14 +1,17 @@
 import { useState } from 'react';
-import { Plus, Download, X, ChevronRight } from 'lucide-react';
+import { Plus, Download, X, ChevronRight, Trash2 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
+import { InvoicePDF } from '../lib/pdf/InvoicePDF';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency, formatDate, daysOverdue } from '../lib/utils';
-import { useApp, nextInvoiceNumber } from '../store/AppContext';
-
-const RED = '#c13a2a';
+import { useApp } from '../store/AppContext';
+import { createInvoice, updateInvoice, deleteInvoice } from '@workspace/api-client-react';
+import { toInvoice } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 
 const TABS = [
   { id: 'all', label: 'All' },
@@ -26,20 +29,20 @@ const emptyForm = {
 
 export function InvoicesPage() {
   const { state, dispatch } = useApp();
-  const { invoices, clients, jobs } = state;
+  const { invoices, clients, jobs, settings } = state;
 
   const [tab, setTab] = useState('all');
   const [selected, setSelected] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = invoices.filter(i => tab === 'all' || i.status === tab);
   const totalOutstanding = invoices.filter(i => i.status !== 'paid' && i.status !== 'credited').reduce((s, i) => s + i.total_amount, 0);
   const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total_amount, 0);
   const overdueTotal = invoices.filter(i => i.status === 'overdue').reduce((s, i) => s + i.total_amount, 0);
   const selectedInv = selected ? invoices.find(i => i.id === selected) : null;
-  const collectionRate = totalPaid + totalOutstanding > 0 ? Math.round((totalPaid / (totalPaid + totalOutstanding)) * 100) : 0;
 
   const subtotal = parseFloat(form.subtotal) || 0;
   const vatAmount = Math.round(subtotal * 0.2 * 100) / 100;
@@ -58,42 +61,84 @@ export function InvoicesPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const client = clients.find(c => c.id === form.client_id);
-    const job = jobs.find(j => j.id === form.job_id);
-    dispatch({
-      type: 'ADD_INVOICE',
-      invoice: {
-        id: crypto.randomUUID(),
-        invoice_number: nextInvoiceNumber(invoices),
-        client_id: form.client_id,
-        client: client ? { company_name: client.company_name } : null,
-        job_id: form.job_id || null,
-        job: job ? { title: job.title } : null,
-        quote_id: null,
+    setSaving(true);
+    try {
+      const result = await createInvoice({
+        clientId: form.client_id,
+        jobId: form.job_id || undefined,
         subtotal,
-        vat_amount: vatAmount,
-        total_amount: total,
+        vatAmount,
+        totalAmount: total,
         status: 'draft',
-        issued_date: form.issued_date,
-        due_date: form.due_date,
-        paid_at: null,
-        notes: form.notes || null,
-        created_at: new Date().toISOString(),
-        cis_deduction: null,
-      },
-    });
-    setShowModal(false);
+        issuedDate: form.issued_date,
+        dueDate: form.due_date,
+        notes: form.notes || undefined,
+      });
+      dispatch({ type: 'ADD_INVOICE', invoice: toInvoice(result) });
+      setShowModal(false);
+      toast.success(`Invoice ${result.invoiceNumber} created`);
+    } catch {
+      toast.error('Failed to create invoice');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function markPaid(id: string) {
-    dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: 'paid', paid_at: new Date().toISOString() } });
+  async function markPaid(id: string) {
+    const paidAt = new Date().toISOString();
+    dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: 'paid', paid_at: paidAt } });
+    try {
+      await updateInvoice(id, { status: 'paid', paidAt });
+      toast.success('Invoice marked as paid');
+    } catch {
+      toast.error('Failed to update invoice');
+    }
   }
 
-  function markSent(id: string) {
+  async function markSent(id: string) {
     dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: 'sent' } });
+    try {
+      await updateInvoice(id, { status: 'sent' });
+      toast.success('Invoice marked as sent');
+    } catch {
+      toast.error('Failed to update invoice');
+    }
+  }
+
+  const [pdfing, setPdfing] = useState(false);
+
+  async function downloadInvoicePdf(inv: typeof invoices[0]) {
+    setPdfing(true);
+    try {
+      const blob = await pdf(<InvoicePDF invoice={inv} company={settings as any} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${inv.invoice_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      toast.error('Failed to generate PDF');
+    } finally {
+      setPdfing(false);
+    }
+  }
+
+  async function handleDelete(id: string, invoiceNumber: string) {
+    if (!confirm(`Delete invoice ${invoiceNumber}? This cannot be undone.`)) return;
+    try {
+      await deleteInvoice(id);
+      dispatch({ type: 'REMOVE_INVOICE', id });
+      setSelected(null);
+      toast.success(`Invoice ${invoiceNumber} deleted`);
+    } catch {
+      toast.error('Failed to delete invoice');
+    }
   }
 
   return (
@@ -107,45 +152,27 @@ export function InvoicesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          accent
-          label="Outstanding"
-          value={formatCurrency(totalOutstanding)}
-          sub={`${invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length} invoices`}
-        />
-        <StatCard
-          danger={overdueTotal > 0}
-          label="Overdue"
-          value={formatCurrency(overdueTotal)}
-          sub={`${invoices.filter(i => i.status === 'overdue').length} overdue`}
-        />
-        <StatCard
-          label="Collected"
-          value={formatCurrency(totalPaid)}
-          sub={`${invoices.filter(i => i.status === 'paid').length} paid`}
-        />
+        <StatCard accent label="Outstanding" value={formatCurrency(totalOutstanding)} sub={`${invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length} invoices`} />
+        <StatCard danger={overdueTotal > 0} label="Overdue" value={formatCurrency(overdueTotal)} sub={`${invoices.filter(i => i.status === 'overdue').length} overdue`} />
+        <StatCard label="Collected" value={formatCurrency(totalPaid)} sub={`${invoices.filter(i => i.status === 'paid').length} paid`} />
       </div>
 
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #d9d4ce' }}>
-          {TABS.map(t => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className="px-4 py-2.5 text-sm transition-colors"
-              style={tab === t.id
-                ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #1b5e78', marginBottom: '-1px' }
-                : { color: '#7a7469' }}
-            >
-              {t.label}
-              {t.id !== 'all' && (
-                <span className="text-xs ml-1.5" style={{ color: tab === t.id ? '#8a8377' : '#c0bab4' }}>
-                  {invoices.filter(i => i.status === t.id).length}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1" style={{ borderBottom: '1px solid #d9d4ce' }}>
+        {TABS.map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className="px-4 py-2.5 text-sm transition-colors"
+            style={tab === t.id ? { color: '#181410', fontWeight: 500, borderBottom: '2px solid #1b5e78', marginBottom: '-1px' } : { color: '#7a7469' }}
+          >
+            {t.label}
+            {t.id !== 'all' && (
+              <span className="text-xs ml-1.5" style={{ color: tab === t.id ? '#8a8377' : '#c0bab4' }}>
+                {invoices.filter(i => i.status === t.id).length}
+              </span>
+            )}
+          </button>
+        ))}
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -173,7 +200,7 @@ export function InvoicesPage() {
                   </div>
                   <div className="hidden sm:flex items-center gap-4">
                     <Badge status={inv.status} />
-                    {overdueDays > 0 && <span className="text-xs flex-shrink-0 font-mono font-bold" style={{ color: RED }}>{overdueDays}d overdue</span>}
+                    {overdueDays > 0 && <span className="text-xs flex-shrink-0 font-mono font-bold" style={{ color: '#c13a2a' }}>{overdueDays}d overdue</span>}
                   </div>
                   <div className="text-right flex-shrink-0 w-28 ml-2">
                     <div className="text-sm font-bold font-mono tnum" style={{ color: '#181410' }}>{formatCurrency(inv.total_amount)}</div>
@@ -188,7 +215,16 @@ export function InvoicesPage() {
 
         {selectedInv && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} className="hover:text-[#181410] transition-colors" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedInv.id, selectedInv.invoice_number)} className="p-1 rounded transition-colors hover:bg-red-50" style={{ color: '#c13a2a' }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} className="hover:text-[#181410] transition-colors p-1" style={{ color: '#7a7469' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            }>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -242,7 +278,9 @@ export function InvoicesPage() {
                   {(selectedInv.status === 'sent' || selectedInv.status === 'overdue') && (
                     <Btn size="sm" className="w-full justify-center" onClick={() => markPaid(selectedInv.id)}>Mark as Paid</Btn>
                   )}
-                  <Btn variant="outline" size="sm" className="w-full justify-center"><Download className="w-3.5 h-3.5" /> Download PDF</Btn>
+                  <Btn variant="outline" size="sm" className="w-full justify-center" disabled={pdfing} onClick={() => downloadInvoicePdf(selectedInv)}>
+                    <Download className="w-3.5 h-3.5" /> {pdfing ? 'Generating…' : 'Download PDF'}
+                  </Btn>
                 </div>
               </div>
             </Panel>
@@ -257,7 +295,7 @@ export function InvoicesPage() {
               <option value="">Select client...</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.company_name}</option>)}
             </Select>
-            {errors.client_id && <p className="mt-1 text-xs" style={{ color: RED }}>{errors.client_id}</p>}
+            {errors.client_id && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.client_id}</p>}
           </Field>
           <Field label="Related Job">
             <Select value={form.job_id} onChange={e => setForm(f => ({ ...f, job_id: e.target.value }))}>
@@ -277,7 +315,7 @@ export function InvoicesPage() {
           </div>
           <Field label="Subtotal (£ excl. VAT)" required>
             <Input type="number" value={form.subtotal} onChange={e => setForm(f => ({ ...f, subtotal: e.target.value }))} placeholder="0.00" />
-            {errors.subtotal && <p className="mt-1 text-xs" style={{ color: RED }}>{errors.subtotal}</p>}
+            {errors.subtotal && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.subtotal}</p>}
           </Field>
           {subtotal > 0 && (
             <div className="p-4 rounded-lg space-y-2" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
@@ -297,7 +335,9 @@ export function InvoicesPage() {
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="e.g. Stage 1 — drainage installation complete" rows={2} />
           </Field>
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Create Invoice</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Creating…' : 'Create Invoice'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

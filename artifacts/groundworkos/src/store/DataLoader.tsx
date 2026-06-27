@@ -9,6 +9,24 @@ import {
   toClient, toJob, toQuote, toInvoice, toSubcontractor,
   toDocument, toScheduleEntry, toPlant,
 } from '../lib/apiTransforms';
+import type { CISReturn } from '../types';
+
+function mapCisReturn(row: Record<string, unknown>, idx: number): CISReturn {
+  const period = (row.period as string | null) ?? '';
+  const taxMonth = period ? period.slice(0, 7) : '';
+  return {
+    id: `cis-${idx}-${taxMonth}`,
+    tax_month: taxMonth,
+    subcontractor_id: '',
+    subcontractor_name: (row.company_name as string) ?? '—',
+    gross_payment: Number(row.gross_payment ?? 0),
+    deduction_rate: Number(row.cis_deduction_rate ?? 0),
+    deduction_amount: Number(row.cis_deducted ?? 0),
+    net_payment: Number(row.net_payment ?? 0),
+    submitted: false,
+    submitted_at: null,
+  };
+}
 
 export function DataLoader() {
   const { dispatch } = useApp();
@@ -21,7 +39,7 @@ export function DataLoader() {
   const { data: documents } = useGetDocuments();
   const { data: schedule } = useGetSchedule();
   const { data: plant } = useGetPlant();
-  const { data: _rateBook } = useGetRateBook();
+  const { data: rateBook } = useGetRateBook();
 
   useEffect(() => {
     if (clients) dispatch({ type: 'INIT_CLIENTS', clients: clients.map(toClient) });
@@ -54,6 +72,31 @@ export function DataLoader() {
   useEffect(() => {
     if (plant) dispatch({ type: 'INIT_PLANT', plant: plant.map(toPlant) });
   }, [plant, dispatch]);
+
+  useEffect(() => {
+    if (rateBook) dispatch({ type: 'INIT_RATE_BOOK', rateBook });
+  }, [rateBook, dispatch]);
+
+  useEffect(() => {
+    fetch('/api/cis/returns')
+      .then(r => r.json())
+      .then((rows: Record<string, unknown>[]) => {
+        if (!Array.isArray(rows)) return;
+        dispatch({ type: 'INIT_CIS_RETURNS', cisReturns: rows.map(mapCisReturn) });
+      })
+      .catch(() => {});
+  }, [dispatch]);
+
+  useEffect(() => {
+    fetch('/api/settings/company')
+      .then(r => r.json())
+      .then(data => {
+        if (data && typeof data === 'object') {
+          dispatch({ type: 'INIT_SETTINGS', settings: data });
+        }
+      })
+      .catch(() => {});
+  }, [dispatch]);
 
   return null;
 }

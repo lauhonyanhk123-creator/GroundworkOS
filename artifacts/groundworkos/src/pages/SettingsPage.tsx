@@ -1,16 +1,32 @@
-import { useState, useEffect } from 'react';
-import { ShieldCheck, Info, Link2, RefreshCw, CheckCircle, AlertCircle, Unlink, Download } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ShieldCheck, Info, Link2, RefreshCw, CheckCircle, AlertCircle, Unlink, Download, Save } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Btn } from '../components/ui/Btn';
+import { useApp } from '../store/AppContext';
+import { toast } from 'sonner';
+import type { CompanySettings } from '../store/AppContext';
 
 const inputCls = 'w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors';
 const inputStyle = { backgroundColor: '#ffffff', border: '1px solid #d9d4ce', color: '#181410' };
 
-function Inp({ defaultValue, placeholder, type = 'text', isMono = false }: { defaultValue?: string; placeholder?: string; type?: string; isMono?: boolean }) {
+function Inp({
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  isMono = false,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  type?: string;
+  isMono?: boolean;
+}) {
   return (
     <input
       type={type}
-      defaultValue={defaultValue}
+      value={value}
+      onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       className={`${inputCls} ${isMono ? 'font-mono tnum' : ''}`}
       style={inputStyle}
@@ -20,23 +36,56 @@ function Inp({ defaultValue, placeholder, type = 'text', isMono = false }: { def
   );
 }
 
-function SettingsRow({ label, description, children, isLast }: { label: string; description?: string; children: React.ReactNode; isLast?: boolean }) {
+function SettingsRow({
+  label,
+  description,
+  children,
+  isLast,
+}: {
+  label: string;
+  description?: string;
+  children: React.ReactNode;
+  isLast?: boolean;
+}) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 transition-colors hover:bg-[#fafaf8]" style={{ borderBottom: isLast ? 'none' : '1px solid #d9d4ce' }}>
+    <div
+      className="flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 transition-colors hover:bg-[#fafaf8]"
+      style={{ borderBottom: isLast ? 'none' : '1px solid #d9d4ce' }}
+    >
       <div className="sm:w-1/3 flex-shrink-0">
-        <label className="block text-[11px] font-bold uppercase tracking-widest" style={{ color: '#4a4540', fontFamily: "'Space Grotesk', sans-serif" }}>{label}</label>
-        {description && <p className="text-xs mt-1" style={{ color: '#7a7469' }}>{description}</p>}
+        <label
+          className="block text-[11px] font-bold uppercase tracking-widest"
+          style={{ color: '#4a4540', fontFamily: "'Space Grotesk', sans-serif" }}
+        >
+          {label}
+        </label>
+        {description && (
+          <p className="text-xs mt-1" style={{ color: '#7a7469' }}>
+            {description}
+          </p>
+        )}
       </div>
-      <div className="sm:w-2/3">
-        {children}
-      </div>
+      <div className="sm:w-2/3">{children}</div>
+    </div>
+  );
+}
+
+function SaveBar({ onSave, saving }: { onSave: () => void; saving: boolean }) {
+  return (
+    <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8', borderTop: '1px solid #d9d4ce' }}>
+      <Btn size="sm" onClick={onSave} disabled={saving}>
+        {saving ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+        {saving ? 'Saving…' : 'Save'}
+      </Btn>
     </div>
   );
 }
 
 // ─── Xero Integration Panel ───────────────────────────────────────────────────
 
-type XeroStatus = { connected: false } | { connected: true; tenantName: string | null; connectedAt: string; updatedAt: string };
+type XeroStatus =
+  | { connected: false }
+  | { connected: true; tenantName: string | null; connectedAt: string; updatedAt: string };
 type SyncResult = { synced: number; failed: number } | null;
 
 function XeroPanel() {
@@ -61,22 +110,17 @@ function XeroPanel() {
 
   useEffect(() => {
     fetchStatus();
-
-    // Handle OAuth callback result from URL params
     const params = new URLSearchParams(window.location.search);
     const xeroParam = params.get('xero');
     const msg = params.get('msg');
 
     if (xeroParam === 'connected') {
       setBanner({ type: 'success', message: 'Xero connected successfully.' });
-      // Clean URL without full reload
-      const clean = window.location.pathname;
-      window.history.replaceState({}, '', clean);
+      window.history.replaceState({}, '', window.location.pathname);
       fetchStatus();
     } else if (xeroParam === 'error') {
       setBanner({ type: 'error', message: msg ?? 'Failed to connect to Xero.' });
-      const clean = window.location.pathname;
-      window.history.replaceState({}, '', clean);
+      window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
 
@@ -110,7 +154,17 @@ function XeroPanel() {
     }
   }
 
-  function SyncBtn({ label, syncKey, path, icon }: { label: string; syncKey: string; path: string; icon: React.ReactNode }) {
+  function SyncBtn({
+    label,
+    syncKey,
+    path,
+    icon,
+  }: {
+    label: string;
+    syncKey: string;
+    path: string;
+    icon: React.ReactNode;
+  }) {
     const res = syncResults[syncKey];
     const busy = syncing === syncKey;
     return (
@@ -120,7 +174,10 @@ function XeroPanel() {
           {busy ? 'Syncing…' : label}
         </Btn>
         {res && (
-          <span className="text-xs font-mono tnum" style={{ color: res.failed > 0 ? '#b56918' : '#2a6e45' }}>
+          <span
+            className="text-xs font-mono tnum"
+            style={{ color: res.failed > 0 ? '#b56918' : '#2a6e45' }}
+          >
             {res.synced} synced{res.failed > 0 ? `, ${res.failed} failed` : ''}
           </span>
         )}
@@ -129,8 +186,12 @@ function XeroPanel() {
   }
 
   const connected = status?.connected === true;
-  const tenant = connected ? (status as { connected: true; tenantName: string | null }).tenantName : null;
-  const connectedAt = connected ? (status as { connected: true; connectedAt: string }).connectedAt : null;
+  const tenant = connected
+    ? (status as { connected: true; tenantName: string | null }).tenantName
+    : null;
+  const connectedAt = connected
+    ? (status as { connected: true; connectedAt: string }).connectedAt
+    : null;
 
   return (
     <Panel
@@ -147,62 +208,122 @@ function XeroPanel() {
             color: banner.type === 'success' ? '#1b5e78' : '#c13a2a',
           }}
         >
-          {banner.type === 'success'
-            ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
-            : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+          {banner.type === 'success' ? (
+            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          )}
           <span>{banner.message}</span>
-          <button className="ml-auto text-xs opacity-60 hover:opacity-100" onClick={() => setBanner(null)}>Dismiss</button>
+          <button
+            className="ml-auto text-xs opacity-60 hover:opacity-100"
+            onClick={() => setBanner(null)}
+          >
+            Dismiss
+          </button>
         </div>
       )}
 
       {loading ? (
-        <div className="px-5 py-6 text-sm" style={{ color: '#7a7469' }}>Checking connection…</div>
+        <div className="px-5 py-6 text-sm" style={{ color: '#7a7469' }}>
+          Checking connection…
+        </div>
       ) : !connected ? (
         <div className="px-5 py-6">
           <p className="text-sm mb-4" style={{ color: '#4a4540' }}>
-            Connect to Xero to automatically sync your invoices, quotes, and client contacts — no more double-entry.
+            Connect to Xero to automatically sync your invoices, quotes, and client contacts — no
+            more double-entry.
           </p>
           <Btn onClick={() => { window.location.href = '/api/xero/auth'; }}>
             <Link2 className="w-3.5 h-3.5" />
             Connect to Xero
           </Btn>
           <p className="text-xs mt-3" style={{ color: '#7a7469' }}>
-            You'll be redirected to Xero to authorise access. Make sure your Xero credentials are configured first.
+            You'll be redirected to Xero to authorise access. Make sure your Xero credentials are
+            configured first.
           </p>
         </div>
       ) : (
         <>
           <div className="px-5 py-4" style={{ borderBottom: '1px solid #d9d4ce' }}>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#2a6e45' }} />
-              <span className="text-sm font-medium" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ backgroundColor: '#2a6e45' }}
+              />
+              <span
+                className="text-sm font-medium"
+                style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}
+              >
                 {tenant ?? 'Xero Organisation'}
               </span>
             </div>
             {connectedAt && (
               <p className="text-xs" style={{ color: '#7a7469' }}>
-                Connected {new Date(connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                Connected{' '}
+                {new Date(connectedAt).toLocaleDateString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  year: 'numeric',
+                })}
               </p>
             )}
           </div>
 
-          <div className="px-5 py-4 space-y-4" style={{ borderBottom: '1px solid #d9d4ce' }}>
-            <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Push to Xero</p>
-            <SyncBtn label="Sync Clients" syncKey="contacts" path="/api/xero/sync/contacts" icon={<RefreshCw className="w-3.5 h-3.5" />} />
-            <SyncBtn label="Sync Invoices" syncKey="invoices" path="/api/xero/sync/invoices" icon={<RefreshCw className="w-3.5 h-3.5" />} />
-            <SyncBtn label="Sync Quotes" syncKey="quotes" path="/api/xero/sync/quotes" icon={<RefreshCw className="w-3.5 h-3.5" />} />
+          <div
+            className="px-5 py-4 space-y-4"
+            style={{ borderBottom: '1px solid #d9d4ce' }}
+          >
+            <p
+              className="text-[11px] font-bold uppercase tracking-widest mb-3"
+              style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Push to Xero
+            </p>
+            <SyncBtn
+              label="Sync Clients"
+              syncKey="contacts"
+              path="/api/xero/sync/contacts"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+            />
+            <SyncBtn
+              label="Sync Invoices"
+              syncKey="invoices"
+              path="/api/xero/sync/invoices"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+            />
+            <SyncBtn
+              label="Sync Quotes"
+              syncKey="quotes"
+              path="/api/xero/sync/quotes"
+              icon={<RefreshCw className="w-3.5 h-3.5" />}
+            />
           </div>
 
           <div className="px-5 py-4" style={{ borderBottom: '1px solid #d9d4ce' }}>
-            <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Pull from Xero</p>
-            <SyncBtn label="Pull Payment Status" syncKey="payments" path="/api/xero/pull/payments" icon={<Download className="w-3.5 h-3.5" />} />
+            <p
+              className="text-[11px] font-bold uppercase tracking-widest mb-3"
+              style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}
+            >
+              Pull from Xero
+            </p>
+            <SyncBtn
+              label="Pull Payment Status"
+              syncKey="payments"
+              path="/api/xero/pull/payments"
+              icon={<Download className="w-3.5 h-3.5" />}
+            />
             <p className="text-xs mt-2" style={{ color: '#7a7469' }}>
               Marks invoices as paid in GroundworkOS when they're marked paid in Xero.
             </p>
           </div>
 
           <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8' }}>
-            <Btn variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+            <Btn
+              variant="outline"
+              size="sm"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
               <Unlink className="w-3.5 h-3.5" />
               {disconnecting ? 'Disconnecting…' : 'Disconnect Xero'}
             </Btn>
@@ -215,121 +336,295 @@ function XeroPanel() {
 
 // ─── Settings Page ─────────────────────────────────────────────────────────────
 
+async function saveSettings(body: Record<string, unknown>): Promise<void> {
+  const r = await fetch('/api/settings/company', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) throw new Error('Save failed');
+}
+
 export function SettingsPage() {
+  const { state, dispatch } = useApp();
+  const s = state.settings;
+
+  const [company, setCompany] = useState({
+    companyName: s.companyName,
+    companyNumber: s.companyNumber,
+    vatNumber: s.vatNumber,
+    utrNumber: s.utrNumber,
+    cisReference: s.cisReference,
+    address: s.address,
+  });
+
+  const [invoiceSettings, setInvoiceSettings] = useState({
+    invoicePrefix: s.invoicePrefix,
+    quotePrefix: s.quotePrefix,
+    jobPrefix: s.jobPrefix,
+    paymentTerms: s.paymentTerms,
+  });
+
+  const [nrswa, setNrswa] = useState({
+    streetWorksLicenceRef: s.streetWorksLicenceRef,
+    defaultPermitAuthority: s.defaultPermitAuthority,
+  });
+
+  const [bankDetails, setBankDetails] = useState({
+    bankName: s.bankName,
+    sortCode: s.sortCode,
+    accountNumber: s.accountNumber,
+  });
+
+  const [savingSection, setSavingSection] = useState<string | null>(null);
+
+  const prevSettings = useRef(s);
+  useEffect(() => {
+    if (prevSettings.current === s) return;
+    prevSettings.current = s;
+    setCompany({
+      companyName: s.companyName,
+      companyNumber: s.companyNumber,
+      vatNumber: s.vatNumber,
+      utrNumber: s.utrNumber,
+      cisReference: s.cisReference,
+      address: s.address,
+    });
+    setInvoiceSettings({
+      invoicePrefix: s.invoicePrefix,
+      quotePrefix: s.quotePrefix,
+      jobPrefix: s.jobPrefix,
+      paymentTerms: s.paymentTerms,
+    });
+    setNrswa({
+      streetWorksLicenceRef: s.streetWorksLicenceRef,
+      defaultPermitAuthority: s.defaultPermitAuthority,
+    });
+    setBankDetails({
+      bankName: s.bankName,
+      sortCode: s.sortCode,
+      accountNumber: s.accountNumber,
+    });
+  }, [s]);
+
+  async function save(section: string, patch: Partial<CompanySettings>) {
+    setSavingSection(section);
+    try {
+      const merged = { ...s, ...patch };
+      await saveSettings(merged as unknown as Record<string, unknown>);
+      dispatch({ type: 'INIT_SETTINGS', settings: patch });
+      toast.success('Settings saved');
+    } catch {
+      toast.error('Failed to save settings');
+    } finally {
+      setSavingSection(null);
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
       <div>
-        <h1 className="text-2xl font-semibold" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.01em' }}>Settings</h1>
-        <p className="text-sm mt-1" style={{ color: '#7a7469' }}>Company configuration, compliance, and preferences</p>
+        <h1
+          className="text-2xl font-semibold"
+          style={{
+            color: '#181410',
+            fontFamily: "'Space Grotesk', sans-serif",
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Settings
+        </h1>
+        <p className="text-sm mt-1" style={{ color: '#7a7469' }}>
+          Company configuration, compliance, and preferences
+        </p>
       </div>
 
       <Panel title="Company Details" noPad>
         <SettingsRow label="Company Name">
-          <Inp defaultValue="GroundworkOS Ltd" placeholder="Company name" />
+          <Inp
+            value={company.companyName}
+            onChange={v => setCompany(c => ({ ...c, companyName: v }))}
+            placeholder="Company name"
+          />
         </SettingsRow>
         <SettingsRow label="Company Number">
-          <Inp defaultValue="12345678" placeholder="Companies House number" isMono />
+          <Inp
+            value={company.companyNumber}
+            onChange={v => setCompany(c => ({ ...c, companyNumber: v }))}
+            placeholder="Companies House number"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="VAT Number">
-          <Inp defaultValue="GB 234 5678 90" placeholder="VAT registration number" isMono />
+          <Inp
+            value={company.vatNumber}
+            onChange={v => setCompany(c => ({ ...c, vatNumber: v }))}
+            placeholder="VAT registration number"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="UTR Number" description="Unique Taxpayer Reference">
-          <Inp defaultValue="1234 56789 01" placeholder="Unique Taxpayer Reference" isMono />
+          <Inp
+            value={company.utrNumber}
+            onChange={v => setCompany(c => ({ ...c, utrNumber: v }))}
+            placeholder="Unique Taxpayer Reference"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="CIS Reference" description="Contractor reference">
-          <Inp defaultValue="CIS-234-5678-90" placeholder="CIS contractor reference" isMono />
+          <Inp
+            value={company.cisReference}
+            onChange={v => setCompany(c => ({ ...c, cisReference: v }))}
+            placeholder="CIS contractor reference"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="Registered Address" isLast>
-          <Inp defaultValue="Unit 3, Anvil Works, Birmingham, B12 0PQ" placeholder="Address" />
+          <Inp
+            value={company.address}
+            onChange={v => setCompany(c => ({ ...c, address: v }))}
+            placeholder="Address"
+          />
         </SettingsRow>
-        <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8', borderTop: '1px solid #d9d4ce' }}>
-          <Btn size="sm">Save Company Details</Btn>
-        </div>
+        <SaveBar
+          onSave={() => save('company', company)}
+          saving={savingSection === 'company'}
+        />
       </Panel>
 
-      <Panel title="Invoice Settings" noPad>
+      <Panel title="Invoice & Numbering" noPad>
         <SettingsRow label="Invoice Prefix">
-          <Inp defaultValue="INV" placeholder="INV" isMono />
+          <Inp
+            value={invoiceSettings.invoicePrefix}
+            onChange={v => setInvoiceSettings(i => ({ ...i, invoicePrefix: v }))}
+            placeholder="INV"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="Quote Prefix">
-          <Inp defaultValue="QT" placeholder="QT" isMono />
+          <Inp
+            value={invoiceSettings.quotePrefix}
+            onChange={v => setInvoiceSettings(i => ({ ...i, quotePrefix: v }))}
+            placeholder="QT"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="Job Number Prefix">
-          <Inp defaultValue="GW" placeholder="GW" isMono />
+          <Inp
+            value={invoiceSettings.jobPrefix}
+            onChange={v => setInvoiceSettings(i => ({ ...i, jobPrefix: v }))}
+            placeholder="GW"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="Default Payment Terms" isLast>
-          <Inp defaultValue="30 days" placeholder="e.g. 30 days" />
+          <Inp
+            value={invoiceSettings.paymentTerms}
+            onChange={v => setInvoiceSettings(i => ({ ...i, paymentTerms: v }))}
+            placeholder="e.g. 30 days"
+          />
         </SettingsRow>
-        <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8', borderTop: '1px solid #d9d4ce' }}>
-          <Btn size="sm">Save Invoice Settings</Btn>
+        <SaveBar
+          onSave={() => save('invoiceSettings', invoiceSettings)}
+          saving={savingSection === 'invoiceSettings'}
+        />
+      </Panel>
+
+      <Panel title="Bank Details" noPad>
+        <div className="px-5 py-3" style={{ backgroundColor: '#e8f3f7', borderBottom: '1px solid #d9d4ce' }}>
+          <p className="text-xs" style={{ color: '#1b5e78' }}>
+            Bank details are printed on PDF invoices. Keep these accurate.
+          </p>
         </div>
+        <SettingsRow label="Bank Name">
+          <Inp
+            value={bankDetails.bankName}
+            onChange={v => setBankDetails(b => ({ ...b, bankName: v }))}
+            placeholder="e.g. Lloyds Bank"
+          />
+        </SettingsRow>
+        <SettingsRow label="Sort Code">
+          <Inp
+            value={bankDetails.sortCode}
+            onChange={v => setBankDetails(b => ({ ...b, sortCode: v }))}
+            placeholder="00-00-00"
+            isMono
+          />
+        </SettingsRow>
+        <SettingsRow label="Account Number" isLast>
+          <Inp
+            value={bankDetails.accountNumber}
+            onChange={v => setBankDetails(b => ({ ...b, accountNumber: v }))}
+            placeholder="12345678"
+            isMono
+          />
+        </SettingsRow>
+        <SaveBar
+          onSave={() => save('bankDetails', bankDetails)}
+          saving={savingSection === 'bankDetails'}
+        />
       </Panel>
 
       <Panel title="CIS Settings" noPad>
-        <div className="px-5 py-4" style={{ backgroundColor: '#e8f3f7', borderBottom: '1px solid #d9d4ce' }}>
+        <div
+          className="px-5 py-4"
+          style={{ backgroundColor: '#e8f3f7', borderBottom: '1px solid #d9d4ce' }}
+        >
           <div className="flex gap-3">
-            <ShieldCheck className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#1b5e78' }} />
+            <ShieldCheck
+              className="w-5 h-5 flex-shrink-0 mt-0.5"
+              style={{ color: '#1b5e78' }}
+            />
             <div className="text-sm leading-relaxed" style={{ color: '#181410' }}>
-              <strong className="font-semibold">Construction Industry Scheme</strong> — Configured as a CIS Contractor. Verify subcontractors with HMRC before payments; file monthly returns by the 19th.
+              <strong className="font-semibold">Construction Industry Scheme</strong> — Configured
+              as a CIS Contractor. Verify subcontractors with HMRC before payments; file monthly
+              returns by the 19th.
             </div>
           </div>
         </div>
         <SettingsRow label="Tax Year Start">
-          <Inp defaultValue="6 April" placeholder="" />
+          <Inp value="6 April" onChange={() => {}} placeholder="" />
         </SettingsRow>
         <SettingsRow label="Filing Reminder" description="Days before the 19th" isLast>
-          <Inp defaultValue="5" placeholder="5" type="number" isMono />
+          <Inp value="5" onChange={() => {}} placeholder="5" type="number" isMono />
         </SettingsRow>
-        <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8', borderTop: '1px solid #d9d4ce' }}>
-          <Btn size="sm">Save CIS Settings</Btn>
-        </div>
       </Panel>
 
       <Panel title="NRSWA / Street Works" noPad>
-        <div className="px-5 py-4" style={{ backgroundColor: '#eeeae4', borderBottom: '1px solid #d9d4ce' }}>
+        <div
+          className="px-5 py-4"
+          style={{ backgroundColor: '#eeeae4', borderBottom: '1px solid #d9d4ce' }}
+        >
           <div className="flex gap-3">
             <Info className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: '#7a7469' }} />
             <div className="text-sm leading-relaxed" style={{ color: '#4a4540' }}>
-              <strong className="font-semibold text-[#181410]">New Roads and Street Works Act 1991</strong> — Company registered with relevant Highway Authority. Ensure all operatives carry valid NRSWA cards for works on the public highway.
+              <strong className="font-semibold text-[#181410]">
+                New Roads and Street Works Act 1991
+              </strong>{' '}
+              — Company registered with relevant Highway Authority. Ensure all operatives carry
+              valid NRSWA cards for works on the public highway.
             </div>
           </div>
         </div>
         <SettingsRow label="Street Works Licence Ref">
-          <Inp defaultValue="SWL-2024-00123" isMono />
+          <Inp
+            value={nrswa.streetWorksLicenceRef}
+            onChange={v => setNrswa(n => ({ ...n, streetWorksLicenceRef: v }))}
+            placeholder="SWL-2024-00123"
+            isMono
+          />
         </SettingsRow>
         <SettingsRow label="Default Permit Authority" isLast>
-          <Inp defaultValue="Transport for West Midlands" />
+          <Inp
+            value={nrswa.defaultPermitAuthority}
+            onChange={v => setNrswa(n => ({ ...n, defaultPermitAuthority: v }))}
+            placeholder="e.g. Transport for West Midlands"
+          />
         </SettingsRow>
-        <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8', borderTop: '1px solid #d9d4ce' }}>
-          <Btn size="sm">Save Street Works</Btn>
-        </div>
-      </Panel>
-
-      <Panel title="Notification Preferences" noPad>
-        {[
-          { label: 'Document expiry warnings', desc: 'Days before expiry', value: '30' },
-          { label: 'Invoice overdue alert', desc: 'Days after due date', value: '3' },
-          { label: 'CIS filing reminder', desc: 'Days before 19th', value: '5' },
-          { label: 'LOLER exam reminder', desc: 'Days before exam due', value: '28' },
-        ].map((item, i, arr) => (
-          <div key={item.label} className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-[#fafaf8]" style={{ borderBottom: i === arr.length - 1 ? 'none' : '1px solid #d9d4ce' }}>
-            <div>
-              <div className="text-sm font-medium" style={{ color: '#181410' }}>{item.label}</div>
-              <div className="text-xs mt-0.5" style={{ color: '#7a7469' }}>{item.desc}</div>
-            </div>
-            <input
-              type="number"
-              defaultValue={item.value}
-              className="w-20 py-1.5 px-2 rounded-md text-sm text-center font-mono tnum focus:outline-none transition-colors"
-              style={{ backgroundColor: '#ffffff', border: '1px solid #d9d4ce', color: '#181410' }}
-              onFocus={e => (e.target.style.borderColor = '#1b5e78')}
-              onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
-            />
-          </div>
-        ))}
-        <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8', borderTop: '1px solid #d9d4ce' }}>
-          <Btn size="sm">Save Preferences</Btn>
-        </div>
+        <SaveBar
+          onSave={() => save('nrswa', nrswa)}
+          saving={savingSection === 'nrswa'}
+        />
       </Panel>
 
       <XeroPanel />

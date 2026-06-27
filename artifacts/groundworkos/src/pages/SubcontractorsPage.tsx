@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, AlertTriangle, X, ChevronRight } from 'lucide-react';
+import { Plus, Search, AlertTriangle, X, ChevronRight, Trash2 } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -7,6 +7,9 @@ import { StatCard } from '../components/ui/StatCard';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatDate, daysUntil } from '../lib/utils';
 import { useApp } from '../store/AppContext';
+import { createSubcontractor, deleteSubcontractor } from '@workspace/api-client-react';
+import { toSubcontractor } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 import type { CISStatus } from '../types';
 
 const CIS_STATUSES: CISStatus[] = ['gross', 'net', 'unverified'];
@@ -28,6 +31,7 @@ export function SubcontractorsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = subcontractors.filter(s => {
     if (tab === 'active' && !s.active) return false;
@@ -62,33 +66,47 @@ export function SubcontractorsPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const deductionRate = form.cis_status === 'gross' ? 0 : form.cis_status === 'net' ? 20 : 30;
-    dispatch({
-      type: 'ADD_SUBCONTRACTOR',
-      sub: {
-        id: crypto.randomUUID(),
-        company_name: form.company_name.trim(),
-        contact_name: form.contact_name || null,
-        trade: form.trade || null,
-        email: form.email || null,
-        phone: form.phone || null,
-        utr_number: form.utr_number || null,
-        cis_status: form.cis_status,
-        cis_deduction_rate: deductionRate,
-        nrswa_card_number: form.nrswa_card_number || null,
-        nrswa_expiry: form.nrswa_expiry || null,
-        public_liability_expiry: form.public_liability_expiry || null,
-        cscs_card_expiry: form.cscs_card_expiry || null,
-        address: null,
-        notes: form.notes || null,
-        active: true,
-        created_at: new Date().toISOString(),
-      },
-    });
-    setShowModal(false);
+    setSaving(true);
+    try {
+      const deductionRate = form.cis_status === 'gross' ? 0 : form.cis_status === 'net' ? 20 : 30;
+      const result = await createSubcontractor({
+        companyName: form.company_name.trim(),
+        contactName: form.contact_name || undefined,
+        trade: form.trade || undefined,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        utrNumber: form.utr_number || undefined,
+        cisStatus: form.cis_status,
+        cisDeductionRate: deductionRate,
+        nrswaCardNumber: form.nrswa_card_number || undefined,
+        nrswaExpiry: form.nrswa_expiry || undefined,
+        publicLiabilityExpiry: form.public_liability_expiry || undefined,
+        cscsCardExpiry: form.cscs_card_expiry || undefined,
+        notes: form.notes || undefined,
+      });
+      dispatch({ type: 'ADD_SUBCONTRACTOR', sub: toSubcontractor(result) });
+      setShowModal(false);
+      toast.success(`${result.companyName} added`);
+    } catch {
+      toast.error('Failed to add subcontractor');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      await deleteSubcontractor(id);
+      dispatch({ type: 'REMOVE_SUBCONTRACTOR', id });
+      setSelected(null);
+      toast.success(`${name} deleted`);
+    } catch {
+      toast.error('Failed to delete subcontractor');
+    }
   }
 
   return (
@@ -163,7 +181,7 @@ export function SubcontractorsPage() {
                     </div>
                     <div className="text-[13px] flex items-center gap-2" style={{ color: '#7a7469' }}>
                       <span className="truncate">{sub.trade ?? '—'}</span>
-                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: '#d9d4ce' }}></span>
+                      <span className="w-1 h-1 rounded-full" style={{ backgroundColor: '#d9d4ce' }} />
                       <span className="truncate">{sub.contact_name ?? '—'}</span>
                     </div>
                   </div>
@@ -185,7 +203,14 @@ export function SubcontractorsPage() {
 
         {selectedSub && (
           <div className="space-y-6">
-            <Panel actions={<button onClick={() => setSelected(null)} className="p-1 rounded hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedSub.id, selectedSub.company_name)} className="p-1 rounded hover:bg-red-50 transition-colors" style={{ color: '#c13a2a' }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} className="p-1 rounded hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>
+              </div>
+            }>
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -266,7 +291,6 @@ export function SubcontractorsPage() {
             <Input value={form.company_name} onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))} placeholder="e.g. Smith Groundworks Ltd" />
             {errors.company_name && <p className="mt-1 text-xs font-medium" style={{ color: '#c13a2a' }}>{errors.company_name}</p>}
           </Field>
-
           <div className="grid grid-cols-2 gap-4">
             <Field label="Contact Name">
               <Input value={form.contact_name} onChange={e => setForm(f => ({ ...f, contact_name: e.target.value }))} placeholder="e.g. Mike Smith" />
@@ -275,7 +299,6 @@ export function SubcontractorsPage() {
               <Input value={form.trade} onChange={e => setForm(f => ({ ...f, trade: e.target.value }))} placeholder="e.g. Drainage, Piling" />
             </Field>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <Field label="Phone">
               <Input className="font-mono" type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="07700 900000" />
@@ -284,7 +307,6 @@ export function SubcontractorsPage() {
               <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="mike@smith.co.uk" />
             </Field>
           </div>
-
           <div className="p-4 rounded-xl" style={{ backgroundColor: '#eeeae4', border: '1px solid #d9d4ce' }}>
             <div className="text-[10px] font-bold uppercase tracking-widest mb-4" style={{ color: '#7a7469' }}>CIS Details</div>
             <div className="grid grid-cols-2 gap-4">
@@ -298,7 +320,6 @@ export function SubcontractorsPage() {
               </Field>
             </div>
           </div>
-
           <div>
             <div className="text-[10px] font-bold uppercase tracking-widest mb-4 mt-2" style={{ color: '#7a7469' }}>Compliance Expiry Dates</div>
             <div className="grid grid-cols-2 gap-4">
@@ -316,13 +337,13 @@ export function SubcontractorsPage() {
               </Field>
             </div>
           </div>
-
           <Field label="Notes">
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={3} />
           </Field>
-
           <div className="flex gap-3 pt-4 border-t border-[#d9d4ce]">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add Subcontractor</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Adding…' : 'Add Subcontractor'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

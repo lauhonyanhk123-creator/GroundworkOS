@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, MapPin } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { useApp } from '../store/AppContext';
+import { createScheduleEntry, deleteScheduleEntry } from '@workspace/api-client-react';
+import { toScheduleEntry } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -39,6 +42,7 @@ export function SchedulePage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   function getWeekBounds(date: Date) {
     const mon = new Date(date);
@@ -98,27 +102,41 @@ export function SchedulePage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const job = jobs.find(j => j.id === form.job_id);
-    dispatch({
-      type: 'ADD_SCHEDULE',
-      entry: {
-        id: crypto.randomUUID(),
-        job_id: form.job_id || null,
-        job: job ? { job_number: job.job_number, title: job.title, client: job.client ?? null } : null,
+    setSaving(true);
+    try {
+      const result = await createScheduleEntry({
+        jobId: form.job_id || undefined,
         title: form.title.trim(),
-        start_datetime: `${form.date}T${form.time}:00`,
-        end_datetime: `${form.date}T${form.end_time}:00`,
-        crew_count: parseInt(form.crew_count) || 1,
-        foreman: form.foreman || null,
-        plant_assigned: form.plant_assigned || null,
-        notes: form.notes || null,
+        startDatetime: `${form.date}T${form.time}:00`,
+        endDatetime: `${form.date}T${form.end_time}:00`,
+        crewCount: parseInt(form.crew_count) || 1,
+        foreman: form.foreman || undefined,
+        plantAssigned: form.plant_assigned || undefined,
+        notes: form.notes || undefined,
         type: form.type,
-      },
-    });
-    setShowModal(false);
+      });
+      dispatch({ type: 'ADD_SCHEDULE', entry: toScheduleEntry(result) });
+      setShowModal(false);
+      toast.success('Schedule entry added');
+    } catch {
+      toast.error('Failed to add schedule entry');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, title: string) {
+    if (!confirm(`Delete "${title}"?`)) return;
+    try {
+      await deleteScheduleEntry(id);
+      dispatch({ type: 'REMOVE_SCHEDULE', id });
+      toast.success('Entry deleted');
+    } catch {
+      toast.error('Failed to delete entry');
+    }
   }
 
   return (
@@ -137,9 +155,9 @@ export function SchedulePage() {
         <StatCard label="Active Sites" value={uniqueJobs} sub="Unique jobs this week" />
       </div>
 
-      <Panel 
-        title="Weekly Overview" 
-        noPad 
+      <Panel
+        title="Weekly Overview"
+        noPad
         actions={
           <div className="flex items-center gap-2">
             <button onClick={prevWeek} className="p-1.5 rounded-md hover:bg-[#ece8e3] transition-colors" style={{ color: '#7a7469' }}><ChevronLeft className="w-4 h-4" /></button>
@@ -190,7 +208,7 @@ export function SchedulePage() {
                     {dayEntries.length === 0 ? (
                       <div className="text-xs py-3 text-center italic" style={{ color: '#a8a099' }}>No scheduled entries</div>
                     ) : dayEntries.map(entry => (
-                      <div key={entry.id} className="flex items-start gap-4 p-3.5 rounded-lg transition-colors hover:bg-[#fafaf8] cursor-pointer group" style={{ border: '1px solid #d9d4ce', borderLeft: `3px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
+                      <div key={entry.id} className="flex items-start gap-4 p-3.5 rounded-lg transition-colors hover:bg-[#fafaf8] group" style={{ border: '1px solid #d9d4ce', borderLeft: `3px solid ${TYPE_COLORS[entry.type] ?? '#7a7469'}` }}>
                         <div className="text-sm font-bold font-mono tnum flex-shrink-0 mt-0.5" style={{ color: '#181410' }}>
                           {new Date(entry.start_datetime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                         </div>
@@ -201,7 +219,6 @@ export function SchedulePage() {
                               {entry.type.replace('_', ' ')}
                             </span>
                           </div>
-                          
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs" style={{ color: '#7a7469' }}>
                             {entry.job && (
                               <div className="flex items-center gap-1.5">
@@ -218,15 +235,17 @@ export function SchedulePage() {
                                 <span className="font-mono tnum font-medium" style={{ color: '#4a4540' }}>{entry.crew_count}</span> crew
                               </div>
                             )}
-                            {entry.foreman && (
-                              <div>FM: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.foreman}</span></div>
-                            )}
-                            {entry.plant_assigned && (
-                              <div>Plant: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.plant_assigned}</span></div>
-                            )}
+                            {entry.foreman && <div>FM: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.foreman}</span></div>}
+                            {entry.plant_assigned && <div>Plant: <span className="font-medium" style={{ color: '#4a4540' }}>{entry.plant_assigned}</span></div>}
                           </div>
                         </div>
-                        <ChevronRight className="w-4 h-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity mt-2" style={{ color: '#7a7469' }} />
+                        <button
+                          onClick={e => { e.stopPropagation(); handleDelete(entry.id, entry.title); }}
+                          className="flex-shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50"
+                          style={{ color: '#c13a2a' }}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       </div>
                     ))}
                   </div>
@@ -252,7 +271,6 @@ export function SchedulePage() {
             <Input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="e.g. Drainage excavation — Phase 1" />
             {errors.title && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.title}</p>}
           </Field>
-
           <div className="grid grid-cols-2 gap-4">
             <Field label="Type">
               <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as EntryType }))}>
@@ -270,7 +288,6 @@ export function SchedulePage() {
               </Select>
             </Field>
           </div>
-
           <div className="grid grid-cols-3 gap-4">
             <Field label="Date">
               <Input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="font-mono tnum" />
@@ -282,7 +299,6 @@ export function SchedulePage() {
               <Input type="time" value={form.end_time} onChange={e => setForm(f => ({ ...f, end_time: e.target.value }))} className="font-mono tnum" />
             </Field>
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <Field label="Crew Count">
               <Input type="number" value={form.crew_count} onChange={e => setForm(f => ({ ...f, crew_count: e.target.value }))} min="1" className="font-mono tnum" />
@@ -291,17 +307,16 @@ export function SchedulePage() {
               <Input value={form.foreman} onChange={e => setForm(f => ({ ...f, foreman: e.target.value }))} placeholder="e.g. Dave Walters" />
             </Field>
           </div>
-
           <Field label="Plant Assigned">
             <Input value={form.plant_assigned} onChange={e => setForm(f => ({ ...f, plant_assigned: e.target.value }))} placeholder="e.g. Cat 313 Excavator" />
           </Field>
-
           <Field label="Notes">
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={3} />
           </Field>
-
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add to Schedule</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Adding…' : 'Add to Schedule'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

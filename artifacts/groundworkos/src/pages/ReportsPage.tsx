@@ -8,7 +8,6 @@ import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { formatCurrency, formatDate } from '../lib/utils';
-import { RATE_BOOK } from '../data/mock';
 import { useApp } from '../store/AppContext';
 
 type ReportTab = 'overview' | 'cis' | 'ratebook';
@@ -41,7 +40,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 export function ReportsPage() {
   const { state } = useApp();
-  const { invoices, jobs, cisReturns } = state;
+  const { invoices, jobs, cisReturns, rateBook } = state;
 
   const [tab, setTab] = useState<ReportTab>('overview');
   const [rateCategory, setRateCategory] = useState('all');
@@ -107,8 +106,8 @@ export function ReportsPage() {
 
   const cisPending = cisReturns.filter(r => !r.submitted);
   const cisTotalDeductions = cisReturns.filter(r => r.submitted).reduce((s, r) => s + r.deduction_amount, 0);
-  const rateCategories = ['all', ...Array.from(new Set(RATE_BOOK.map(r => r.category)))];
-  const filteredRates = RATE_BOOK.filter(r => rateCategory === 'all' || r.category === rateCategory);
+  const rateCategories = ['all', ...Array.from(new Set(rateBook.map((r: any) => r.category)))];
+  const filteredRates = rateBook.filter((r: any) => rateCategory === 'all' || r.category === rateCategory);
   const taxMonths = [...new Set(cisReturns.map(r => r.tax_month))].sort().reverse();
 
   const collectionRate = totalRevenue + totalOutstanding > 0 ? Math.round((totalRevenue / (totalRevenue + totalOutstanding)) * 100) : 0;

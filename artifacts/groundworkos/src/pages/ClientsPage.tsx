@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Plus, Search, Mail, Phone, X, ChevronRight, Building2, MapPin } from 'lucide-react';
+import { Plus, Search, Mail, Phone, X, ChevronRight, Building2, MapPin, Trash2 } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency } from '../lib/utils';
 import { useApp } from '../store/AppContext';
+import { createClient, deleteClient } from '@workspace/api-client-react';
+import { toClient } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 
 const emptyForm = {
   company_name: '', contact_name: '', email: '',
@@ -21,6 +24,7 @@ export function ClientsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = clients.filter(c => {
     if (!search) return true;
@@ -44,26 +48,40 @@ export function ClientsPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    dispatch({
-      type: 'ADD_CLIENT',
-      client: {
-        id: crypto.randomUUID(),
-        company_name: form.company_name.trim(),
-        contact_name: form.contact_name || null,
-        email: form.email || null,
-        phone: form.phone || null,
-        address: form.address || null,
-        vat_number: form.vat_number || null,
-        notes: form.notes || null,
-        total_jobs: 0,
-        total_value: 0,
-        created_at: new Date().toISOString(),
-      },
-    });
-    setShowModal(false);
+    setSaving(true);
+    try {
+      const result = await createClient({
+        companyName: form.company_name.trim(),
+        contactName: form.contact_name || undefined,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        address: form.address || undefined,
+        vatNumber: form.vat_number || undefined,
+        notes: form.notes || undefined,
+      });
+      dispatch({ type: 'ADD_CLIENT', client: toClient(result) });
+      setShowModal(false);
+      toast.success(`${result.companyName} added`);
+    } catch {
+      toast.error('Failed to add client');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      await deleteClient(id);
+      dispatch({ type: 'REMOVE_CLIENT', id });
+      setSelected(null);
+      toast.success(`${name} deleted`);
+    } catch {
+      toast.error('Failed to delete client');
+    }
   }
 
   return (
@@ -145,9 +163,14 @@ export function ClientsPage() {
         {selectedClient && (
           <div>
             <Panel actions={
-              <button onClick={() => setSelected(null)} className="hover:bg-[#e8e4dd] p-1.5 rounded transition-colors" style={{ color: '#7a7469' }}>
-                <X className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedClient.id, selectedClient.company_name)} className="p-1.5 rounded transition-colors hover:bg-red-50" style={{ color: '#c13a2a' }} title="Delete client">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} className="hover:bg-[#e8e4dd] p-1.5 rounded transition-colors" style={{ color: '#7a7469' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             }>
               <div className="space-y-6">
                 <div className="flex items-start gap-4">
@@ -187,7 +210,7 @@ export function ClientsPage() {
                         <div className="min-w-0">
                           <div className="text-[10px] font-bold uppercase tracking-widest mb-0.5" style={{ color: '#7a7469' }}>{label}</div>
                           {value ? (
-                            <div className="text-sm font-medium truncate" style={{ color: '#181410', fontFamily: label === 'Email' || label === 'Phone' || label === 'VAT No' ? "'JetBrains Mono', monospace" : "inherit" }}>{value}</div>
+                            <div className="text-sm font-medium truncate" style={{ color: '#181410', fontFamily: label === 'Email' || label === 'Phone' || label === 'VAT No' ? "'JetBrains Mono', monospace" : 'inherit' }}>{value}</div>
                           ) : (
                             <div className="text-sm italic" style={{ color: '#a8a099' }}>Not provided</div>
                           )}
@@ -240,7 +263,9 @@ export function ClientsPage() {
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={2} />
           </Field>
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add Client</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Adding…' : 'Add Client'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

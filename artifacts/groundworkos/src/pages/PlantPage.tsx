@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Truck, AlertTriangle, Wrench, X, ChevronRight } from 'lucide-react';
+import { Plus, Truck, AlertTriangle, Wrench, X, ChevronRight, Trash2 } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
@@ -7,6 +7,9 @@ import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { StatCard } from '../components/ui/StatCard';
 import { cn, formatDate, formatCurrency, daysUntil } from '../lib/utils';
 import { useApp } from '../store/AppContext';
+import { createPlantItem, updatePlantItem, deletePlantItem } from '@workspace/api-client-react';
+import { toPlant } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 import type { PlantStatus } from '../types';
 
 const PLANT_STATUSES: PlantStatus[] = ['available', 'on_site', 'maintenance', 'hired_in', 'disposed'];
@@ -19,13 +22,14 @@ const emptyForm = {
 
 export function PlantPage() {
   const { state, dispatch } = useApp();
-  const { plant, jobs } = state;
+  const { plant } = state;
 
   const [selected, setSelected] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = plant.filter(p => statusFilter === 'all' || p.status === statusFilter);
   const selectedPlant = selected ? plant.find(p => p.id === selected) : null;
@@ -59,35 +63,55 @@ export function PlantPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    dispatch({
-      type: 'ADD_PLANT',
-      plant: {
-        id: crypto.randomUUID(),
+    setSaving(true);
+    try {
+      const result = await createPlantItem({
         name: form.name.trim(),
-        make: form.make || null,
-        model: form.model || null,
-        year: form.year ? parseInt(form.year) : null,
-        registration: form.registration || null,
+        make: form.make || undefined,
+        model: form.model || undefined,
+        year: form.year ? parseInt(form.year) : undefined,
+        registration: form.registration || undefined,
         category: form.category || 'other',
         owned: form.owned,
-        status: 'available' as const,
-        daily_rate: form.daily_rate ? parseFloat(form.daily_rate) : null,
-        current_job_id: null,
-        current_job: null,
-        service_due: form.service_due || null,
-        mot_due: form.mot_due || null,
-        thorough_exam_due: form.thorough_exam_due || null,
-        notes: form.notes || null,
-      },
-    });
-    setShowModal(false);
+        status: 'available',
+        dailyRate: form.daily_rate ? parseFloat(form.daily_rate) : undefined,
+        serviceDue: form.service_due || undefined,
+        motDue: form.mot_due || undefined,
+        thoroughExamDue: form.thorough_exam_due || undefined,
+        notes: form.notes || undefined,
+      });
+      dispatch({ type: 'ADD_PLANT', plant: toPlant(result) });
+      setShowModal(false);
+      toast.success(`${result.name} added to fleet`);
+    } catch {
+      toast.error('Failed to add plant item');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function updateStatus(id: string, status: PlantStatus) {
+  async function updateStatus(id: string, status: PlantStatus) {
     dispatch({ type: 'UPDATE_PLANT', id, updates: { status } });
+    try {
+      await updatePlantItem(id, { status });
+    } catch {
+      toast.error('Failed to update status');
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete ${name}? This cannot be undone.`)) return;
+    try {
+      await deletePlantItem(id);
+      dispatch({ type: 'REMOVE_PLANT', id });
+      setSelected(null);
+      toast.success(`${name} removed from fleet`);
+    } catch {
+      toast.error('Failed to delete plant item');
+    }
   }
 
   return (
@@ -153,12 +177,7 @@ export function PlantPage() {
                       <span className="font-mono tnum">{p.registration ?? 'No Reg'}</span>
                       <span>&middot;</span>
                       <span>{p.make} {p.model}</span>
-                      {p.year && (
-                        <>
-                          <span>&middot;</span>
-                          <span className="font-mono tnum">{p.year}</span>
-                        </>
-                      )}
+                      {p.year && <><span>&middot;</span><span className="font-mono tnum">{p.year}</span></>}
                     </div>
                   </div>
                   <div className="hidden sm:block">
@@ -179,7 +198,14 @@ export function PlantPage() {
 
         {selectedPlant && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} className="p-1 rounded-md transition-colors hover:bg-[#e8e4dd]" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedPlant.id, selectedPlant.name)} className="p-1 rounded-md transition-colors hover:bg-red-50" style={{ color: '#c13a2a' }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} className="p-1 rounded-md transition-colors hover:bg-[#e8e4dd]" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>
+              </div>
+            }>
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -274,7 +300,6 @@ export function PlantPage() {
             <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. 13T Tracked Excavator" />
             {errors.name && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.name}</p>}
           </Field>
-
           <div className="grid grid-cols-3 gap-3">
             <Field label="Make">
               <Input value={form.make} onChange={e => setForm(f => ({ ...f, make: e.target.value }))} placeholder="e.g. Caterpillar" />
@@ -286,7 +311,6 @@ export function PlantPage() {
               <Input type="number" value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))} placeholder="2021" />
             </Field>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Registration">
               <Input value={form.registration} onChange={e => setForm(f => ({ ...f, registration: e.target.value }))} placeholder="e.g. BM21 XYZ" />
@@ -295,7 +319,6 @@ export function PlantPage() {
               <Input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="e.g. Excavator" />
             </Field>
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Daily Rate (£)">
               <Input type="number" value={form.daily_rate} onChange={e => setForm(f => ({ ...f, daily_rate: e.target.value }))} placeholder="0.00" />
@@ -307,7 +330,6 @@ export function PlantPage() {
               </Select>
             </Field>
           </div>
-
           <div>
             <div className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: '#7a7469' }}>Compliance Dates</div>
             <div className="grid grid-cols-2 gap-3">
@@ -322,13 +344,13 @@ export function PlantPage() {
               </Field>
             </div>
           </div>
-
           <Field label="Notes">
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={2} />
           </Field>
-
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add to Fleet</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Adding…' : 'Add to Fleet'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

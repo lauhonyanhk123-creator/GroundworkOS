@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight } from 'lucide-react';
+import { Plus, Search, AlertTriangle, FolderOpen, X, ChevronRight, Trash2 } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
@@ -7,6 +7,9 @@ import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatDate, daysUntil } from '../lib/utils';
 import { useApp } from '../store/AppContext';
+import { createDocument, deleteDocument } from '@workspace/api-client-react';
+import { toDocument } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 import type { DocumentType, DocumentRelatedTo } from '../types';
 
 const TYPE_LABELS: Record<DocumentType, string> = {
@@ -29,15 +32,6 @@ const TYPE_COLORS: Record<DocumentType, string> = {
   other: '#7a7469',
 };
 
-function getDocumentStatus(expiry_date: string | null): 'valid' | 'expiring_soon' | 'expired' {
-  if (!expiry_date) return 'valid';
-  const days = daysUntil(expiry_date);
-  if (days === null) return 'valid';
-  if (days <= 0) return 'expired';
-  if (days <= 30) return 'expiring_soon';
-  return 'valid';
-}
-
 const emptyForm = {
   name: '', type: 'rams' as DocumentType,
   related_to: 'company' as DocumentRelatedTo,
@@ -57,6 +51,7 @@ export function DocumentsPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = documents.filter(d => {
     if (filterType !== 'all' && d.type !== filterType) return false;
@@ -85,27 +80,40 @@ export function DocumentsPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const status = getDocumentStatus(form.expiry_date || null);
-    dispatch({
-      type: 'ADD_DOCUMENT',
-      doc: {
-        id: crypto.randomUUID(),
+    setSaving(true);
+    try {
+      const result = await createDocument({
         name: form.name.trim(),
         type: form.type,
-        related_to: form.related_to,
-        related_id: null,
-        related_name: form.related_name || null,
-        issued_date: form.issued_date || null,
-        expiry_date: form.expiry_date || null,
-        status,
-        notes: form.notes || null,
-        created_at: new Date().toISOString(),
-      },
-    });
-    setShowModal(false);
+        relatedTo: form.related_to,
+        relatedName: form.related_name || undefined,
+        issuedDate: form.issued_date || undefined,
+        expiryDate: form.expiry_date || undefined,
+        notes: form.notes || undefined,
+      });
+      dispatch({ type: 'ADD_DOCUMENT', doc: toDocument(result) });
+      setShowModal(false);
+      toast.success(`${result.name} added`);
+    } catch {
+      toast.error('Failed to add document');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(id: string, name: string) {
+    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+    try {
+      await deleteDocument(id);
+      dispatch({ type: 'REMOVE_DOCUMENT', id });
+      setSelected(null);
+      toast.success(`${name} deleted`);
+    } catch {
+      toast.error('Failed to delete document');
+    }
   }
 
   return (
@@ -151,7 +159,7 @@ export function DocumentsPage() {
             onChange={e => setSearch(e.target.value)}
             className="pl-9 pr-4 py-1.5 rounded-md text-sm w-52 focus:outline-none"
             style={{ backgroundColor: '#fafaf8', border: '1px solid #d9d4ce', color: '#181410' }}
-            onFocus={e => (e.target.style.borderColor = '#e0dbd5')}
+            onFocus={e => (e.target.style.borderColor = '#1b5e78')}
             onBlur={e => (e.target.style.borderColor = '#d9d4ce')}
           />
         </div>
@@ -214,7 +222,14 @@ export function DocumentsPage() {
 
         {selectedDoc && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedDoc.id, selectedDoc.name)} className="p-1 rounded transition-colors hover:bg-red-50" style={{ color: '#c13a2a' }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>
+              </div>
+            }>
               <div className="space-y-5">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
@@ -267,7 +282,6 @@ export function DocumentsPage() {
             <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. RAMS — Drain Installation Plot 4" />
             {errors.name && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{errors.name}</p>}
           </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Document Type">
               <Select value={form.type} onChange={e => setForm(f => ({ ...f, type: e.target.value as DocumentType }))}>
@@ -283,11 +297,9 @@ export function DocumentsPage() {
               </Select>
             </Field>
           </div>
-
           <Field label="Related Name" hint="e.g. Job name, subcontractor name">
             <Input value={form.related_name} onChange={e => setForm(f => ({ ...f, related_name: e.target.value }))} placeholder="e.g. Longbridge Drainage Phase 2" />
           </Field>
-
           <div className="grid grid-cols-2 gap-3">
             <Field label="Issue Date">
               <Input type="date" value={form.issued_date} onChange={e => setForm(f => ({ ...f, issued_date: e.target.value }))} />
@@ -296,13 +308,13 @@ export function DocumentsPage() {
               <Input type="date" value={form.expiry_date} onChange={e => setForm(f => ({ ...f, expiry_date: e.target.value }))} />
             </Field>
           </div>
-
           <Field label="Notes">
             <Textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))} placeholder="Any relevant notes..." rows={2} />
           </Field>
-
           <div className="flex gap-3 pt-2">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Add Document</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Adding…' : 'Add Document'}
+            </Btn>
             <Btn variant="ghost" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>

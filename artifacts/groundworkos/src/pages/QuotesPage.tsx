@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { Plus, Search, Trash2, X, ChevronRight } from 'lucide-react';
+import { Plus, Search, Trash2, X, ChevronRight, Download } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
+import { QuotePDF } from '../lib/pdf/QuotePDF';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { Badge } from '../components/ui/Badge';
 import { Btn } from '../components/ui/Btn';
 import { Modal, Field, Input, Select, Textarea } from '../components/ui/Modal';
 import { cn, formatCurrency, formatDate } from '../lib/utils';
-import { useApp, nextQuoteNumber } from '../store/AppContext';
+import { useApp } from '../store/AppContext';
+import { createQuote, updateQuote, deleteQuote } from '@workspace/api-client-react';
+import { toQuote } from '../lib/apiTransforms';
+import { toast } from 'sonner';
 import type { LineItem } from '../types';
 
 const TABS = [
@@ -36,7 +41,7 @@ const emptyForm = {
 
 export function QuotesPage() {
   const { state, dispatch } = useApp();
-  const { quotes, clients } = state;
+  const { quotes, clients, settings } = state;
 
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
@@ -44,6 +49,7 @@ export function QuotesPage() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   const filtered = quotes.filter(q => {
     if (tab !== 'all' && q.status !== tab) return false;
@@ -95,39 +101,91 @@ export function QuotesPage() {
     return e;
   }
 
-  function handleSubmit() {
+  async function handleSubmit() {
     const e = validate();
     if (Object.keys(e).length) { setErrors(e); return; }
-    const client = clients.find(c => c.id === form.client_id);
-    dispatch({
-      type: 'ADD_QUOTE',
-      quote: {
-        id: crypto.randomUUID(),
-        quote_number: nextQuoteNumber(quotes),
-        client_id: form.client_id,
-        client: client ? { company_name: client.company_name } : null,
-        job_id: null,
+    setSaving(true);
+    try {
+      const validLineItems = form.line_items.filter(li => li.description.trim());
+      const result = await createQuote({
+        clientId: form.client_id,
         title: form.title.trim(),
-        status: 'draft',
+        validUntil: form.valid_until || undefined,
+        notes: form.notes || undefined,
         subtotal,
-        vat_amount: vatAmount,
-        total_amount: total,
-        valid_until: form.valid_until || null,
-        notes: form.notes || null,
-        line_items: form.line_items.filter(li => li.description.trim()),
-        created_at: new Date().toISOString(),
-        sent_at: null,
-      },
-    });
-    setShowModal(false);
+        vatAmount,
+        totalAmount: total,
+        lineItems: validLineItems.map(li => ({
+          id: li.id,
+          description: li.description,
+          quantity: li.quantity,
+          unit: li.unit,
+          unitPrice: li.unit_price,
+          total: li.total,
+        })),
+      });
+      dispatch({ type: 'ADD_QUOTE', quote: toQuote(result) });
+      setShowModal(false);
+      toast.success(`Quote ${result.quoteNumber} created`);
+    } catch {
+      toast.error('Failed to create quote');
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function sendQuote(id: string) {
-    dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: 'sent', sent_at: new Date().toISOString() } });
+  async function sendQuote(id: string) {
+    const sentAt = new Date().toISOString();
+    dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: 'sent', sent_at: sentAt } });
+    try {
+      await updateQuote(id, { status: 'sent', sentAt });
+      toast.success('Quote marked as sent');
+    } catch {
+      toast.error('Failed to update quote');
+    }
   }
 
-  function acceptQuote(id: string) {
+  async function acceptQuote(id: string) {
     dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: 'accepted' } });
+    try {
+      await updateQuote(id, { status: 'accepted' });
+      toast.success('Quote accepted');
+    } catch {
+      toast.error('Failed to update quote');
+    }
+  }
+
+  const [pdfing, setPdfing] = useState(false);
+
+  async function downloadQuotePdf(q: typeof quotes[0]) {
+    setPdfing(true);
+    try {
+      const blob = await pdf(<QuotePDF quote={q} company={settings as any} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${q.quote_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      toast.error('Failed to generate PDF');
+    } finally {
+      setPdfing(false);
+    }
+  }
+
+  async function handleDelete(id: string, quoteNumber: string) {
+    if (!confirm(`Delete quote ${quoteNumber}? This cannot be undone.`)) return;
+    try {
+      await deleteQuote(id);
+      dispatch({ type: 'REMOVE_QUOTE', id });
+      setSelected(null);
+      toast.success(`Quote ${quoteNumber} deleted`);
+    } catch {
+      toast.error('Failed to delete quote');
+    }
   }
 
   const selectedQuote = selected ? quotes.find(q => q.id === selected) : null;
@@ -143,23 +201,9 @@ export function QuotesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard 
-          label="Total Quoted" 
-          value={formatCurrency(quotes.reduce((s, q) => s + q.total_amount, 0))} 
-          sub={`${quotes.length} quotes`} 
-        />
-        <StatCard 
-          label="Accepted Rate" 
-          value={`${acceptedRate}%`} 
-          sub={`${accepted.length} accepted`} 
-          accent 
-        />
-        <StatCard 
-          label="Accepted Value" 
-          value={formatCurrency(accepted.reduce((s, q) => s + q.total_amount, 0))} 
-          sub="converted" 
-          accent 
-        />
+        <StatCard label="Total Quoted" value={formatCurrency(quotes.reduce((s, q) => s + q.total_amount, 0))} sub={`${quotes.length} quotes`} />
+        <StatCard label="Accepted Rate" value={`${acceptedRate}%`} sub={`${accepted.length} accepted`} accent />
+        <StatCard label="Accepted Value" value={formatCurrency(accepted.reduce((s, q) => s + q.total_amount, 0))} sub="converted" accent />
       </div>
 
       <div className="flex items-center justify-between gap-4">
@@ -169,14 +213,10 @@ export function QuotesPage() {
               key={t.id}
               onClick={() => setTab(t.id)}
               className="px-4 py-2.5 text-sm transition-colors relative"
-              style={tab === t.id
-                ? { color: '#181410', fontWeight: 600 }
-                : { color: '#7a7469', fontWeight: 500 }}
+              style={tab === t.id ? { color: '#181410', fontWeight: 600 } : { color: '#7a7469', fontWeight: 500 }}
             >
               {t.label}
-              {tab === t.id && (
-                <div className="absolute bottom-[-1px] left-0 w-full h-[2px]" style={{ backgroundColor: '#1b5e78' }} />
-              )}
+              {tab === t.id && <div className="absolute bottom-[-1px] left-0 w-full h-[2px]" style={{ backgroundColor: '#1b5e78' }} />}
             </button>
           ))}
         </div>
@@ -229,7 +269,16 @@ export function QuotesPage() {
 
         {selectedQuote && (
           <div>
-            <Panel actions={<button onClick={() => setSelected(null)} className="p-1 rounded hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}><X className="w-4 h-4" /></button>}>
+            <Panel actions={
+              <div className="flex items-center gap-1">
+                <button onClick={() => handleDelete(selectedQuote.id, selectedQuote.quote_number)} className="p-1 rounded hover:bg-red-50 transition-colors" style={{ color: '#c13a2a' }}>
+                  <Trash2 className="w-4 h-4" />
+                </button>
+                <button onClick={() => setSelected(null)} className="p-1 rounded hover:bg-[#e8e4dd] transition-colors" style={{ color: '#7a7469' }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            }>
               <div className="space-y-6">
                 <div>
                   <div className="flex items-center justify-between mb-2">
@@ -299,7 +348,9 @@ export function QuotesPage() {
                   {selectedQuote.status === 'sent' && (
                     <Btn size="md" className="w-full justify-center" onClick={() => acceptQuote(selectedQuote.id)}>Mark Accepted</Btn>
                   )}
-                  <Btn variant="outline" size="md" className="w-full justify-center">Download PDF</Btn>
+                  <Btn variant="outline" size="md" className="w-full justify-center" disabled={pdfing} onClick={() => downloadQuotePdf(selectedQuote)}>
+                    <Download className="w-3.5 h-3.5" /> {pdfing ? 'Generating…' : 'Download PDF'}
+                  </Btn>
                 </div>
               </div>
             </Panel>
@@ -376,7 +427,9 @@ export function QuotesPage() {
             </Field>
           </div>
           <div className="flex gap-3 pt-4">
-            <Btn className="flex-1 justify-center" onClick={handleSubmit}>Create Quote</Btn>
+            <Btn className="flex-1 justify-center" onClick={handleSubmit} disabled={saving}>
+              {saving ? 'Creating…' : 'Create Quote'}
+            </Btn>
             <Btn variant="outline" onClick={() => setShowModal(false)}>Cancel</Btn>
           </div>
         </div>
