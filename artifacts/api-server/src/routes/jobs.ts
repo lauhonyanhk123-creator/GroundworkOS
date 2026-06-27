@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, jobsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.post("/jobs", async (req, res) => {
   const id = generateId();
   const jobNumber = await nextSeqNumber("jobs", "GW");
   const [job] = await db.insert(jobsTable).values({ id, jobNumber, ...data }).returning();
+  await logAudit("job", id, "create", { title: data.title, status: data.status }, req);
   res.status(201).json(await withClient(job));
 });
 
@@ -40,10 +42,12 @@ router.patch("/jobs/:id", async (req, res) => {
   const { clientName: _cn, ...data } = req.body;
   const [job] = await db.update(jobsTable).set(data).where(eq(jobsTable.id, req.params.id)).returning();
   if (!job) return res.status(404).json({ error: "Not found" });
+  await logAudit("job", req.params.id, "update", data, req);
   res.json(await withClient(job));
 });
 
 router.delete("/jobs/:id", async (req, res) => {
+  await logAudit("job", req.params.id, "delete", null, req);
   await db.delete(jobsTable).where(eq(jobsTable.id, req.params.id));
   res.status(204).send();
 });

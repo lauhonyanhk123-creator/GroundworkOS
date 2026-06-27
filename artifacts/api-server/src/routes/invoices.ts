@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, invoicesTable, clientsTable, jobsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.post("/invoices", async (req, res) => {
   const id = generateId();
   const invoiceNumber = await nextSeqNumber("invoices", "INV");
   const [inv] = await db.insert(invoicesTable).values({ id, invoiceNumber, ...data }).returning();
+  await logAudit("invoice", id, "create", { invoiceNumber, status: data.status }, req);
   res.status(201).json(await enrichInvoice(inv));
 });
 
@@ -39,10 +41,12 @@ router.patch("/invoices/:id", async (req, res) => {
   const { clientName: _cn, jobTitle: _jt, ...data } = req.body;
   const [inv] = await db.update(invoicesTable).set(data).where(eq(invoicesTable.id, req.params.id)).returning();
   if (!inv) return res.status(404).json({ error: "Not found" });
+  await logAudit("invoice", req.params.id, "update", data, req);
   res.json(await enrichInvoice(inv));
 });
 
 router.delete("/invoices/:id", async (req, res) => {
+  await logAudit("invoice", req.params.id, "delete", null, req);
   await db.delete(invoicesTable).where(eq(invoicesTable.id, req.params.id));
   res.status(204).send();
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Switch, Route, Router as WouterRouter, useLocation, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { ClerkProvider, SignIn, SignUp, Show, useClerk } from "@clerk/react";
@@ -25,6 +25,10 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { PortalPage } from "./pages/PortalPage";
 import { useRole } from "./hooks/useRole";
+import { OnboardingWizard } from "./components/OnboardingWizard";
+import { ImportPage } from "./pages/ImportPage";
+import { AuditLogPage } from "./pages/AuditLogPage";
+import { useApp } from "./store/AppContext";
 
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -220,10 +224,17 @@ function ForemanRedirect({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function AuthenticatedApp() {
+function AppRoutes() {
+  const { state } = useApp();
+  const [wizardDone, setWizardDone] = useState(false);
+
+  const needsOnboarding = state.settingsLoaded && (
+    !state.settings.companyName || state.settings.companyName === 'GroundworkOS Ltd'
+  ) && !wizardDone;
+
   return (
-    <AppProvider>
-      <DataLoader />
+    <>
+      {needsOnboarding && <OnboardingWizard onComplete={() => setWizardDone(true)} />}
       <ForemanRedirect>
         <DashboardLayout>
           <Switch>
@@ -240,6 +251,8 @@ function AuthenticatedApp() {
             <Route path="/timesheets" component={TimesheetsPage} />
             <Route path="/purchase-orders" component={PurchaseOrdersPage} />
             <Route path="/reports" component={ReportsPage} />
+            <Route path="/import" component={ImportPage} />
+            <Route path="/audit" component={AuditLogPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/settings/users" component={UsersPage} />
             <Route>
@@ -251,6 +264,15 @@ function AuthenticatedApp() {
           </Switch>
         </DashboardLayout>
       </ForemanRedirect>
+    </>
+  );
+}
+
+function AuthenticatedApp() {
+  return (
+    <AppProvider>
+      <DataLoader />
+      <AppRoutes />
     </AppProvider>
   );
 }

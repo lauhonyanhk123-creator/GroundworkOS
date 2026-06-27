@@ -20,6 +20,7 @@ import adminRouter from "./admin";
 import timesheetsRouter from "./timesheets";
 import purchaseOrdersRouter from "./purchase_orders";
 import emailRouter from "./email";
+import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(adminRouter);
 router.use(timesheetsRouter);
 router.use(purchaseOrdersRouter);
 router.use(emailRouter);
+router.use(auditRouter);
 
 export default router;

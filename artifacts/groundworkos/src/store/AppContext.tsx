@@ -51,6 +51,7 @@ export interface AppState {
   timesheets: Timesheet[];
   purchaseOrders: PurchaseOrder[];
   settings: CompanySettings;
+  settingsLoaded: boolean;
 }
 
 export type AppAction =
@@ -111,6 +112,7 @@ const initialState: AppState = {
   timesheets: [],
   purchaseOrders: [],
   settings: DEFAULT_SETTINGS,
+  settingsLoaded: false,
 };
 
 function reducer(state: AppState, action: AppAction): AppState {
@@ -126,7 +128,7 @@ function reducer(state: AppState, action: AppAction): AppState {
     case 'INIT_RATE_BOOK': return { ...state, rateBook: action.rateBook };
     case 'INIT_CIS_RETURNS': return { ...state, cisReturns: action.cisReturns };
     case 'INIT_TIMESHEETS': return { ...state, timesheets: action.timesheets };
-    case 'INIT_SETTINGS': return { ...state, settings: { ...state.settings, ...action.settings } };
+    case 'INIT_SETTINGS': return { ...state, settings: { ...state.settings, ...action.settings }, settingsLoaded: true };
     case 'ADD_TIMESHEET': return { ...state, timesheets: [action.timesheet, ...state.timesheets] };
     case 'UPDATE_TIMESHEET': return { ...state, timesheets: state.timesheets.map(t => t.id === action.id ? { ...t, ...action.updates } : t) };
     case 'REMOVE_TIMESHEET': return { ...state, timesheets: state.timesheets.filter(t => t.id !== action.id) };

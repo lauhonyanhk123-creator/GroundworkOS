@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, quotesTable, lineItemsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.post("/quotes", async (req, res) => {
   if (lineItems?.length) {
     await db.insert(lineItemsTable).values(lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({ ...li, quoteId: quote.id })));
   }
+  await logAudit("quote", id, "create", { quoteNumber, status: data.status }, req);
   res.status(201).json(await enrichQuote(quote));
 });
 
@@ -46,10 +48,12 @@ router.patch("/quotes/:id", async (req, res) => {
       await db.insert(lineItemsTable).values(lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({ ...li, quoteId: quote.id })));
     }
   }
+  await logAudit("quote", req.params.id, "update", data, req);
   res.json(await enrichQuote(quote));
 });
 
 router.delete("/quotes/:id", async (req, res) => {
+  await logAudit("quote", req.params.id, "delete", null, req);
   await db.delete(lineItemsTable).where(eq(lineItemsTable.quoteId, req.params.id));
   await db.delete(quotesTable).where(eq(quotesTable.id, req.params.id));
   res.status(204).send();
