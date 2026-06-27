@@ -88,22 +88,26 @@ export function InvoicesPage() {
   }
 
   async function markPaid(id: string) {
+    const prev = invoices.find(i => i.id === id);
     const paidAt = new Date().toISOString();
     dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: 'paid', paid_at: paidAt } });
     try {
       await updateInvoice(id, { status: 'paid', paidAt });
       toast.success('Invoice marked as paid');
     } catch {
+      if (prev) dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: prev.status, paid_at: prev.paid_at } });
       toast.error('Failed to update invoice');
     }
   }
 
   async function markSent(id: string) {
+    const prev = invoices.find(i => i.id === id);
     dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: 'sent' } });
     try {
       await updateInvoice(id, { status: 'sent' });
       toast.success('Invoice marked as sent');
     } catch {
+      if (prev) dispatch({ type: 'UPDATE_INVOICE', id, updates: { status: prev.status } });
       toast.error('Failed to update invoice');
     }
   }

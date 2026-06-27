@@ -94,10 +94,12 @@ export function PlantPage() {
   }
 
   async function updateStatus(id: string, status: PlantStatus) {
+    const prev = plant.find(p => p.id === id);
     dispatch({ type: 'UPDATE_PLANT', id, updates: { status } });
     try {
       await updatePlantItem(id, { status });
     } catch {
+      if (prev) dispatch({ type: 'UPDATE_PLANT', id, updates: { status: prev.status } });
       toast.error('Failed to update status');
     }
   }

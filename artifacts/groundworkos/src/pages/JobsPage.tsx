@@ -109,21 +109,25 @@ export function JobsPage() {
   }
 
   async function updateStatus(id: string, status: JobStatus) {
+    const prev = jobs.find(j => j.id === id);
     dispatch({ type: 'UPDATE_JOB', id, updates: { status } });
     try {
       await updateJob(id, { status });
     } catch {
+      if (prev) dispatch({ type: 'UPDATE_JOB', id, updates: { status: prev.status } });
       toast.error('Failed to update status');
     }
   }
 
   function updateProgress(id: string, progress_percent: number) {
+    const prev = jobs.find(j => j.id === id);
     dispatch({ type: 'UPDATE_JOB', id, updates: { progress_percent } });
     clearTimeout(progressTimer.current);
     progressTimer.current = setTimeout(async () => {
       try {
         await updateJob(id, { progressPercent: progress_percent });
       } catch {
+        if (prev) dispatch({ type: 'UPDATE_JOB', id, updates: { progress_percent: prev.progress_percent } });
         toast.error('Failed to save progress');
       }
     }, 800);

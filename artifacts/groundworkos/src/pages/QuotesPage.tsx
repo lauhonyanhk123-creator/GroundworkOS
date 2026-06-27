@@ -135,22 +135,26 @@ export function QuotesPage() {
   }
 
   async function sendQuote(id: string) {
+    const prev = quotes.find(q => q.id === id);
     const sentAt = new Date().toISOString();
     dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: 'sent', sent_at: sentAt } });
     try {
       await updateQuote(id, { status: 'sent', sentAt });
       toast.success('Quote marked as sent');
     } catch {
+      if (prev) dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: prev.status, sent_at: prev.sent_at } });
       toast.error('Failed to update quote');
     }
   }
 
   async function acceptQuote(id: string) {
+    const prev = quotes.find(q => q.id === id);
     dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: 'accepted' } });
     try {
       await updateQuote(id, { status: 'accepted' });
       toast.success('Quote accepted');
     } catch {
+      if (prev) dispatch({ type: 'UPDATE_QUOTE', id, updates: { status: prev.status } });
       toast.error('Failed to update quote');
     }
   }
