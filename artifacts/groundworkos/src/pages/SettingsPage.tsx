@@ -1,4 +1,5 @@
-import { ShieldCheck, Info } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ShieldCheck, Info, Link2, RefreshCw, CheckCircle, AlertCircle, Unlink, Download } from 'lucide-react';
 import { Panel } from '../components/ui/Panel';
 import { Btn } from '../components/ui/Btn';
 
@@ -32,6 +33,187 @@ function SettingsRow({ label, description, children, isLast }: { label: string; 
     </div>
   );
 }
+
+// ─── Xero Integration Panel ───────────────────────────────────────────────────
+
+type XeroStatus = { connected: false } | { connected: true; tenantName: string | null; connectedAt: string; updatedAt: string };
+type SyncResult = { synced: number; failed: number } | null;
+
+function XeroPanel() {
+  const [status, setStatus] = useState<XeroStatus | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [syncResults, setSyncResults] = useState<Record<string, SyncResult>>({});
+  const [banner, setBanner] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [disconnecting, setDisconnecting] = useState(false);
+
+  async function fetchStatus() {
+    try {
+      const r = await fetch('/api/xero/status');
+      const data = await r.json();
+      setStatus(data);
+    } catch {
+      setStatus({ connected: false });
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    fetchStatus();
+
+    // Handle OAuth callback result from URL params
+    const params = new URLSearchParams(window.location.search);
+    const xeroParam = params.get('xero');
+    const msg = params.get('msg');
+
+    if (xeroParam === 'connected') {
+      setBanner({ type: 'success', message: 'Xero connected successfully.' });
+      // Clean URL without full reload
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+      fetchStatus();
+    } else if (xeroParam === 'error') {
+      setBanner({ type: 'error', message: msg ?? 'Failed to connect to Xero.' });
+      const clean = window.location.pathname;
+      window.history.replaceState({}, '', clean);
+    }
+  }, []);
+
+  async function runSync(key: string, path: string) {
+    setSyncing(key);
+    setSyncResults(r => ({ ...r, [key]: null }));
+    try {
+      const r = await fetch(path, { method: 'POST' });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error ?? 'Sync failed');
+      setSyncResults(prev => ({ ...prev, [key]: data }));
+    } catch (e) {
+      setBanner({ type: 'error', message: String(e) });
+    } finally {
+      setSyncing(null);
+    }
+  }
+
+  async function handleDisconnect() {
+    if (!confirm('This will remove the Xero connection and all sync mapping data. Continue?')) return;
+    setDisconnecting(true);
+    try {
+      await fetch('/api/xero/disconnect', { method: 'DELETE' });
+      setSyncResults({});
+      setBanner({ type: 'success', message: 'Xero disconnected.' });
+      fetchStatus();
+    } catch (e) {
+      setBanner({ type: 'error', message: String(e) });
+    } finally {
+      setDisconnecting(false);
+    }
+  }
+
+  function SyncBtn({ label, syncKey, path, icon }: { label: string; syncKey: string; path: string; icon: React.ReactNode }) {
+    const res = syncResults[syncKey];
+    const busy = syncing === syncKey;
+    return (
+      <div className="flex items-center gap-3">
+        <Btn variant="outline" size="sm" onClick={() => runSync(syncKey, path)} disabled={!!syncing}>
+          {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : icon}
+          {busy ? 'Syncing…' : label}
+        </Btn>
+        {res && (
+          <span className="text-xs font-mono tnum" style={{ color: res.failed > 0 ? '#b56918' : '#2a6e45' }}>
+            {res.synced} synced{res.failed > 0 ? `, ${res.failed} failed` : ''}
+          </span>
+        )}
+      </div>
+    );
+  }
+
+  const connected = status?.connected === true;
+  const tenant = connected ? (status as { connected: true; tenantName: string | null }).tenantName : null;
+  const connectedAt = connected ? (status as { connected: true; connectedAt: string }).connectedAt : null;
+
+  return (
+    <Panel
+      title="Xero Integration"
+      badge={connected ? { label: 'Connected', variant: 'success' } : undefined}
+      noPad
+    >
+      {banner && (
+        <div
+          className="flex items-center gap-3 px-5 py-3 text-sm"
+          style={{
+            backgroundColor: banner.type === 'success' ? '#e8f3f7' : '#fdf2f2',
+            borderBottom: '1px solid #d9d4ce',
+            color: banner.type === 'success' ? '#1b5e78' : '#c13a2a',
+          }}
+        >
+          {banner.type === 'success'
+            ? <CheckCircle className="w-4 h-4 flex-shrink-0" />
+            : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+          <span>{banner.message}</span>
+          <button className="ml-auto text-xs opacity-60 hover:opacity-100" onClick={() => setBanner(null)}>Dismiss</button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="px-5 py-6 text-sm" style={{ color: '#7a7469' }}>Checking connection…</div>
+      ) : !connected ? (
+        <div className="px-5 py-6">
+          <p className="text-sm mb-4" style={{ color: '#4a4540' }}>
+            Connect to Xero to automatically sync your invoices, quotes, and client contacts — no more double-entry.
+          </p>
+          <Btn onClick={() => { window.location.href = '/api/xero/auth'; }}>
+            <Link2 className="w-3.5 h-3.5" />
+            Connect to Xero
+          </Btn>
+          <p className="text-xs mt-3" style={{ color: '#7a7469' }}>
+            You'll be redirected to Xero to authorise access. Make sure your Xero credentials are configured first.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="px-5 py-4" style={{ borderBottom: '1px solid #d9d4ce' }}>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: '#2a6e45' }} />
+              <span className="text-sm font-medium" style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}>
+                {tenant ?? 'Xero Organisation'}
+              </span>
+            </div>
+            {connectedAt && (
+              <p className="text-xs" style={{ color: '#7a7469' }}>
+                Connected {new Date(connectedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+              </p>
+            )}
+          </div>
+
+          <div className="px-5 py-4 space-y-4" style={{ borderBottom: '1px solid #d9d4ce' }}>
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Push to Xero</p>
+            <SyncBtn label="Sync Clients" syncKey="contacts" path="/api/xero/sync/contacts" icon={<RefreshCw className="w-3.5 h-3.5" />} />
+            <SyncBtn label="Sync Invoices" syncKey="invoices" path="/api/xero/sync/invoices" icon={<RefreshCw className="w-3.5 h-3.5" />} />
+            <SyncBtn label="Sync Quotes" syncKey="quotes" path="/api/xero/sync/quotes" icon={<RefreshCw className="w-3.5 h-3.5" />} />
+          </div>
+
+          <div className="px-5 py-4" style={{ borderBottom: '1px solid #d9d4ce' }}>
+            <p className="text-[11px] font-bold uppercase tracking-widest mb-3" style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}>Pull from Xero</p>
+            <SyncBtn label="Pull Payment Status" syncKey="payments" path="/api/xero/pull/payments" icon={<Download className="w-3.5 h-3.5" />} />
+            <p className="text-xs mt-2" style={{ color: '#7a7469' }}>
+              Marks invoices as paid in GroundworkOS when they're marked paid in Xero.
+            </p>
+          </div>
+
+          <div className="px-5 py-4" style={{ backgroundColor: '#f0ede8' }}>
+            <Btn variant="outline" size="sm" onClick={handleDisconnect} disabled={disconnecting}>
+              <Unlink className="w-3.5 h-3.5" />
+              {disconnecting ? 'Disconnecting…' : 'Disconnect Xero'}
+            </Btn>
+          </div>
+        </>
+      )}
+    </Panel>
+  );
+}
+
+// ─── Settings Page ─────────────────────────────────────────────────────────────
 
 export function SettingsPage() {
   return (
@@ -149,6 +331,8 @@ export function SettingsPage() {
           <Btn size="sm">Save Preferences</Btn>
         </div>
       </Panel>
+
+      <XeroPanel />
     </div>
   );
 }

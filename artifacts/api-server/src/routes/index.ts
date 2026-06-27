@@ -10,6 +10,7 @@ import scheduleRouter from "./schedule";
 import plantRouter from "./plant";
 import rateBookRouter from "./rate_book";
 import dashboardRouter from "./dashboard";
+import xeroRouter from "./xero";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(scheduleRouter);
 router.use(plantRouter);
 router.use(rateBookRouter);
 router.use(dashboardRouter);
+router.use(xeroRouter);
 
 export default router;

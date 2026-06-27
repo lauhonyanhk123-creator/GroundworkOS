@@ -30,3 +30,8 @@ externalPort = 8081
 [[ports]]
 localPort = 25421
 externalPort = 80
+
+[userenv]
+
+[userenv.shared]
+XERO_REDIRECT_URI = "https://1a6a123c-c7c4-4a9d-ba99-09ef184f1ba4-00-3lw5lnkr737su.picard.replit.dev/api/xero/callback"

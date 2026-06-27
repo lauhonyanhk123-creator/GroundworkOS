@@ -7,3 +7,4 @@ export * from "./documents";
 export * from "./schedule";
 export * from "./plant";
 export * from "./rate_book";
+export * from "./xero";
