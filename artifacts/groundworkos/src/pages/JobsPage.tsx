@@ -43,7 +43,7 @@ export function JobsPage() {
   const [form, setForm] = useState(emptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
-  const progressTimer = useRef<ReturnType<typeof setTimeout>>();
+  const progressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const filtered = jobs.filter(j => {
     if (activeTab !== 'all' && j.status !== activeTab) return false;
@@ -87,7 +87,7 @@ export function JobsPage() {
         crewCount: form.crew_count ? parseInt(form.crew_count) : undefined,
         nrswaRequired: form.nrswa_required,
         permitNumber: form.permit_number || undefined,
-      });
+      } as any);
       dispatch({ type: 'ADD_JOB', job: toJob(result) });
       setShowModal(false);
       toast.success(`Job ${result.jobNumber} created`);
@@ -122,7 +122,7 @@ export function JobsPage() {
   function updateProgress(id: string, progress_percent: number) {
     const prev = jobs.find(j => j.id === id);
     dispatch({ type: 'UPDATE_JOB', id, updates: { progress_percent } });
-    clearTimeout(progressTimer.current);
+    clearTimeout(progressTimer.current ?? undefined);
     progressTimer.current = setTimeout(async () => {
       try {
         await updateJob(id, { progressPercent: progress_percent });

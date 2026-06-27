@@ -128,7 +128,7 @@ export function SubcontractorsPage() {
           publicLiabilityExpiry: form.public_liability_expiry || undefined,
           cscsCardExpiry: form.cscs_card_expiry || undefined,
           notes: form.notes || undefined,
-        });
+        } as any);
         dispatch({ type: 'ADD_SUBCONTRACTOR', sub: toSubcontractor(result) });
         setShowModal(false);
         toast.success(`${result.companyName} added`);

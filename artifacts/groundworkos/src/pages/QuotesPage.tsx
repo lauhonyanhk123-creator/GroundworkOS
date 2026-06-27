@@ -123,7 +123,7 @@ export function QuotesPage() {
           unitPrice: li.unit_price,
           total: li.total,
         })),
-      });
+      } as any);
       dispatch({ type: 'ADD_QUOTE', quote: toQuote(result) });
       setShowModal(false);
       toast.success(`Quote ${result.quoteNumber} created`);

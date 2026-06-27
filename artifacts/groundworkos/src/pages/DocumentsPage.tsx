@@ -261,7 +261,7 @@ export function DocumentsPage() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-semibold truncate group-hover:text-[#1b5e78] transition-colors" style={{ color: '#181410' }}>{doc.name}</span>
                       {(isExpired || isExpiringSoon) && <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" style={{ color: isExpired ? '#c13a2a' : '#e07b39' }} />}
-                      {doc.file_path && <Paperclip className="w-3 h-3 flex-shrink-0" style={{ color: '#a8a099' }} title="File attached" />}
+                      {doc.file_path && <Paperclip className="w-3 h-3 flex-shrink-0" style={{ color: '#a8a099' }} aria-label="File attached" />}
                     </div>
                     <div className="text-xs" style={{ color: '#7a7469' }}>
                       <span className="font-medium">{TYPE_LABELS[doc.type]}</span>

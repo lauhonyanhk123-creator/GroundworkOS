@@ -82,7 +82,7 @@ export function PlantPage() {
         motDue: form.mot_due || undefined,
         thoroughExamDue: form.thorough_exam_due || undefined,
         notes: form.notes || undefined,
-      });
+      } as any);
       dispatch({ type: 'ADD_PLANT', plant: toPlant(result) });
       setShowModal(false);
       toast.success(`${result.name} added to fleet`);

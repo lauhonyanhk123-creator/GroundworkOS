@@ -113,8 +113,8 @@ export function InvoicePDF({ invoice, company }: Props) {
           <Text style={[S.tableHeaderText, { width: 80, textAlign: 'right' }]}>Amount</Text>
         </View>
 
-        {invoice.line_items && invoice.line_items.length > 0 ? (
-          invoice.line_items.map(li => (
+        {(invoice as any).line_items && (invoice as any).line_items.length > 0 ? (
+          (invoice as any).line_items.map((li: any) => (
             <View key={li.id} style={S.tableRow}>
               <View style={{ flex: 1 }}>
                 <Text style={S.tableCell}>{li.description}</Text>

@@ -93,7 +93,7 @@ export function ClientsPage() {
           address: form.address || undefined,
           vatNumber: form.vat_number || undefined,
           notes: form.notes || undefined,
-        });
+        } as any);
         dispatch({ type: 'ADD_CLIENT', client: toClient(result) });
         setShowModal(false);
         toast.success(`${result.companyName} added`);

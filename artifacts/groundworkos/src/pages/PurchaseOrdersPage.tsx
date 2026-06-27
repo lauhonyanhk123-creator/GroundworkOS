@@ -1,14 +1,16 @@
 import { useState, useMemo } from 'react';
 import {
   ShoppingCart, Plus, Download, X, ChevronRight,
-  Package, Truck, FileCheck, AlertCircle, Search, Pencil, Trash2,
+  Package, Truck, FileCheck, AlertCircle, Search, Pencil, Trash2, FileText,
 } from 'lucide-react';
+import { pdf } from '@react-pdf/renderer';
 import { useApp } from '../store/AppContext';
 import { Btn } from '../components/ui/Btn';
 import { Panel } from '../components/ui/Panel';
 import { StatCard } from '../components/ui/StatCard';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { toPurchaseOrder } from '../lib/apiTransforms';
+import { PurchaseOrderPDF } from '../lib/pdf/PurchaseOrderPDF';
 import { toast } from 'sonner';
 import type { PurchaseOrder, PurchaseOrderStatus } from '../types';
 
@@ -42,7 +44,7 @@ type FormState = typeof EMPTY_FORM;
 
 export function PurchaseOrdersPage() {
   const { state, dispatch } = useApp();
-  const { purchaseOrders, jobs } = state;
+  const { purchaseOrders, jobs, settings } = state;
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PurchaseOrderStatus>('all');
@@ -188,6 +190,22 @@ export function PurchaseOrdersPage() {
       toast.success(`Status → ${STATUS_CONFIG[status].label}`);
     } catch {
       toast.error('Failed to update status');
+    }
+  }
+
+  async function downloadPO(o: PurchaseOrder) {
+    try {
+      const blob = await pdf(<PurchaseOrderPDF po={o} company={settings as any} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${o.po_number}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      toast.error('Failed to generate PDF');
     }
   }
 
@@ -415,6 +433,9 @@ export function PurchaseOrdersPage() {
               </div>
 
               <div className="flex gap-2 pt-3" style={{ borderTop: '1px solid #e8e4dd' }}>
+                <Btn variant="outline" size="sm" onClick={() => downloadPO(selected)} title="Download PDF">
+                  <FileText className="w-3.5 h-3.5" />
+                </Btn>
                 <Btn variant="outline" size="sm" className="flex-1" onClick={e => openEdit(selected, e as any)}>
                   <Pencil className="w-3.5 h-3.5" /> Edit
                 </Btn>

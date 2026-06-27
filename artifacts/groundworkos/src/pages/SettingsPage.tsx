@@ -196,7 +196,7 @@ function XeroPanel() {
   return (
     <Panel
       title="Xero Integration"
-      badge={connected ? { label: 'Connected', variant: 'success' } : undefined}
+      badge={connected ? 'Connected' : undefined}
       noPad
     >
       {banner && (

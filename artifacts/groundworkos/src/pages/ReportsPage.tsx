@@ -139,7 +139,7 @@ export function ReportsPage() {
         const jobInvoices = invoices.filter(i => i.job_id === j.id);
         const invoiced = jobInvoices.reduce((s, i) => s + i.total_amount, 0);
         const collected = jobInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total_amount, 0);
-        const labour = timesheets.filter(t => t.job_id === j.id).reduce((s, t) => s + t.cost, 0);
+        const labour = timesheets.filter(t => t.job_id === j.id).reduce((s, t) => s + (t.cost ?? 0), 0);
         const materials = purchaseOrders.filter(o => o.job_id === j.id).reduce((s, o) => s + o.total_amount, 0);
         const totalCost = labour + materials;
         const contractValue = j.value ?? 0;
@@ -349,7 +349,7 @@ export function ReportsPage() {
           const jobInvoices = invoices.filter(i => i.job_id === j.id);
           const invoiced = jobInvoices.reduce((s, i) => s + i.total_amount, 0);
           const collected = jobInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + i.total_amount, 0);
-          const labour = timesheets.filter(t => t.job_id === j.id).reduce((s, t) => s + t.cost, 0);
+          const labour = timesheets.filter(t => t.job_id === j.id).reduce((s, t) => s + (t.cost ?? 0), 0);
           const materials = purchaseOrders.filter(o => o.job_id === j.id).reduce((s, o) => s + o.total_amount, 0);
           const totalCost = labour + materials;
           const contractValue = j.value ?? 0;

@@ -156,7 +156,7 @@ export function SchedulePage() {
           plantAssigned: form.plant_assigned || undefined,
           notes: form.notes || undefined,
           type: form.type,
-        });
+        } as any);
         dispatch({ type: 'ADD_SCHEDULE', entry: toScheduleEntry(result) });
         setShowModal(false);
         toast.success('Schedule entry added');

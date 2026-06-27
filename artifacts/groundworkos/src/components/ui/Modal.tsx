@@ -41,33 +41,36 @@ interface FieldProps {
   required?: boolean;
   children: ReactNode;
   hint?: string;
+  error?: string;
 }
 
-export function Field({ label, required, children, hint }: FieldProps) {
+export function Field({ label, required, children, hint, error }: FieldProps) {
   return (
     <div>
       <label className="block text-xs font-medium uppercase tracking-widest mb-1.5" style={{ color: '#7a7469', letterSpacing: '0.07em' }}>
         {label}{required && <span style={{ color: '#c13a2a' }}> *</span>}
       </label>
       {children}
-      {hint && <p className="mt-1 text-xs" style={{ color: '#c0bab4' }}>{hint}</p>}
+      {error && <p className="mt-1 text-xs" style={{ color: '#c13a2a' }}>{error}</p>}
+      {hint && !error && <p className="mt-1 text-xs" style={{ color: '#c0bab4' }}>{hint}</p>}
     </div>
   );
 }
 
 const inputCls = 'w-full py-2 px-3 rounded-md text-sm focus:outline-none transition-colors';
 const inputStyle = { backgroundColor: '#ffffff', border: '1px solid #d9d4ce', color: '#181410' };
+const inputErrorStyle = { backgroundColor: '#ffffff', border: '1px solid #c13a2a', color: '#181410' };
 const inputFocusBorder = '#1b5e78';
 const inputBlurBorder = '#d9d4ce';
 
-export function Input({ ...props }: React.InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { error?: boolean }) {
   return (
     <input
       {...props}
       className={cn(inputCls, props.className)}
-      style={inputStyle}
+      style={error ? inputErrorStyle : inputStyle}
       onFocus={e => { (e.target as HTMLInputElement).style.borderColor = inputFocusBorder; props.onFocus?.(e); }}
-      onBlur={e => { (e.target as HTMLInputElement).style.borderColor = inputBlurBorder; props.onBlur?.(e); }}
+      onBlur={e => { (e.target as HTMLInputElement).style.borderColor = error ? '#c13a2a' : inputBlurBorder; props.onBlur?.(e); }}
     />
   );
 }

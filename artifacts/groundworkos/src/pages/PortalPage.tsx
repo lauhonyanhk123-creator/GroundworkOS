@@ -64,8 +64,8 @@ export function PortalPage() {
         const e = await r.json();
         throw new Error(e.error);
       }
-      setOutcome(action);
-      setQuote(prev => prev ? { ...prev, status: action } : prev);
+      setOutcome(action === 'approve' ? 'approved' : 'declined');
+      setQuote(prev => prev ? { ...prev, status: action === 'approve' ? 'accepted' : 'declined' } : prev);
     } catch (e: any) {
       alert(e.message ?? "Something went wrong");
     } finally {

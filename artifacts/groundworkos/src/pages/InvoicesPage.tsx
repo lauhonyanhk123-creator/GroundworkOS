@@ -76,7 +76,7 @@ export function InvoicesPage() {
         issuedDate: form.issued_date,
         dueDate: form.due_date,
         notes: form.notes || undefined,
-      });
+      } as any);
       dispatch({ type: 'ADD_INVOICE', invoice: toInvoice(result) });
       setShowModal(false);
       toast.success(`Invoice ${result.invoiceNumber} created`);

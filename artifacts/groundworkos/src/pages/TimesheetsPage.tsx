@@ -297,7 +297,7 @@ export function TimesheetsPage() {
           <div className="xl:col-span-1">
             <Panel
               title="Entry Details"
-              action={
+              actions={
                 <button onClick={() => setSelected(null)} className="p-1 rounded transition-colors hover:bg-[#eeeae4]" style={{ color: '#7a7469' }}>
                   <X className="w-4 h-4" />
                 </button>
@@ -371,7 +371,7 @@ export function TimesheetsPage() {
       </div>
 
       {showModal && (
-        <Modal title="Log Hours" onClose={() => setShowModal(false)}>
+        <Modal open={showModal} title="Log Hours" onClose={() => setShowModal(false)}>
           <div className="space-y-4">
             <Field label="Worker Name *" error={errors.worker_name}>
               <Input
