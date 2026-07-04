@@ -217,7 +217,10 @@ function LandingPage() {
 function ForemanRedirect({ children }: { children: React.ReactNode }) {
   const role = useRole();
   const [location, setLocation] = useLocation();
-  const FOREMAN_ALLOWED = ["/", "/jobs", "/schedule", "/timesheets"];
+  // "/settings/users" is allowed for foremen too: UsersPage does its own
+  // role gating, and a brand-new deployment has no admin yet, so the first
+  // (default-foreman) user must be able to reach it to self-promote.
+  const FOREMAN_ALLOWED = ["/", "/jobs", "/schedule", "/timesheets", "/settings/users"];
   const blocked = role === "foreman" && !FOREMAN_ALLOWED.some(p => location === p || (p !== "/" && location.startsWith(p)));
 
   // Navigation is a side effect and must not run during render (it triggers a

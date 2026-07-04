@@ -28,6 +28,19 @@ export function UsersPage() {
   const [users, setUsers] = useState<ClerkUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
+  const [bootstrapping, setBootstrapping] = useState(false);
+  const [noAdminYet, setNoAdminYet] = useState(false);
+
+  const checkBootstrap = useCallback(async () => {
+    try {
+      const r = await fetch(`${BASE}/api/admin/bootstrap-status`);
+      if (!r.ok) return;
+      const data = await r.json();
+      setNoAdminYet(!data.adminExists);
+    } catch {
+      // silently ignore; bootstrap banner just won't show
+    }
+  }, []);
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -43,7 +56,31 @@ export function UsersPage() {
     }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    if (isAtLeast(role, "admin")) {
+      fetchUsers();
+    } else {
+      setLoading(false);
+      checkBootstrap();
+    }
+  }, [role, fetchUsers, checkBootstrap]);
+
+  async function handleBootstrap() {
+    setBootstrapping(true);
+    try {
+      const r = await fetch(`${BASE}/api/admin/bootstrap`, { method: "POST" });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "Failed to become admin");
+      toast.success("You're now an admin. Reloading...");
+      await currentUser?.reload();
+      window.location.reload();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to become admin");
+      setNoAdminYet(false);
+    } finally {
+      setBootstrapping(false);
+    }
+  }
 
   async function handleRoleChange(userId: string, newRole: Role) {
     if (userId === currentUser?.id && newRole !== "admin") {
@@ -64,6 +101,36 @@ export function UsersPage() {
   }
 
   if (!isAtLeast(role, "admin")) {
+    if (noAdminYet) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4" style={{ maxWidth: 420, margin: "0 auto", textAlign: "center" }}>
+          <p style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 18, color: "#181410" }}>
+            First-time setup
+          </p>
+          <p style={{ color: "#7a7469", fontSize: 13, fontFamily: "'Inter', sans-serif", lineHeight: 1.5 }}>
+            No admin has been set up yet for this workspace. Since you're the first person here, you can make yourself the admin now.
+          </p>
+          <button
+            onClick={handleBootstrap}
+            disabled={bootstrapping}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 8,
+              backgroundColor: "#1b5e78",
+              color: "#fff",
+              fontFamily: "'Space Grotesk', sans-serif",
+              fontWeight: 600,
+              fontSize: 13,
+              border: "none",
+              cursor: bootstrapping ? "default" : "pointer",
+              opacity: bootstrapping ? 0.6 : 1,
+            }}
+          >
+            {bootstrapping ? "Setting up..." : "Make me admin"}
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
         <p style={{ color: "#7a7469", fontSize: 14, fontFamily: "'Inter', sans-serif" }}>Admin access required</p>
