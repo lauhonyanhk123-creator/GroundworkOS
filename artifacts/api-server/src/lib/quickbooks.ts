@@ -36,9 +36,19 @@ export async function getConnection() {
   return conn ?? null;
 }
 
+let refreshInFlight: Promise<typeof quickbooksConnectionTable.$inferSelect> | null = null;
+
 async function refreshIfNeeded(conn: typeof quickbooksConnectionTable.$inferSelect) {
   if (Date.now() < new Date(conn.expiresAt).getTime() - 5 * 60 * 1000) return conn;
 
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = doRefresh(conn).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefresh(conn: typeof quickbooksConnectionTable.$inferSelect) {
   const r = await fetch(QB_TOKEN_URL, {
     method: "POST",
     headers: { Authorization: basicAuth(), "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },

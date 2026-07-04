@@ -420,6 +420,11 @@ export function SettingsPage() {
     accountNumber: s.accountNumber,
   });
 
+  const [cisSettings, setCisSettings] = useState({
+    taxYearStart: s.taxYearStart,
+    filingReminderDays: s.filingReminderDays,
+  });
+
   const [savingSection, setSavingSection] = useState<string | null>(null);
 
   const prevSettings = useRef(s);
@@ -448,6 +453,10 @@ export function SettingsPage() {
       bankName: s.bankName,
       sortCode: s.sortCode,
       accountNumber: s.accountNumber,
+    });
+    setCisSettings({
+      taxYearStart: s.taxYearStart,
+      filingReminderDays: s.filingReminderDays,
     });
   }, [s]);
 
@@ -627,11 +636,25 @@ export function SettingsPage() {
           </div>
         </div>
         <SettingsRow label="Tax Year Start">
-          <Inp value="6 April" onChange={() => {}} placeholder="" />
+          <Inp
+            value={cisSettings.taxYearStart}
+            onChange={v => setCisSettings(c => ({ ...c, taxYearStart: v }))}
+            placeholder="6 April"
+          />
         </SettingsRow>
         <SettingsRow label="Filing Reminder" description="Days before the 19th" isLast>
-          <Inp value="5" onChange={() => {}} placeholder="5" type="number" isMono />
+          <Inp
+            value={cisSettings.filingReminderDays}
+            onChange={v => setCisSettings(c => ({ ...c, filingReminderDays: v }))}
+            placeholder="5"
+            type="number"
+            isMono
+          />
         </SettingsRow>
+        <SaveBar
+          onSave={() => save('cisSettings', cisSettings)}
+          saving={savingSection === 'cisSettings'}
+        />
       </Panel>
 
       <Panel title="NRSWA / Street Works" noPad>

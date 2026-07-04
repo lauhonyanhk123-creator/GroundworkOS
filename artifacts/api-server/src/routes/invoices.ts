@@ -1,9 +1,12 @@
 import { Router } from "express";
-import { db, invoicesTable, clientsTable, jobsTable } from "@workspace/db";
+import { db, invoicesTable, clientsTable, jobsTable, subcontractorsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { logAudit } from "./audit.js";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
+
+const VAT_RATE = 0.2;
 
 async function enrichInvoice(inv: typeof invoicesTable.$inferSelect) {
   const [client] = inv.clientId
@@ -15,6 +18,33 @@ async function enrichInvoice(inv: typeof invoicesTable.$inferSelect) {
   return { ...inv, clientName: client?.companyName ?? null, jobTitle: job?.title ?? null };
 }
 
+/**
+ * Recompute financial fields server-side instead of trusting client-sent
+ * values. `subtotal` is treated as the source of truth (frontend has no
+ * per-line-item editor for invoices yet); VAT and total are always derived
+ * from it. If the invoice is linked to a subcontractor, the CIS deduction is
+ * derived from that subcontractor's on-file deduction rate rather than any
+ * client-supplied value.
+ */
+async function computeFinancials(data: Record<string, any>) {
+  const subtotal = Math.round((Number(data.subtotal) || 0) * 100) / 100;
+  const vatAmount = Math.round(subtotal * VAT_RATE * 100) / 100;
+  const totalAmount = Math.round((subtotal + vatAmount) * 100) / 100;
+
+  let cisDeduction: number | null = null;
+  if (data.subcontractorId) {
+    const [sub] = await db
+      .select({ cisDeductionRate: subcontractorsTable.cisDeductionRate })
+      .from(subcontractorsTable)
+      .where(eq(subcontractorsTable.id, data.subcontractorId));
+    if (sub) {
+      cisDeduction = Math.round(subtotal * (sub.cisDeductionRate / 100) * 100) / 100;
+    }
+  }
+
+  return { ...data, subtotal, vatAmount, totalAmount, cisDeduction };
+}
+
 router.get("/invoices", async (req, res) => {
   const invoices = await db.select().from(invoicesTable).orderBy(invoicesTable.createdAt);
   const enriched = await Promise.all(invoices.map(enrichInvoice));
@@ -22,12 +52,14 @@ router.get("/invoices", async (req, res) => {
 });
 
 router.post("/invoices", async (req, res) => {
-  const { clientName: _cn, jobTitle: _jt, id: _id, invoiceNumber: _in, ...data } = req.body;
+  const { clientName: _cn, jobTitle: _jt, id: _id, invoiceNumber: _in, vatAmount: _va, totalAmount: _ta, cisDeduction: _cd, ...rest } = req.body;
+  const data = await computeFinancials(rest);
   const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
   const id = generateId();
   const invoiceNumber = await nextSeqNumber("invoices", "INV");
-  const [inv] = await db.insert(invoicesTable).values({ id, invoiceNumber, ...data }).returning();
-  await logAudit("invoice", id, "create", { invoiceNumber, status: data.status }, req);
+  const insertData = { id, invoiceNumber, ...data } as typeof invoicesTable.$inferInsert;
+  const [inv] = await db.insert(invoicesTable).values(insertData).returning();
+  await logAudit("invoice", id, "create", { invoiceNumber, status: (data as any).status }, req);
   res.status(201).json(await enrichInvoice(inv));
 });
 
@@ -38,14 +70,24 @@ router.get("/invoices/:id", async (req, res) => {
 });
 
 router.patch("/invoices/:id", async (req, res) => {
-  const { clientName: _cn, jobTitle: _jt, ...data } = req.body;
+  const { clientName: _cn, jobTitle: _jt, vatAmount: _va, totalAmount: _ta, cisDeduction: _cd, ...rest } = req.body;
+  let data: Record<string, any> = rest;
+  if (rest.subtotal !== undefined || rest.subcontractorId !== undefined) {
+    const [existing] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, req.params.id));
+    if (!existing) return res.status(404).json({ error: "Not found" });
+    data = await computeFinancials({
+      subtotal: rest.subtotal ?? existing.subtotal,
+      subcontractorId: rest.subcontractorId !== undefined ? rest.subcontractorId : existing.subcontractorId,
+      ...rest,
+    });
+  }
   const [inv] = await db.update(invoicesTable).set(data).where(eq(invoicesTable.id, req.params.id)).returning();
   if (!inv) return res.status(404).json({ error: "Not found" });
   await logAudit("invoice", req.params.id, "update", data, req);
   return res.json(await enrichInvoice(inv));
 });
 
-router.delete("/invoices/:id", async (req, res) => {
+router.delete("/invoices/:id", requireRole("manager"), async (req, res) => {
   await logAudit("invoice", req.params.id, "delete", null, req);
   await db.delete(invoicesTable).where(eq(invoicesTable.id, req.params.id));
   res.status(204).send();

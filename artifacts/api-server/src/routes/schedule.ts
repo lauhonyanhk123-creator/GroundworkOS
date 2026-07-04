@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, scheduleEntriesTable, jobsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.patch("/schedule/:id", async (req, res) => {
   return res.json(await enrichEntry(entry));
 });
 
-router.delete("/schedule/:id", async (req, res) => {
+router.delete("/schedule/:id", requireRole("manager"), async (req, res) => {
   await db.delete(scheduleEntriesTable).where(eq(scheduleEntriesTable.id, req.params.id));
   res.status(204).send();
 });

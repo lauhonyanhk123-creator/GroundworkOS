@@ -218,10 +218,16 @@ function ForemanRedirect({ children }: { children: React.ReactNode }) {
   const role = useRole();
   const [location, setLocation] = useLocation();
   const FOREMAN_ALLOWED = ["/", "/jobs", "/schedule", "/timesheets"];
-  if (role === "foreman" && !FOREMAN_ALLOWED.some(p => location === p || (p !== "/" && location.startsWith(p)))) {
-    setLocation("/");
-    return null;
-  }
+  const blocked = role === "foreman" && !FOREMAN_ALLOWED.some(p => location === p || (p !== "/" && location.startsWith(p)));
+
+  // Navigation is a side effect and must not run during render (it triggers a
+  // parent state update while this component is still rendering, which React
+  // flags and can leave the redirect in an inconsistent state).
+  useEffect(() => {
+    if (blocked) setLocation("/");
+  }, [blocked, setLocation]);
+
+  if (blocked) return null;
   return <>{children}</>;
 }
 

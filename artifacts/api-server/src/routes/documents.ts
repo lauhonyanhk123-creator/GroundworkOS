@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, documentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.patch("/documents/:id", async (req, res) => {
   return res.json(doc);
 });
 
-router.delete("/documents/:id", async (req, res) => {
+router.delete("/documents/:id", requireRole("manager"), async (req, res) => {
   await db.delete(documentsTable).where(eq(documentsTable.id, req.params.id));
   res.status(204).send();
 });

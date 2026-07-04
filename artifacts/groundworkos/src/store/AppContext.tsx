@@ -17,6 +17,8 @@ export interface CompanySettings {
   bankName: string;
   sortCode: string;
   accountNumber: string;
+  taxYearStart: string;
+  filingReminderDays: string;
 }
 
 export const DEFAULT_SETTINGS: CompanySettings = {
@@ -35,6 +37,8 @@ export const DEFAULT_SETTINGS: CompanySettings = {
   bankName: '',
   sortCode: '',
   accountNumber: '',
+  taxYearStart: '6 April',
+  filingReminderDays: '5',
 };
 
 export interface AppState {

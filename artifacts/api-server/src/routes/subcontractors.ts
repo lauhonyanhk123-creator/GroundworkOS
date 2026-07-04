@@ -1,15 +1,36 @@
 import { Router } from "express";
 import { db, subcontractorsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { getUserRole, requireRole } from "../lib/auth.js";
 
 const router = Router();
+
+// Fields any user may edit about a subcontractor's own record.
+const SELF_SERVICE_FIELDS = [
+  "companyName",
+  "contactName",
+  "email",
+  "phone",
+  "trade",
+  "nrswaCardNumber",
+  "nrswaExpiry",
+  "publicLiabilityExpiry",
+  "cscsCardExpiry",
+  "address",
+  "notes",
+  "active",
+] as const;
+
+// Compliance-sensitive fields that control CIS verification/deduction —
+// only an admin should be able to change these.
+const ADMIN_ONLY_FIELDS = ["cisStatus", "cisDeductionRate", "utrNumber"] as const;
 
 router.get("/subcontractors", async (req, res) => {
   const subs = await db.select().from(subcontractorsTable).orderBy(subcontractorsTable.companyName);
   res.json(subs);
 });
 
-router.post("/subcontractors", async (req, res) => {
+router.post("/subcontractors", requireRole("manager"), async (req, res) => {
   const { id: _id, ...data } = req.body;
   const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
@@ -24,12 +45,25 @@ router.get("/subcontractors/:id", async (req, res) => {
 });
 
 router.patch("/subcontractors/:id", async (req, res) => {
-  const [sub] = await db.update(subcontractorsTable).set(req.body).where(eq(subcontractorsTable.id, req.params.id)).returning();
+  const role = await getUserRole(req);
+  const requestedFields = Object.keys(req.body);
+  const touchesAdminOnly = requestedFields.some((f) => (ADMIN_ONLY_FIELDS as readonly string[]).includes(f));
+  if (touchesAdminOnly && role !== "admin") {
+    return res.status(403).json({ error: "Forbidden: admin role required to change CIS status, deduction rate, or UTR" });
+  }
+
+  const allowed = role === "admin" ? [...SELF_SERVICE_FIELDS, ...ADMIN_ONLY_FIELDS] : SELF_SERVICE_FIELDS;
+  const data: Record<string, unknown> = {};
+  for (const field of requestedFields) {
+    if ((allowed as readonly string[]).includes(field)) data[field] = req.body[field];
+  }
+
+  const [sub] = await db.update(subcontractorsTable).set(data).where(eq(subcontractorsTable.id, req.params.id)).returning();
   if (!sub) return res.status(404).json({ error: "Not found" });
   return res.json(sub);
 });
 
-router.delete("/subcontractors/:id", async (req, res) => {
+router.delete("/subcontractors/:id", requireRole("manager"), async (req, res) => {
   await db.delete(subcontractorsTable).where(eq(subcontractorsTable.id, req.params.id));
   res.status(204).send();
 });

@@ -31,9 +31,19 @@ export async function getConnection() {
   return conn ?? null;
 }
 
+let refreshInFlight: Promise<typeof sageConnectionTable.$inferSelect> | null = null;
+
 async function refreshIfNeeded(conn: typeof sageConnectionTable.$inferSelect) {
   if (Date.now() < new Date(conn.expiresAt).getTime() - 5 * 60 * 1000) return conn;
 
+  if (refreshInFlight) return refreshInFlight;
+  refreshInFlight = doRefresh(conn).finally(() => {
+    refreshInFlight = null;
+  });
+  return refreshInFlight;
+}
+
+async function doRefresh(conn: typeof sageConnectionTable.$inferSelect) {
   const { id, secret } = creds();
   const r = await fetch(SAGE_TOKEN_URL, {
     method: "POST",

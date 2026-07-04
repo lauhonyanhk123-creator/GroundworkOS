@@ -7,3 +7,5 @@
 - [GroundworkOS role system](groundworkos-roles.md) — Clerk publicMetadata.role: admin/manager/foreman; useRole hook in hooks/useRole.ts; nav filtered in DashboardLayout; foreman redirect in ForemanRedirect in App.tsx
 - [GroundworkOS DB migrations](groundworkos-db-migrations.md) — drizzle-kit push requires TTY for interactive prompts; use executeSql (code_execution) to apply columns directly when push hangs on ALTER TABLE
 - [Object storage setup quirks](object-storage-quirks.md) — api-server needs zod installed explicitly; pnpm override $react fails if react not in root package.json; React 19 already satisfies Uppy v5 peer dep >=19 so no override needed
+- [Express 5 typed middleware params](express5-typed-middleware.md) — untyped RequestHandler factories passed as extra middleware break route param typing; make the factory generic over P/ResBody/ReqBody/ReqQuery
+- [Clerk test-auth role limits](clerk-test-auth-roles.md) — testClerkAuth signup can't set custom publicMetadata; new test users default to lowest role, so role-gated e2e tests need a different verification path

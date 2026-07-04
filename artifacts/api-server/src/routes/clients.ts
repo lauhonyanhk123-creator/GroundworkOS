@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, clientsTable, jobsTable } from "@workspace/db";
 import { eq, sql } from "drizzle-orm";
 import { logAudit } from "./audit.js";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -57,7 +58,7 @@ router.patch("/clients/:id", async (req, res) => {
   return res.json({ ...client, totalJobs: 0, totalValue: 0 });
 });
 
-router.delete("/clients/:id", async (req, res) => {
+router.delete("/clients/:id", requireRole("manager"), async (req, res) => {
   await logAudit("client", req.params.id, "delete", null, req);
   await db.delete(clientsTable).where(eq(clientsTable.id, req.params.id));
   res.status(204).send();
