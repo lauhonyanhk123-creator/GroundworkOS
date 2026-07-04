@@ -13,6 +13,9 @@ import plantRouter from "./plant";
 import rateBookRouter from "./rate_book";
 import dashboardRouter from "./dashboard";
 import xeroRouter from "./xero";
+import quickbooksRouter from "./quickbooks";
+import sageRouter from "./sage";
+import freeagentRouter from "./freeagent";
 import settingsRouter from "./settings";
 import cisRouter from "./cis";
 import portalRouter from "./portal";
@@ -24,7 +27,14 @@ import auditRouter from "./audit";
 
 const router: IRouter = Router();
 
-const PUBLIC_PATHS = ["/health", "/xero/callback", "/portal"];
+const PUBLIC_PATHS = [
+  "/health",
+  "/xero/callback",
+  "/quickbooks/callback",
+  "/sage/callback",
+  "/freeagent/callback",
+  "/portal",
+];
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (PUBLIC_PATHS.some((p) => req.path === p || req.path.startsWith(p + "/"))) {
@@ -54,6 +64,9 @@ router.use(plantRouter);
 router.use(rateBookRouter);
 router.use(dashboardRouter);
 router.use(xeroRouter);
+router.use(quickbooksRouter);
+router.use(sageRouter);
+router.use(freeagentRouter);
 router.use(settingsRouter);
 router.use(cisRouter);
 router.use(portalRouter);

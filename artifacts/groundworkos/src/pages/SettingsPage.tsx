@@ -81,15 +81,54 @@ function SaveBar({ onSave, saving }: { onSave: () => void; saving: boolean }) {
   );
 }
 
-// ─── Xero Integration Panel ───────────────────────────────────────────────────
+// ─── Accounting Integration Panel (Xero / QuickBooks / Sage / FreeAgent) ─────
 
-type XeroStatus =
+type ProviderStatus =
   | { connected: false }
-  | { connected: true; tenantName: string | null; connectedAt: string; updatedAt: string };
+  | { connected: true; orgName: string | null; connectedAt: string; updatedAt: string };
 type SyncResult = { synced: number; failed: number } | null;
 
-function XeroPanel() {
-  const [status, setStatus] = useState<XeroStatus | null>(null);
+type AccountingProviderConfig = {
+  key: string;
+  label: string;
+  orgNameField: string;
+  orgFallback: string;
+  description: string;
+};
+
+const ACCOUNTING_PROVIDERS: AccountingProviderConfig[] = [
+  {
+    key: 'xero',
+    label: 'Xero',
+    orgNameField: 'tenantName',
+    orgFallback: 'Xero Organisation',
+    description: 'Connect to Xero to automatically sync your invoices, quotes, and client contacts — no more double-entry.',
+  },
+  {
+    key: 'quickbooks',
+    label: 'QuickBooks',
+    orgNameField: 'companyName',
+    orgFallback: 'QuickBooks Company',
+    description: 'Connect to QuickBooks Online to sync your invoices, estimates, and customer contacts automatically.',
+  },
+  {
+    key: 'sage',
+    label: 'Sage',
+    orgNameField: 'businessName',
+    orgFallback: 'Sage Business',
+    description: 'Connect to Sage Accounting to sync your sales invoices, quotes, and contacts automatically.',
+  },
+  {
+    key: 'freeagent',
+    label: 'FreeAgent',
+    orgNameField: 'companyName',
+    orgFallback: 'FreeAgent Company',
+    description: 'Connect to FreeAgent to sync your invoices, estimates, and contacts automatically.',
+  },
+];
+
+function AccountingProviderPanel({ provider }: { provider: AccountingProviderConfig }) {
+  const [status, setStatus] = useState<ProviderStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState<string | null>(null);
   const [syncResults, setSyncResults] = useState<Record<string, SyncResult>>({});
@@ -98,9 +137,18 @@ function XeroPanel() {
 
   async function fetchStatus() {
     try {
-      const r = await fetch('/api/xero/status');
+      const r = await fetch(`/api/${provider.key}/status`);
       const data = await r.json();
-      setStatus(data);
+      if (data.connected) {
+        setStatus({
+          connected: true,
+          orgName: data[provider.orgNameField] ?? null,
+          connectedAt: data.connectedAt,
+          updatedAt: data.updatedAt,
+        });
+      } else {
+        setStatus({ connected: false });
+      }
     } catch {
       setStatus({ connected: false });
     } finally {
@@ -111,17 +159,18 @@ function XeroPanel() {
   useEffect(() => {
     fetchStatus();
     const params = new URLSearchParams(window.location.search);
-    const xeroParam = params.get('xero');
+    const providerParam = params.get(provider.key);
     const msg = params.get('msg');
 
-    if (xeroParam === 'connected') {
-      setBanner({ type: 'success', message: 'Xero connected successfully.' });
+    if (providerParam === 'connected') {
+      setBanner({ type: 'success', message: `${provider.label} connected successfully.` });
       window.history.replaceState({}, '', window.location.pathname);
       fetchStatus();
-    } else if (xeroParam === 'error') {
-      setBanner({ type: 'error', message: msg ?? 'Failed to connect to Xero.' });
+    } else if (providerParam === 'error') {
+      setBanner({ type: 'error', message: msg ?? `Failed to connect to ${provider.label}.` });
       window.history.replaceState({}, '', window.location.pathname);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function runSync(key: string, path: string) {
@@ -140,12 +189,12 @@ function XeroPanel() {
   }
 
   async function handleDisconnect() {
-    if (!confirm('This will remove the Xero connection and all sync mapping data. Continue?')) return;
+    if (!confirm(`This will remove the ${provider.label} connection and all sync mapping data. Continue?`)) return;
     setDisconnecting(true);
     try {
-      await fetch('/api/xero/disconnect', { method: 'DELETE' });
+      await fetch(`/api/${provider.key}/disconnect`, { method: 'DELETE' });
       setSyncResults({});
-      setBanner({ type: 'success', message: 'Xero disconnected.' });
+      setBanner({ type: 'success', message: `${provider.label} disconnected.` });
       fetchStatus();
     } catch (e) {
       setBanner({ type: 'error', message: String(e) });
@@ -186,16 +235,12 @@ function XeroPanel() {
   }
 
   const connected = status?.connected === true;
-  const tenant = connected
-    ? (status as { connected: true; tenantName: string | null }).tenantName
-    : null;
-  const connectedAt = connected
-    ? (status as { connected: true; connectedAt: string }).connectedAt
-    : null;
+  const orgName = connected ? (status as { orgName: string | null }).orgName : null;
+  const connectedAt = connected ? (status as { connectedAt: string }).connectedAt : null;
 
   return (
     <Panel
-      title="Xero Integration"
+      title={`${provider.label} Integration`}
       badge={connected ? 'Connected' : undefined}
       noPad
     >
@@ -230,16 +275,15 @@ function XeroPanel() {
       ) : !connected ? (
         <div className="px-5 py-6">
           <p className="text-sm mb-4" style={{ color: '#4a4540' }}>
-            Connect to Xero to automatically sync your invoices, quotes, and client contacts — no
-            more double-entry.
+            {provider.description}
           </p>
-          <Btn onClick={() => { window.location.href = '/api/xero/auth'; }}>
+          <Btn onClick={() => { window.location.href = `/api/${provider.key}/auth`; }}>
             <Link2 className="w-3.5 h-3.5" />
-            Connect to Xero
+            Connect to {provider.label}
           </Btn>
           <p className="text-xs mt-3" style={{ color: '#7a7469' }}>
-            You'll be redirected to Xero to authorise access. Make sure your Xero credentials are
-            configured first.
+            You'll be redirected to {provider.label} to log in and authorise access with your own
+            {' '}{provider.label} account.
           </p>
         </div>
       ) : (
@@ -254,7 +298,7 @@ function XeroPanel() {
                 className="text-sm font-medium"
                 style={{ color: '#181410', fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                {tenant ?? 'Xero Organisation'}
+                {orgName ?? provider.orgFallback}
               </span>
             </div>
             {connectedAt && (
@@ -277,24 +321,24 @@ function XeroPanel() {
               className="text-[11px] font-bold uppercase tracking-widest mb-3"
               style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Push to Xero
+              Push to {provider.label}
             </p>
             <SyncBtn
               label="Sync Clients"
               syncKey="contacts"
-              path="/api/xero/sync/contacts"
+              path={`/api/${provider.key}/sync/contacts`}
               icon={<RefreshCw className="w-3.5 h-3.5" />}
             />
             <SyncBtn
               label="Sync Invoices"
               syncKey="invoices"
-              path="/api/xero/sync/invoices"
+              path={`/api/${provider.key}/sync/invoices`}
               icon={<RefreshCw className="w-3.5 h-3.5" />}
             />
             <SyncBtn
               label="Sync Quotes"
               syncKey="quotes"
-              path="/api/xero/sync/quotes"
+              path={`/api/${provider.key}/sync/quotes`}
               icon={<RefreshCw className="w-3.5 h-3.5" />}
             />
           </div>
@@ -304,16 +348,16 @@ function XeroPanel() {
               className="text-[11px] font-bold uppercase tracking-widest mb-3"
               style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}
             >
-              Pull from Xero
+              Pull from {provider.label}
             </p>
             <SyncBtn
               label="Pull Payment Status"
               syncKey="payments"
-              path="/api/xero/pull/payments"
+              path={`/api/${provider.key}/pull/payments`}
               icon={<Download className="w-3.5 h-3.5" />}
             />
             <p className="text-xs mt-2" style={{ color: '#7a7469' }}>
-              Marks invoices as paid in GroundworkOS when they're marked paid in Xero.
+              Marks invoices as paid in GroundworkOS when they're marked paid in {provider.label}.
             </p>
           </div>
 
@@ -325,7 +369,7 @@ function XeroPanel() {
               disabled={disconnecting}
             >
               <Unlink className="w-3.5 h-3.5" />
-              {disconnecting ? 'Disconnecting…' : 'Disconnect Xero'}
+              {disconnecting ? 'Disconnecting…' : `Disconnect ${provider.label}`}
             </Btn>
           </div>
         </>
@@ -627,7 +671,9 @@ export function SettingsPage() {
         />
       </Panel>
 
-      <XeroPanel />
+      {ACCOUNTING_PROVIDERS.map(provider => (
+        <AccountingProviderPanel key={provider.key} provider={provider} />
+      ))}
     </div>
   );
 }

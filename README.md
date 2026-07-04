@@ -23,7 +23,7 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 
 - **Jobs** — full lifecycle from enquiry to completion, with progress tracking and site details
 - **Quotes** — line-item quotes with PDF export and client email sending
-- **Invoices** — CIS-aware invoicing with PDF export and Xero sync
+- **Invoices** — CIS-aware invoicing with PDF export and accounting sync (Xero, QuickBooks, Sage, FreeAgent)
 - **Schedule** — crew and plant scheduling calendar
 - **Clients & Subcontractors** — full contact management with CIS verification status
 - **Documents** — compliance document tracking with expiry alerts (RAMS, insurance, permits)
@@ -34,7 +34,7 @@ Manage jobs, CIS compliance, quotes, invoices, plant, subcontractors, timesheets
 - **CIS300 Export** — HMRC-formatted CSV per tax month, ready for submission
 - **Audit Trail** — every create/update/delete recorded with full change history
 - **Client Portal** — shareable quote approval links for clients
-- **Xero Integration** — sync contacts, invoices, quotes and pull payments
+- **Accounting Integrations** — sync contacts, invoices and quotes, and pull payment status, with Xero, QuickBooks Online, Sage Accounting, or FreeAgent (self-service OAuth — the client connects with their own accounting login, no API keys required)
 - **CSV Import** — bulk import clients and jobs from spreadsheet
 - **Role-based access** — Admin / Manager / Foreman permission levels
 - **Onboarding wizard** — guided company setup on first login
@@ -68,7 +68,25 @@ RESEND_API_KEY=re_...
 # Xero (optional)
 XERO_CLIENT_ID=...
 XERO_CLIENT_SECRET=...
+XERO_REDIRECT_URI=...
+
+# QuickBooks Online (optional)
+QUICKBOOKS_CLIENT_ID=...
+QUICKBOOKS_CLIENT_SECRET=...
+QUICKBOOKS_REDIRECT_URI=...
+
+# Sage Accounting (optional)
+SAGE_CLIENT_ID=...
+SAGE_CLIENT_SECRET=...
+SAGE_REDIRECT_URI=...
+
+# FreeAgent (optional)
+FREEAGENT_CLIENT_ID=...
+FREEAGENT_CLIENT_SECRET=...
+FREEAGENT_REDIRECT_URI=...
 ```
+
+Each accounting integration is optional and independent — set only the credentials for the providers this client actually uses. Every provider uses self-service OAuth: the client logs in with their own accounting software account and authorises access, so you never need to obtain or hold their accounting API keys.
 
 ### Install & Run
 
@@ -124,7 +142,7 @@ Roles are stored in Clerk `publicMetadata.role`. Set via the **Settings → User
 3. Refresh the app — full sidebar now visible
 4. Go to **Settings** and complete your company details (name, address, VAT number, bank details)
 5. Invite any additional users and set their roles from **Settings → Users**
-6. (Optional) Connect Xero from **Settings → Xero Integration**
+6. (Optional) Connect an accounting provider from **Settings → [Provider] Integration** (Xero, QuickBooks, Sage, or FreeAgent)
 7. (Optional) Add `RESEND_API_KEY` secret to enable email sending for quotes and invoices
 
 ---
