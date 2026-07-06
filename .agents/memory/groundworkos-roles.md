@@ -5,8 +5,10 @@ description: How roles work in GroundworkOS — Clerk publicMetadata, hook, nav 
 
 Roles are stored in Clerk `user.publicMetadata.role` as one of: `"admin" | "manager" | "foreman"`.
 
+**Default role for users with no explicit `publicMetadata.role`: `"admin"`** (changed from `"foreman"`). Set in BOTH frontend `useRole.ts` and backend `lib/auth.ts` `getUserRole` + `admin.ts` `requireAdmin`/user-list mapping — all four must stay in sync or the UI and API disagree (e.g. UI shows admin screens but `/admin/*` returns 403). An explicitly-set role always takes precedence over the default. **Why:** user wanted every new signup to have full access out of the box (single-company deployment, trusted team). Consequence: the bootstrap "Make me admin" screen and `adminExists()` path are now effectively dead (everyone is admin by default); to create a limited user you must explicitly PATCH their role to manager/foreman.
+
 **Hook**: `artifacts/groundworkos/src/hooks/useRole.ts`
-- `useRole()` returns the current user's role (defaults to `"foreman"` if unset)
+- `useRole()` returns the current user's role (defaults to `"admin"` if unset)
 - `isAtLeast(role, min)` checks rank (admin=2, manager=1, foreman=0)
 - `ROLE_LABELS` maps to display strings
 

@@ -28,7 +28,10 @@ async function requireAdmin(req: any, res: any): Promise<boolean> {
     return false;
   }
   const user = await clerkClient.users.getUser(userId);
-  if ((user.publicMetadata?.role as string) !== "admin") {
+  // Users with no explicit role default to admin; only an explicitly-set
+  // non-admin role is rejected here.
+  const claimedRole = user.publicMetadata?.role as string | undefined;
+  if (claimedRole && claimedRole !== "admin") {
     res.status(403).json({ error: "Forbidden: admin role required" });
     return false;
   }
@@ -46,7 +49,7 @@ router.get("/admin/users", async (req, res) => {
       firstName: u.firstName,
       lastName: u.lastName,
       email: u.emailAddresses[0]?.emailAddress ?? null,
-      role: (u.publicMetadata?.role as string) ?? "foreman",
+      role: (u.publicMetadata?.role as string) ?? "admin",
       imageUrl: u.imageUrl,
       createdAt: new Date(u.createdAt).toISOString(),
       lastSignInAt: u.lastSignInAt ? new Date(u.lastSignInAt).toISOString() : null,

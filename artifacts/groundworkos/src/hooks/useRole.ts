@@ -6,9 +6,11 @@ const ROLE_RANKS: Record<Role, number> = { admin: 2, manager: 1, foreman: 0 };
 
 export function useRole(): Role {
   const { user } = useUser();
-  const raw = (user?.publicMetadata?.role as string) ?? "foreman";
+  // New users have no role set yet: default them to admin so the first
+  // person(s) to sign up have full access out of the box.
+  const raw = (user?.publicMetadata?.role as string) ?? "admin";
   if (raw === "admin" || raw === "manager" || raw === "foreman") return raw;
-  return "foreman";
+  return "admin";
 }
 
 export function isAtLeast(role: Role, min: Role): boolean {

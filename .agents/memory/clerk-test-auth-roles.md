@@ -3,7 +3,9 @@ name: Clerk test-auth role limits
 description: testClerkAuth-created users can't be given a specific role/publicMetadata, which breaks e2e tests of role-gated routes
 ---
 
-**Problem**: When using `runTest({ testClerkAuth: true, ... })` with a test plan step like `[Clerk Auth] Sign in as {..., publicMetadata: {role: "admin"}}`, the custom `publicMetadata` is not actually applied. New test users come out with whatever role the app defaults unknown/new users to (in GroundworkOS: `"foreman"`, the lowest rank) — because Clerk's self-serve signup flow doesn't accept arbitrary metadata, and the app itself only lets an *existing* admin promote another user's role via a backend endpoint.
+**Problem**: When using `runTest({ testClerkAuth: true, ... })` with a test plan step like `[Clerk Auth] Sign in as {..., publicMetadata: {role: "admin"}}`, the custom `publicMetadata` is not actually applied. New test users come out with whatever role the app defaults unknown/new users to — because Clerk's self-serve signup flow doesn't accept arbitrary metadata, and the app itself only lets an *existing* admin promote another user's role via a backend endpoint.
+
+**Note (GroundworkOS-specific, as of this change):** the app now defaults roleless users to `"admin"` (not `"foreman"`), so fresh test signups come out as admin. The role-gating limitations below still apply generically — to test a *low*-privilege path in GroundworkOS now, you must explicitly assign a `manager`/`foreman` role rather than relying on the default.
 
 **Why**: Custom `publicMetadata` on a Clerk user can only be set via the Clerk backend/admin API, not through client-side signup. Test-harness programmatic sign-in goes through the same signup surface, so it inherits this limitation. This is a test-infrastructure/app-bootstrap constraint, not a bug in role-gating code — if a fresh test user is redirected away from an admin/manager-only page, that is the role gate working correctly.
 

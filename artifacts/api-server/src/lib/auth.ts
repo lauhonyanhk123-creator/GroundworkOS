@@ -19,14 +19,16 @@ export async function getUserRole(req: Request): Promise<Role> {
 
   const auth = getAuth(req);
   const userId: string | undefined = (req as any).userId ?? (auth as any)?.userId;
-  let role: Role = "foreman";
+  // Users with no explicit role default to admin, so brand-new signups have
+  // full access out of the box. An explicitly-set role always takes precedence.
+  let role: Role = "admin";
   if (userId) {
     try {
       const user = await clerkClient.users.getUser(userId);
       const claimed = user.publicMetadata?.role;
       if (isRole(claimed)) role = claimed;
     } catch {
-      // fall back to least-privileged role if Clerk lookup fails
+      // fall back to the default role if Clerk lookup fails
     }
   }
   (req as any)._role = role;
