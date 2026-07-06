@@ -31,10 +31,10 @@ function mapCisReturn(row: Record<string, unknown>, idx: number): CISReturn {
 export function DataLoader() {
   const { dispatch } = useApp();
 
-  const { data: clients } = useGetClients();
-  const { data: jobs } = useGetJobs();
-  const { data: quotes } = useGetQuotes();
-  const { data: invoices } = useGetInvoices();
+  const { data: clients, isLoading: clientsLoading } = useGetClients();
+  const { data: jobs, isLoading: jobsLoading } = useGetJobs();
+  const { data: quotes, isLoading: quotesLoading } = useGetQuotes();
+  const { data: invoices, isLoading: invoicesLoading } = useGetInvoices();
   const { data: subcontractors } = useGetSubcontractors();
   const { data: documents } = useGetDocuments();
   const { data: schedule } = useGetSchedule();
@@ -76,6 +76,12 @@ export function DataLoader() {
   useEffect(() => {
     if (rateBook) dispatch({ type: 'INIT_RATE_BOOK', rateBook });
   }, [rateBook, dispatch]);
+
+  useEffect(() => {
+    if (!clientsLoading && !jobsLoading && !quotesLoading && !invoicesLoading) {
+      dispatch({ type: 'SET_LOADED' });
+    }
+  }, [clientsLoading, jobsLoading, quotesLoading, invoicesLoading, dispatch]);
 
   useEffect(() => {
     const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';

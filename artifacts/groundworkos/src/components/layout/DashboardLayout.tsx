@@ -11,6 +11,7 @@ import { useAlerts } from '../../hooks/useAlerts';
 import { GlobalSearch } from '../ui/GlobalSearch';
 import { useUser, useClerk } from '@clerk/react';
 import { useRole, isAtLeast, type Role } from '../../hooks/useRole';
+import { useApp } from '../../store/AppContext';
 
 const ALL_NAV = [
   { name: 'Dashboard',       href: '/',               icon: LayoutDashboard, minRole: 'foreman' as Role },
@@ -47,7 +48,28 @@ const ALERT_ICONS = {
   plant:    Wrench,
 };
 
+function InitialLoadingState() {
+  return (
+    <div className="flex flex-col items-center justify-center" style={{ minHeight: '50vh' }}>
+      <div
+        className="w-8 h-8 rounded-full animate-spin"
+        style={{
+          border: '3px solid #d9d4ce',
+          borderTopColor: '#1b5e78',
+        }}
+      />
+      <p
+        className="mt-4 text-[11px] font-bold uppercase tracking-widest"
+        style={{ color: '#7a7469', fontFamily: "'Space Grotesk', sans-serif" }}
+      >
+        Loading workspace…
+      </p>
+    </div>
+  );
+}
+
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { state } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [bellOpen, setBellOpen] = useState(false);
@@ -279,7 +301,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         </header>
 
         <main className="flex-1 overflow-auto p-4 sm:p-6">
-          {children}
+          {state.isLoading ? <InitialLoadingState /> : children}
         </main>
       </div>
 

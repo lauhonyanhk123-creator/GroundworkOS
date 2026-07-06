@@ -28,6 +28,7 @@ import { useRole } from "./hooks/useRole";
 import { OnboardingWizard } from "./components/OnboardingWizard";
 import { ImportPage } from "./pages/ImportPage";
 import { AuditLogPage } from "./pages/AuditLogPage";
+import NotFound from "./pages/not-found";
 import { DeployPage } from "./pages/DeployPage";
 import { useApp } from "./store/AppContext";
 
@@ -291,12 +292,7 @@ function AppRoutes() {
             <Route path="/deploy" component={DeployPage} />
             <Route path="/settings" component={SettingsPage} />
             <Route path="/settings/users" component={UsersPage} />
-            <Route>
-              <div className="flex flex-col items-center justify-center min-h-[50vh] gap-4">
-                <div style={{ fontFamily: "'Space Grotesk', sans-serif", color: "#1b5e78", fontSize: 60, fontWeight: 700 }}>404</div>
-                <p style={{ color: "#7a7469", fontSize: 14 }}>Page not found</p>
-              </div>
-            </Route>
+            <Route component={NotFound} />
           </Switch>
         </DashboardLayout>
       </ForemanRedirect>

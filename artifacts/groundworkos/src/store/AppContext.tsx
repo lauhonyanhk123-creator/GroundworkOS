@@ -56,9 +56,11 @@ export interface AppState {
   purchaseOrders: PurchaseOrder[];
   settings: CompanySettings;
   settingsLoaded: boolean;
+  isLoading: boolean;
 }
 
 export type AppAction =
+  | { type: 'SET_LOADED' }
   | { type: 'INIT_JOBS'; jobs: Job[] }
   | { type: 'INIT_QUOTES'; quotes: Quote[] }
   | { type: 'INIT_INVOICES'; invoices: Invoice[] }
@@ -118,10 +120,12 @@ const initialState: AppState = {
   purchaseOrders: [],
   settings: DEFAULT_SETTINGS,
   settingsLoaded: false,
+  isLoading: true,
 };
 
 function reducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
+    case 'SET_LOADED': return { ...state, isLoading: false };
     case 'INIT_JOBS': return { ...state, jobs: action.jobs };
     case 'INIT_QUOTES': return { ...state, quotes: action.quotes };
     case 'INIT_INVOICES': return { ...state, invoices: action.invoices };
