@@ -1,6 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import * as sage from "../lib/sage.js";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -11,7 +12,7 @@ function cleanStates() {
   for (const [k, t] of oauthStates) if (t < cutoff) oauthStates.delete(k);
 }
 
-router.get("/sage/status", async (_req, res) => {
+router.get("/sage/status", requireRole("admin"), async (_req, res) => {
   try {
     const conn = await sage.getConnection();
     if (!conn) return res.json({ connected: false });
@@ -26,7 +27,7 @@ router.get("/sage/status", async (_req, res) => {
   }
 });
 
-router.get("/sage/auth", (req, res) => {
+router.get("/sage/auth", requireRole("admin"), (req, res) => {
   try {
     cleanStates();
     const state = crypto.randomBytes(16).toString("hex");
@@ -61,7 +62,7 @@ router.get("/sage/callback", async (req, res) => {
   }
 });
 
-router.delete("/sage/disconnect", async (_req, res) => {
+router.delete("/sage/disconnect", requireRole("admin"), async (_req, res) => {
   try {
     await sage.disconnect();
     res.json({ disconnected: true });
@@ -70,7 +71,7 @@ router.delete("/sage/disconnect", async (_req, res) => {
   }
 });
 
-router.post("/sage/sync/contacts", async (_req, res) => {
+router.post("/sage/sync/contacts", requireRole("admin"), async (_req, res) => {
   try {
     const results = await sage.syncAllContacts();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -81,7 +82,7 @@ router.post("/sage/sync/contacts", async (_req, res) => {
   }
 });
 
-router.post("/sage/sync/invoices", async (_req, res) => {
+router.post("/sage/sync/invoices", requireRole("admin"), async (_req, res) => {
   try {
     const results = await sage.syncAllInvoices();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -92,7 +93,7 @@ router.post("/sage/sync/invoices", async (_req, res) => {
   }
 });
 
-router.post("/sage/sync/quotes", async (_req, res) => {
+router.post("/sage/sync/quotes", requireRole("admin"), async (_req, res) => {
   try {
     const results = await sage.syncAllQuotes();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -103,7 +104,7 @@ router.post("/sage/sync/quotes", async (_req, res) => {
   }
 });
 
-router.post("/sage/pull/payments", async (_req, res) => {
+router.post("/sage/pull/payments", requireRole("admin"), async (_req, res) => {
   try {
     const result = await sage.pullPayments();
     res.json(result);

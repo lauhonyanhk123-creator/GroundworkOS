@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db, timesheetsTable, jobsTable } from "@workspace/db";
 import { eq, desc } from "drizzle-orm";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -26,6 +27,7 @@ router.post("/timesheets", async (req, res) => {
   const dayRate = data.dayRate ? Number(data.dayRate) : null;
   const cost = dayRate != null ? Math.round(((hoursWorked / 8) * dayRate) * 100) / 100 : null;
   const [row] = await db.insert(timesheetsTable).values({ id, ...data, hoursWorked, dayRate, cost }).returning();
+  await logAudit("timesheet", id, "create", { jobId: data.jobId, workDate: data.workDate }, req);
   res.status(201).json({ ...row, jobNumber: null, jobTitle: null });
 });
 
@@ -44,10 +46,12 @@ router.patch("/timesheets/:id", async (req, res) => {
   }
   const [row] = await db.update(timesheetsTable).set(updates).where(eq(timesheetsTable.id, req.params.id)).returning();
   if (!row) return res.status(404).json({ error: "Not found" });
+  await logAudit("timesheet", req.params.id, "update", updates, req);
   return res.json({ ...row, jobNumber: null, jobTitle: null });
 });
 
 router.delete("/timesheets/:id", async (req, res) => {
+  await logAudit("timesheet", req.params.id, "delete", null, req);
   await db.delete(timesheetsTable).where(eq(timesheetsTable.id, req.params.id));
   res.status(204).send();
 });

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import * as xero from "../lib/xero.js";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -14,7 +15,7 @@ function cleanStates() {
 
 // ─── Status ──────────────────────────────────────────────────────────────────
 
-router.get("/xero/status", async (_req, res) => {
+router.get("/xero/status", requireRole("admin"), async (_req, res) => {
   try {
     const conn = await xero.getConnection();
     if (!conn) return res.json({ connected: false });
@@ -31,7 +32,7 @@ router.get("/xero/status", async (_req, res) => {
 
 // ─── OAuth ───────────────────────────────────────────────────────────────────
 
-router.get("/xero/auth", (req, res) => {
+router.get("/xero/auth", requireRole("admin"), (req, res) => {
   try {
     cleanStates();
     const state = crypto.randomBytes(16).toString("hex");
@@ -72,7 +73,7 @@ router.get("/xero/callback", async (req, res) => {
 
 // ─── Disconnect ───────────────────────────────────────────────────────────────
 
-router.delete("/xero/disconnect", async (_req, res) => {
+router.delete("/xero/disconnect", requireRole("admin"), async (_req, res) => {
   try {
     await xero.disconnect();
     res.json({ disconnected: true });
@@ -83,7 +84,7 @@ router.delete("/xero/disconnect", async (_req, res) => {
 
 // ─── Sync endpoints ───────────────────────────────────────────────────────────
 
-router.post("/xero/sync/contacts", async (_req, res) => {
+router.post("/xero/sync/contacts", requireRole("admin"), async (_req, res) => {
   try {
     const results = await xero.syncAllContacts();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -94,7 +95,7 @@ router.post("/xero/sync/contacts", async (_req, res) => {
   }
 });
 
-router.post("/xero/sync/invoices", async (_req, res) => {
+router.post("/xero/sync/invoices", requireRole("admin"), async (_req, res) => {
   try {
     const results = await xero.syncAllInvoices();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -105,7 +106,7 @@ router.post("/xero/sync/invoices", async (_req, res) => {
   }
 });
 
-router.post("/xero/sync/quotes", async (_req, res) => {
+router.post("/xero/sync/quotes", requireRole("admin"), async (_req, res) => {
   try {
     const results = await xero.syncAllQuotes();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -116,7 +117,7 @@ router.post("/xero/sync/quotes", async (_req, res) => {
   }
 });
 
-router.post("/xero/pull/payments", async (_req, res) => {
+router.post("/xero/pull/payments", requireRole("admin"), async (_req, res) => {
   try {
     const result = await xero.pullPayments();
     res.json(result);

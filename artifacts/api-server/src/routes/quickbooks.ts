@@ -1,6 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import * as quickbooks from "../lib/quickbooks.js";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -11,7 +12,7 @@ function cleanStates() {
   for (const [k, t] of oauthStates) if (t < cutoff) oauthStates.delete(k);
 }
 
-router.get("/quickbooks/status", async (_req, res) => {
+router.get("/quickbooks/status", requireRole("admin"), async (_req, res) => {
   try {
     const conn = await quickbooks.getConnection();
     if (!conn) return res.json({ connected: false });
@@ -26,7 +27,7 @@ router.get("/quickbooks/status", async (_req, res) => {
   }
 });
 
-router.get("/quickbooks/auth", (req, res) => {
+router.get("/quickbooks/auth", requireRole("admin"), (req, res) => {
   try {
     cleanStates();
     const state = crypto.randomBytes(16).toString("hex");
@@ -62,7 +63,7 @@ router.get("/quickbooks/callback", async (req, res) => {
   }
 });
 
-router.delete("/quickbooks/disconnect", async (_req, res) => {
+router.delete("/quickbooks/disconnect", requireRole("admin"), async (_req, res) => {
   try {
     await quickbooks.disconnect();
     res.json({ disconnected: true });
@@ -71,7 +72,7 @@ router.delete("/quickbooks/disconnect", async (_req, res) => {
   }
 });
 
-router.post("/quickbooks/sync/contacts", async (_req, res) => {
+router.post("/quickbooks/sync/contacts", requireRole("admin"), async (_req, res) => {
   try {
     const results = await quickbooks.syncAllContacts();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -82,7 +83,7 @@ router.post("/quickbooks/sync/contacts", async (_req, res) => {
   }
 });
 
-router.post("/quickbooks/sync/invoices", async (_req, res) => {
+router.post("/quickbooks/sync/invoices", requireRole("admin"), async (_req, res) => {
   try {
     const results = await quickbooks.syncAllInvoices();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -93,7 +94,7 @@ router.post("/quickbooks/sync/invoices", async (_req, res) => {
   }
 });
 
-router.post("/quickbooks/sync/quotes", async (_req, res) => {
+router.post("/quickbooks/sync/quotes", requireRole("admin"), async (_req, res) => {
   try {
     const results = await quickbooks.syncAllQuotes();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -104,7 +105,7 @@ router.post("/quickbooks/sync/quotes", async (_req, res) => {
   }
 });
 
-router.post("/quickbooks/pull/payments", async (_req, res) => {
+router.post("/quickbooks/pull/payments", requireRole("admin"), async (_req, res) => {
   try {
     const result = await quickbooks.pullPayments();
     res.json(result);

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import crypto from "crypto";
 import * as freeagent from "../lib/freeagent.js";
+import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -11,7 +12,7 @@ function cleanStates() {
   for (const [k, t] of oauthStates) if (t < cutoff) oauthStates.delete(k);
 }
 
-router.get("/freeagent/status", async (_req, res) => {
+router.get("/freeagent/status", requireRole("admin"), async (_req, res) => {
   try {
     const conn = await freeagent.getConnection();
     if (!conn) return res.json({ connected: false });
@@ -26,7 +27,7 @@ router.get("/freeagent/status", async (_req, res) => {
   }
 });
 
-router.get("/freeagent/auth", (req, res) => {
+router.get("/freeagent/auth", requireRole("admin"), (req, res) => {
   try {
     cleanStates();
     const state = crypto.randomBytes(16).toString("hex");
@@ -61,7 +62,7 @@ router.get("/freeagent/callback", async (req, res) => {
   }
 });
 
-router.delete("/freeagent/disconnect", async (_req, res) => {
+router.delete("/freeagent/disconnect", requireRole("admin"), async (_req, res) => {
   try {
     await freeagent.disconnect();
     res.json({ disconnected: true });
@@ -70,7 +71,7 @@ router.delete("/freeagent/disconnect", async (_req, res) => {
   }
 });
 
-router.post("/freeagent/sync/contacts", async (_req, res) => {
+router.post("/freeagent/sync/contacts", requireRole("admin"), async (_req, res) => {
   try {
     const results = await freeagent.syncAllContacts();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -81,7 +82,7 @@ router.post("/freeagent/sync/contacts", async (_req, res) => {
   }
 });
 
-router.post("/freeagent/sync/invoices", async (_req, res) => {
+router.post("/freeagent/sync/invoices", requireRole("admin"), async (_req, res) => {
   try {
     const results = await freeagent.syncAllInvoices();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -92,7 +93,7 @@ router.post("/freeagent/sync/invoices", async (_req, res) => {
   }
 });
 
-router.post("/freeagent/sync/quotes", async (_req, res) => {
+router.post("/freeagent/sync/quotes", requireRole("admin"), async (_req, res) => {
   try {
     const results = await freeagent.syncAllQuotes();
     const synced = results.filter((r) => !("error" in r)).length;
@@ -103,7 +104,7 @@ router.post("/freeagent/sync/quotes", async (_req, res) => {
   }
 });
 
-router.post("/freeagent/pull/payments", async (_req, res) => {
+router.post("/freeagent/pull/payments", requireRole("admin"), async (_req, res) => {
   try {
     const result = await freeagent.pullPayments();
     res.json(result);

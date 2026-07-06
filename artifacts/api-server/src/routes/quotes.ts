@@ -37,18 +37,23 @@ router.post("/quotes", async (req, res) => {
   const totals = lineItems?.length ? computeTotalsFromLineItems(lineItems) : { subtotal: 0, vatAmount: 0, totalAmount: 0 };
   const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
   const id = generateId();
-  const quoteNumber = await nextSeqNumber("quotes", "QT");
-  const [quote] = await db.insert(quotesTable).values({ id, quoteNumber, ...data, ...totals }).returning();
-  if (lineItems?.length) {
-    await db.insert(lineItemsTable).values(
-      lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({
-        ...li,
-        quoteId: quote.id,
-        total: Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) / 100,
-      }))
-    );
-  }
-  await logAudit("quote", id, "create", { quoteNumber, status: data.status }, req);
+
+  const quote = await db.transaction(async (tx) => {
+    const quoteNumber = await nextSeqNumber("quotes", "QT", tx);
+    const [inserted] = await tx.insert(quotesTable).values({ id, quoteNumber, ...data, ...totals }).returning();
+    if (lineItems?.length) {
+      await tx.insert(lineItemsTable).values(
+        lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({
+          ...li,
+          quoteId: inserted.id,
+          total: Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) / 100,
+        }))
+      );
+    }
+    return inserted;
+  });
+
+  await logAudit("quote", id, "create", { quoteNumber: quote.quoteNumber, status: data.status }, req);
   res.status(201).json(await enrichQuote(quote));
 });
 
@@ -63,20 +68,26 @@ router.patch("/quotes/:id", async (req, res) => {
   const totals = lineItems !== undefined
     ? (lineItems.length ? computeTotalsFromLineItems(lineItems) : { subtotal: 0, vatAmount: 0, totalAmount: 0 })
     : {};
-  const [quote] = await db.update(quotesTable).set({ ...data, ...totals }).where(eq(quotesTable.id, req.params.id)).returning();
-  if (!quote) return res.status(404).json({ error: "Not found" });
-  if (lineItems !== undefined) {
-    await db.delete(lineItemsTable).where(eq(lineItemsTable.quoteId, quote.id));
-    if (lineItems.length) {
-      await db.insert(lineItemsTable).values(
-        lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({
-          ...li,
-          quoteId: quote.id,
-          total: Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) / 100,
-        }))
-      );
+
+  const quote = await db.transaction(async (tx) => {
+    const [updated] = await tx.update(quotesTable).set({ ...data, ...totals }).where(eq(quotesTable.id, req.params.id)).returning();
+    if (!updated) return null;
+    if (lineItems !== undefined) {
+      await tx.delete(lineItemsTable).where(eq(lineItemsTable.quoteId, updated.id));
+      if (lineItems.length) {
+        await tx.insert(lineItemsTable).values(
+          lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({
+            ...li,
+            quoteId: updated.id,
+            total: Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) / 100,
+          }))
+        );
+      }
     }
-  }
+    return updated;
+  });
+  if (!quote) return res.status(404).json({ error: "Not found" });
+
   await logAudit("quote", req.params.id, "update", data, req);
   return res.json(await enrichQuote(quote));
 });

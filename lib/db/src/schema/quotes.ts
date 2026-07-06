@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const quotesTable = pgTable("quotes", {
   id: text("id").primaryKey(),
-  quoteNumber: text("quote_number").notNull(),
+  quoteNumber: text("quote_number").notNull().unique(),
   clientId: text("client_id"),
   jobId: text("job_id"),
   title: text("title"),

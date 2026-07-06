@@ -46,8 +46,8 @@ export function OnboardingWizard({ onComplete }: Props) {
     if (!form.companyName.trim()) { toast.error('Company name is required'); return; }
     setSaving(true);
     try {
-      await fetch(`${BASE}/api/settings/company`, {
-        method: 'PATCH',
+      const r = await fetch(`${BASE}/api/settings/company`, {
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           companyName: form.companyName.trim(),
@@ -65,6 +65,7 @@ export function OnboardingWizard({ onComplete }: Props) {
           accountNumber: form.accountNumber.trim(),
         }),
       });
+      if (!r.ok) throw new Error('Failed to save company settings');
       dispatch({ type: 'INIT_SETTINGS', settings: {
         companyName: form.companyName.trim(),
         companyNumber: form.companyNumber.trim(),

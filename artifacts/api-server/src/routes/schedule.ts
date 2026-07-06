@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, scheduleEntriesTable, jobsTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -36,6 +37,7 @@ router.post("/schedule", async (req, res) => {
   const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
   const [entry] = await db.insert(scheduleEntriesTable).values({ id, ...data }).returning();
+  await logAudit("schedule_entry", id, "create", { jobId: data.jobId, title: data.title }, req);
   res.status(201).json(await enrichEntry(entry));
 });
 
@@ -43,10 +45,12 @@ router.patch("/schedule/:id", async (req, res) => {
   const { jobNumber: _jn, jobTitle: _jt, clientName: _cn, ...data } = req.body;
   const [entry] = await db.update(scheduleEntriesTable).set(data).where(eq(scheduleEntriesTable.id, req.params.id)).returning();
   if (!entry) return res.status(404).json({ error: "Not found" });
+  await logAudit("schedule_entry", req.params.id, "update", data, req);
   return res.json(await enrichEntry(entry));
 });
 
 router.delete("/schedule/:id", requireRole("manager"), async (req, res) => {
+  await logAudit("schedule_entry", req.params.id, "delete", null, req);
   await db.delete(scheduleEntriesTable).where(eq(scheduleEntriesTable.id, req.params.id));
   res.status(204).send();
 });

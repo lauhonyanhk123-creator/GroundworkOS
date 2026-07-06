@@ -85,7 +85,7 @@ export function DataLoader() {
         if (!Array.isArray(rows)) return;
         dispatch({ type: 'INIT_PURCHASE_ORDERS', purchaseOrders: rows.map(toPurchaseOrder) });
       })
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load purchase orders:', err));
   }, [dispatch]);
 
   useEffect(() => {
@@ -96,28 +96,30 @@ export function DataLoader() {
         if (!Array.isArray(rows)) return;
         dispatch({ type: 'INIT_TIMESHEETS', timesheets: rows.map(toTimesheet) });
       })
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load timesheets:', err));
   }, [dispatch]);
 
   useEffect(() => {
-    fetch('/api/cis/returns')
+    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
+    fetch(`${BASE}/api/cis/returns`)
       .then(r => r.json())
       .then((rows: Record<string, unknown>[]) => {
         if (!Array.isArray(rows)) return;
         dispatch({ type: 'INIT_CIS_RETURNS', cisReturns: rows.map(mapCisReturn) });
       })
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load CIS returns:', err));
   }, [dispatch]);
 
   useEffect(() => {
-    fetch('/api/settings/company')
+    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
+    fetch(`${BASE}/api/settings/company`)
       .then(r => r.json())
       .then(data => {
         if (data && typeof data === 'object') {
           dispatch({ type: 'INIT_SETTINGS', settings: data });
         }
       })
-      .catch(() => {});
+      .catch((err) => console.error('Failed to load company settings:', err));
   }, [dispatch]);
 
   return null;

@@ -11,7 +11,7 @@ function getUserId(req: any): string | null {
 }
 
 /** True if any user in the workspace already has the "admin" role. */
-async function adminExists(): Promise<boolean> {
+export async function adminExists(): Promise<boolean> {
   const response = await clerkClient.users.getUserList({ limit: 500 });
   return response.data.some((u) => (u.publicMetadata?.role as string) === "admin");
 }

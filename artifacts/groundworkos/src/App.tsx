@@ -230,7 +230,25 @@ function ForemanRedirect({ children }: { children: React.ReactNode }) {
     if (blocked) setLocation("/");
   }, [blocked, setLocation]);
 
-  if (blocked) return null;
+  // Render a visible placeholder instead of null while the redirect effect
+  // fires, so blocked routes never show a bare blank/white page.
+  if (blocked) {
+    return (
+      <div
+        style={{
+          minHeight: "60vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "#7a7469",
+          fontFamily: "'Inter', sans-serif",
+          fontSize: 14,
+        }}
+      >
+        Redirecting…
+      </div>
+    );
+  }
   return <>{children}</>;
 }
 

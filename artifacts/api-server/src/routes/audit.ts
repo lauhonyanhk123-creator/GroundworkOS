@@ -10,7 +10,7 @@ const router = Router();
 export async function logAudit(
   entityType: string,
   entityId: string,
-  action: "create" | "update" | "delete",
+  action: "create" | "update" | "delete" | (string & {}),
   changes: Record<string, any> | null,
   req: Request
 ) {

@@ -27,7 +27,7 @@ router.get("/cis/returns", requireRole("manager"), async (_req, res) => {
     res.json((rows as any).rows ?? rows);
   } catch (err) {
     console.error("CIS returns query failed:", err);
-    res.json([]);
+    res.status(500).json({ error: "Failed to load CIS returns" });
   }
 });
 

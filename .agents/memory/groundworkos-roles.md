@@ -18,6 +18,9 @@ Roles are stored in Clerk `user.publicMetadata.role` as one of: `"admin" | "mana
 
 **Route guard**: `ForemanRedirect` component in `App.tsx`
 - Redirects foremen to `/` if they navigate to a restricted path
+- Navigation must happen in a `useEffect` (calling `setLocation` during render throws a React warning), but while `blocked` is true and the effect hasn't fired yet, render a visible placeholder (e.g. "Redirecting…") instead of `null` — returning `null` produces a real bare blank/white page for a frame, which e2e tests (correctly) flag as a bug even though it "self-heals".
+
+**Bootstrap RBAC exception pattern**: routes needed by the very first user before any admin/manager exists (e.g. `PUT /settings/company` for onboarding) must bypass the normal `requireRole()` gate when `!(await adminExists())`, mirroring `POST /admin/bootstrap`. Without this, a fresh deployment's first (default-foreman) user can see the onboarding wizard (GET is open) but silently can't save it (PUT is manager-gated) — a chicken-and-egg lockout.
 
 **Users page**: `/settings/users` (admin only)
 - Lists Clerk users via `GET /api/admin/users`

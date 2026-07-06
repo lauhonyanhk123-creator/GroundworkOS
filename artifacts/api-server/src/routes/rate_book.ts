@@ -1,26 +1,31 @@
 import { Router } from "express";
 import { db, rateBookTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireRole } from "../lib/auth.js";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
-router.get("/rate-book", async (req, res) => {
+router.get("/rate-book", requireRole("manager"), async (req, res) => {
   const entries = await db.select().from(rateBookTable).orderBy(rateBookTable.category, rateBookTable.description);
   res.json(entries);
 });
 
-router.post("/rate-book", async (req, res) => {
+router.post("/rate-book", requireRole("manager"), async (req, res) => {
   const [entry] = await db.insert(rateBookTable).values(req.body).returning();
+  await logAudit("rate_book", entry.id, "create", { description: entry.description }, req);
   res.status(201).json(entry);
 });
 
-router.patch("/rate-book/:id", async (req, res) => {
+router.patch("/rate-book/:id", requireRole("manager"), async (req, res) => {
   const [entry] = await db.update(rateBookTable).set(req.body).where(eq(rateBookTable.id, req.params.id)).returning();
   if (!entry) return res.status(404).json({ error: "Not found" });
+  await logAudit("rate_book", req.params.id, "update", req.body, req);
   return res.json(entry);
 });
 
-router.delete("/rate-book/:id", async (req, res) => {
+router.delete("/rate-book/:id", requireRole("manager"), async (req, res) => {
+  await logAudit("rate_book", req.params.id, "delete", null, req);
   await db.delete(rateBookTable).where(eq(rateBookTable.id, req.params.id));
   res.status(204).send();
 });

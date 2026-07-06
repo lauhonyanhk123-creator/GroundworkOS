@@ -6,7 +6,7 @@ import { requireRole } from "../lib/auth.js";
 
 const router = Router();
 
-router.get("/clients", async (req, res) => {
+router.get("/clients", requireRole("manager"), async (req, res) => {
   const clients = await db.select().from(clientsTable).orderBy(clientsTable.companyName);
   const jobStats = await db
     .select({
@@ -25,7 +25,7 @@ router.get("/clients", async (req, res) => {
   res.json(result);
 });
 
-router.post("/clients", async (req, res) => {
+router.post("/clients", requireRole("manager"), async (req, res) => {
   const { id: _id, ...data } = req.body;
   const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
@@ -34,7 +34,7 @@ router.post("/clients", async (req, res) => {
   res.status(201).json({ ...client, totalJobs: 0, totalValue: 0 });
 });
 
-router.get("/clients/:id", async (req, res) => {
+router.get("/clients/:id", requireRole("manager"), async (req, res) => {
   const [client] = await db.select().from(clientsTable).where(eq(clientsTable.id, req.params.id));
   if (!client) return res.status(404).json({ error: "Not found" });
   const [stats] = await db
@@ -47,7 +47,7 @@ router.get("/clients/:id", async (req, res) => {
   return res.json({ ...client, totalJobs: stats?.totalJobs ?? 0, totalValue: stats?.totalValue ?? 0 });
 });
 
-router.patch("/clients/:id", async (req, res) => {
+router.patch("/clients/:id", requireRole("manager"), async (req, res) => {
   const [client] = await db
     .update(clientsTable)
     .set(req.body)

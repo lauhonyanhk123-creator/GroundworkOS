@@ -1,6 +1,8 @@
 import { Router } from "express";
 import { db, quotesTable, invoicesTable, jobsTable, clientsTable, companySettingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { requireRole } from "../lib/auth.js";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -119,7 +121,7 @@ function buildInvoiceHtml(invoice: any, company: any): string {
 </html>`;
 }
 
-router.post("/email/send-quote", async (req, res) => {
+router.post("/email/send-quote", requireRole("manager"), async (req, res) => {
   const { quoteId, to, subject, message } = req.body as { quoteId: string; to: string; subject?: string; message?: string };
   if (!quoteId || !to) return res.status(400).json({ error: "quoteId and to are required" });
 
@@ -147,6 +149,7 @@ router.post("/email/send-quote", async (req, res) => {
     });
 
     await db.update(quotesTable).set({ status: "sent", sentAt: new Date().toISOString() } as any).where(eq(quotesTable.id, quoteId));
+    await logAudit("quote", quoteId, "update", { action: "email_sent", to }, req);
 
     return res.json({ ok: true });
   } catch (err: any) {
@@ -154,7 +157,7 @@ router.post("/email/send-quote", async (req, res) => {
   }
 });
 
-router.post("/email/send-invoice", async (req, res) => {
+router.post("/email/send-invoice", requireRole("manager"), async (req, res) => {
   const { invoiceId, to, subject, message } = req.body as { invoiceId: string; to: string; subject?: string; message?: string };
   if (!invoiceId || !to) return res.status(400).json({ error: "invoiceId and to are required" });
 
@@ -182,6 +185,7 @@ router.post("/email/send-invoice", async (req, res) => {
     });
 
     await db.update(invoicesTable).set({ status: "sent" } as any).where(eq(invoicesTable.id, invoiceId));
+    await logAudit("invoice", invoiceId, "update", { action: "email_sent", to }, req);
 
     return res.json({ ok: true });
   } catch (err: any) {

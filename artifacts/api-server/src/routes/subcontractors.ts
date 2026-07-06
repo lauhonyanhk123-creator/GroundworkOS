@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, subcontractorsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { getUserRole, requireRole } from "../lib/auth.js";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -25,7 +26,7 @@ const SELF_SERVICE_FIELDS = [
 // only an admin should be able to change these.
 const ADMIN_ONLY_FIELDS = ["cisStatus", "cisDeductionRate", "utrNumber"] as const;
 
-router.get("/subcontractors", async (req, res) => {
+router.get("/subcontractors", requireRole("manager"), async (req, res) => {
   const subs = await db.select().from(subcontractorsTable).orderBy(subcontractorsTable.companyName);
   res.json(subs);
 });
@@ -35,16 +36,17 @@ router.post("/subcontractors", requireRole("manager"), async (req, res) => {
   const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
   const [sub] = await db.insert(subcontractorsTable).values({ id, ...data }).returning();
+  await logAudit("subcontractor", id, "create", { companyName: data.companyName }, req);
   res.status(201).json(sub);
 });
 
-router.get("/subcontractors/:id", async (req, res) => {
+router.get("/subcontractors/:id", requireRole("manager"), async (req, res) => {
   const [sub] = await db.select().from(subcontractorsTable).where(eq(subcontractorsTable.id, req.params.id));
   if (!sub) return res.status(404).json({ error: "Not found" });
   return res.json(sub);
 });
 
-router.patch("/subcontractors/:id", async (req, res) => {
+router.patch("/subcontractors/:id", requireRole("manager"), async (req, res) => {
   const role = await getUserRole(req);
   const requestedFields = Object.keys(req.body);
   const touchesAdminOnly = requestedFields.some((f) => (ADMIN_ONLY_FIELDS as readonly string[]).includes(f));
@@ -60,10 +62,12 @@ router.patch("/subcontractors/:id", async (req, res) => {
 
   const [sub] = await db.update(subcontractorsTable).set(data).where(eq(subcontractorsTable.id, req.params.id)).returning();
   if (!sub) return res.status(404).json({ error: "Not found" });
+  await logAudit("subcontractor", req.params.id, "update", data, req);
   return res.json(sub);
 });
 
 router.delete("/subcontractors/:id", requireRole("manager"), async (req, res) => {
+  await logAudit("subcontractor", req.params.id, "delete", null, req);
   await db.delete(subcontractorsTable).where(eq(subcontractorsTable.id, req.params.id));
   res.status(204).send();
 });

@@ -4,7 +4,7 @@ import { z } from "zod/v4";
 
 export const jobsTable = pgTable("jobs", {
   id: text("id").primaryKey(),
-  jobNumber: text("job_number").notNull(),
+  jobNumber: text("job_number").notNull().unique(),
   title: text("title").notNull(),
   clientId: text("client_id"),
   type: text("type"),

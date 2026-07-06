@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, plantTable, jobsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireRole } from "../lib/auth.js";
+import { logAudit } from "./audit.js";
 
 const router = Router();
 
@@ -12,28 +13,31 @@ async function enrichPlant(item: typeof plantTable.$inferSelect) {
   return { ...item, currentJobTitle: job?.title ?? null };
 }
 
-router.get("/plant", async (req, res) => {
+router.get("/plant", requireRole("manager"), async (req, res) => {
   const items = await db.select().from(plantTable).orderBy(plantTable.name);
   const enriched = await Promise.all(items.map(enrichPlant));
   res.json(enriched);
 });
 
-router.post("/plant", async (req, res) => {
+router.post("/plant", requireRole("manager"), async (req, res) => {
   const { currentJobTitle: _cjt, id: _id, ...data } = req.body;
   const { generateId } = await import("../lib/generateId.js");
   const id = generateId();
   const [item] = await db.insert(plantTable).values({ id, ...data }).returning();
+  await logAudit("plant", id, "create", { name: data.name }, req);
   res.status(201).json(await enrichPlant(item));
 });
 
-router.patch("/plant/:id", async (req, res) => {
+router.patch("/plant/:id", requireRole("manager"), async (req, res) => {
   const { currentJobTitle: _cjt, ...data } = req.body;
   const [item] = await db.update(plantTable).set(data).where(eq(plantTable.id, req.params.id)).returning();
   if (!item) return res.status(404).json({ error: "Not found" });
+  await logAudit("plant", req.params.id, "update", data, req);
   return res.json(await enrichPlant(item));
 });
 
 router.delete("/plant/:id", requireRole("manager"), async (req, res) => {
+  await logAudit("plant", req.params.id, "delete", null, req);
   await db.delete(plantTable).where(eq(plantTable.id, req.params.id));
   res.status(204).send();
 });
