@@ -52,14 +52,21 @@ router.get("/invoices", async (req, res) => {
 });
 
 router.post("/invoices", async (req, res) => {
+  // Strip fields the client must not control directly: `id`/`invoiceNumber`
+  // are server-generated, and `clientName`/`jobTitle` are enrichment-only
+  // (joined in from other tables, never stored on the invoice itself).
+  // `vatAmount`/`totalAmount`/`cisDeduction` are recomputed below rather than
+  // trusted from the request, so any client-sent values are discarded here.
   const { clientName: _cn, jobTitle: _jt, id: _id, invoiceNumber: _in, vatAmount: _va, totalAmount: _ta, cisDeduction: _cd, ...rest } = req.body;
   const data = await computeFinancials(rest);
   const { generateId, nextSeqNumber } = await import("../lib/generateId.js");
   const id = generateId();
   const invoiceNumber = await nextSeqNumber("invoices", "INV");
+  // `data` is a loosely-typed Record from computeFinancials; cast once here
+  // rather than threading strict types through the whole compute pipeline.
   const insertData = { id, invoiceNumber, ...data } as typeof invoicesTable.$inferInsert;
   const [inv] = await db.insert(invoicesTable).values(insertData).returning();
-  await logAudit("invoice", id, "create", { invoiceNumber, status: (data as any).status }, req);
+  await logAudit("invoice", id, "create", { invoiceNumber, status: insertData.status }, req);
   res.status(201).json(await enrichInvoice(inv));
 });
 
@@ -70,8 +77,12 @@ router.get("/invoices/:id", async (req, res) => {
 });
 
 router.patch("/invoices/:id", async (req, res) => {
+  // Same stripping rationale as the POST handler above.
   const { clientName: _cn, jobTitle: _jt, vatAmount: _va, totalAmount: _ta, cisDeduction: _cd, ...rest } = req.body;
   let data: Record<string, any> = rest;
+  // Only recompute VAT/total/CIS if something that affects them changed;
+  // otherwise this is a partial update (e.g. just `status`) and we leave the
+  // existing financial fields untouched.
   if (rest.subtotal !== undefined || rest.subcontractorId !== undefined) {
     const [existing] = await db.select().from(invoicesTable).where(eq(invoicesTable.id, req.params.id));
     if (!existing) return res.status(404).json({ error: "Not found" });

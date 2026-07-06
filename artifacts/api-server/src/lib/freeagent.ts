@@ -39,8 +39,11 @@ export async function getConnection() {
 let refreshInFlight: Promise<typeof freeagentConnectionTable.$inferSelect> | null = null;
 
 async function refreshIfNeeded(conn: typeof freeagentConnectionTable.$inferSelect) {
+  // Refresh 5 min before expiry
   if (Date.now() < new Date(conn.expiresAt).getTime() - 5 * 60 * 1000) return conn;
 
+  // Concurrent requests hitting an expired token share one refresh instead of
+  // racing each other and clobbering the stored refresh token.
   if (refreshInFlight) return refreshInFlight;
   refreshInFlight = doRefresh(conn).finally(() => {
     refreshInFlight = null;

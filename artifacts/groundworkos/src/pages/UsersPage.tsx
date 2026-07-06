@@ -29,6 +29,8 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(false);
+  // Only relevant for non-admins: true when the workspace has no admin yet,
+  // which unlocks the one-time "make me admin" self-promotion screen below.
   const [noAdminYet, setNoAdminYet] = useState(false);
 
   const checkBootstrap = useCallback(async () => {
@@ -38,7 +40,8 @@ export function UsersPage() {
       const data = await r.json();
       setNoAdminYet(!data.adminExists);
     } catch {
-      // silently ignore; bootstrap banner just won't show
+      // Network error: fail closed and just show "Admin access required"
+      // instead of the bootstrap screen.
     }
   }, []);
 
@@ -57,6 +60,9 @@ export function UsersPage() {
   }, []);
 
   useEffect(() => {
+    // Admins see the full member list; everyone else only needs to know
+    // whether bootstrap is available, so we skip fetching the (admin-only)
+    // user list entirely for them.
     if (isAtLeast(role, "admin")) {
       fetchUsers();
     } else {
@@ -65,6 +71,7 @@ export function UsersPage() {
     }
   }, [role, fetchUsers, checkBootstrap]);
 
+  /** Self-promotes the current user to admin, then reloads so Clerk's cached role updates everywhere. */
   async function handleBootstrap() {
     setBootstrapping(true);
     try {
@@ -75,6 +82,8 @@ export function UsersPage() {
       await currentUser?.reload();
       window.location.reload();
     } catch (err: any) {
+      // Most likely someone else became admin in the meantime (409); hide
+      // the bootstrap screen so we fall back to "Admin access required".
       toast.error(err.message || "Failed to become admin");
       setNoAdminYet(false);
     } finally {

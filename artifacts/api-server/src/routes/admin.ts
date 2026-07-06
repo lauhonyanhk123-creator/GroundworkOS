@@ -3,8 +3,26 @@ import { clerkClient } from "@clerk/express";
 
 const router = Router();
 
+// ─── Shared helpers ─────────────────────────────────────────────────────────
+
+/** Reads the authenticated Clerk user id off the request, or null if signed out. */
+function getUserId(req: any): string | null {
+  return req.userId ?? req.auth?.userId ?? null;
+}
+
+/** True if any user in the workspace already has the "admin" role. */
+async function adminExists(): Promise<boolean> {
+  const response = await clerkClient.users.getUserList({ limit: 500 });
+  return response.data.some((u) => (u.publicMetadata?.role as string) === "admin");
+}
+
+/**
+ * Guards a route to admins only. Responds with 401/403 and returns false if
+ * the caller isn't an admin, so the route handler can `if (!(await
+ * requireAdmin(req, res))) return;` and stop early.
+ */
 async function requireAdmin(req: any, res: any): Promise<boolean> {
-  const userId: string | undefined = req.userId ?? req.auth?.userId;
+  const userId = getUserId(req);
   if (!userId) {
     res.status(401).json({ error: "Unauthorized" });
     return false;
@@ -16,6 +34,8 @@ async function requireAdmin(req: any, res: any): Promise<boolean> {
   }
   return true;
 }
+
+// ─── User management (admin only) ──────────────────────────────────────────
 
 router.get("/admin/users", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
@@ -37,46 +57,6 @@ router.get("/admin/users", async (req, res) => {
   }
 });
 
-router.get("/admin/bootstrap-status", async (req, res) => {
-  const userId: string | undefined = (req as any).userId ?? (req as any).auth?.userId;
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  try {
-    const response = await clerkClient.users.getUserList({ limit: 500 });
-    const adminExists = response.data.some(
-      (u) => (u.publicMetadata?.role as string) === "admin",
-    );
-    return res.json({ adminExists });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message ?? "Failed to check admin status" });
-  }
-});
-
-router.post("/admin/bootstrap", async (req, res) => {
-  const userId: string | undefined = (req as any).userId ?? (req as any).auth?.userId;
-  if (!userId) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-  try {
-    const response = await clerkClient.users.getUserList({ limit: 500 });
-    const anyAdminExists = response.data.some(
-      (u) => (u.publicMetadata?.role as string) === "admin",
-    );
-    if (anyAdminExists) {
-      return res
-        .status(409)
-        .json({ error: "An admin already exists. Ask them to promote you from Settings > Users." });
-    }
-    await clerkClient.users.updateUserMetadata(userId, {
-      publicMetadata: { role: "admin" },
-    });
-    return res.json({ ok: true });
-  } catch (err: any) {
-    return res.status(500).json({ error: err.message ?? "Failed to bootstrap admin" });
-  }
-});
-
 router.patch("/admin/users/:id/role", async (req, res) => {
   if (!(await requireAdmin(req, res))) return;
   const { role } = req.body;
@@ -90,6 +70,47 @@ router.patch("/admin/users/:id/role", async (req, res) => {
     return res.json({ ok: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message ?? "Failed to update role" });
+  }
+});
+
+// ─── First-time admin bootstrap ─────────────────────────────────────────────
+//
+// A brand-new deployment starts with zero admins, so the "admin only" guard
+// above would lock everyone out of user management forever — nobody could
+// ever grant the first admin role. These two endpoints solve that one-time
+// bootstrap problem: any signed-in user may check whether an admin exists
+// yet, and may promote *themselves* to admin, but only while the workspace
+// still has none. Once an admin exists, bootstrap permanently stops working
+// and role changes must go through the admin-only endpoint above.
+
+router.get("/admin/bootstrap-status", async (req, res) => {
+  if (!getUserId(req)) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    return res.json({ adminExists: await adminExists() });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Failed to check admin status" });
+  }
+});
+
+router.post("/admin/bootstrap", async (req, res) => {
+  const userId = getUserId(req);
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+  try {
+    if (await adminExists()) {
+      return res
+        .status(409)
+        .json({ error: "An admin already exists. Ask them to promote you from Settings > Users." });
+    }
+    await clerkClient.users.updateUserMetadata(userId, {
+      publicMetadata: { role: "admin" },
+    });
+    return res.json({ ok: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err.message ?? "Failed to bootstrap admin" });
   }
 });
 
