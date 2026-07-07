@@ -10,10 +10,25 @@ function getUserId(req: any): string | null {
   return req.userId ?? req.auth?.userId ?? null;
 }
 
-/** True if any user in the workspace already has the "admin" role. */
+/**
+ * True if the workspace already has an effective admin.
+ *
+ * Role resolution across the app treats a user with NO explicit role as an
+ * admin (see getUserRole in lib/auth.ts and requireAdmin below), so brand-new
+ * signups have full access by default. This check MUST use the same semantics:
+ * a user counts as an admin when their role is explicitly "admin" OR when no
+ * role is set at all. Counting only the explicit "admin" string would report
+ * "no admin exists" in normal operation (default-admins never carry the
+ * explicit string), which would wrongly re-open the self-promotion bootstrap
+ * flow to demoted managers/foremen. Bootstrap should only unlock in a genuine
+ * lockout — i.e. every user has been explicitly demoted to manager/foreman.
+ */
 export async function adminExists(): Promise<boolean> {
   const response = await clerkClient.users.getUserList({ limit: 500 });
-  return response.data.some((u) => (u.publicMetadata?.role as string) === "admin");
+  return response.data.some((u) => {
+    const role = u.publicMetadata?.role as string | undefined;
+    return role === undefined || role === "admin";
+  });
 }
 
 /**
