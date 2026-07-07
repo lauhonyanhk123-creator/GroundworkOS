@@ -1,1 +1,0 @@
-- [GroundworkOS project conventions](groundworkos.md) — UK construction CRM; mock data only; all dates must stay in 2025-2026 range to keep charts/alerts realistic
