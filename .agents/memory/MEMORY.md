@@ -10,3 +10,4 @@
 - [Express 5 typed middleware params](express5-typed-middleware.md) — untyped RequestHandler factories passed as extra middleware break route param typing; make the factory generic over P/ResBody/ReqBody/ReqQuery
 - [Clerk test-auth role limits](clerk-test-auth-roles.md) — testClerkAuth signup can't set custom publicMetadata; GroundworkOS defaults new signups to admin, so to test low-privilege paths assign manager/foreman via the app's role endpoint; includes trick for testing catch-all/404 routes without elevating role
 - [GroundworkOS initial loading state](groundworkos-initial-loading-state.md) — global `isLoading` gate in DashboardLayout avoids flash-of-empty-state on cold load; add new core dataset queries to the SET_LOADED condition
+- [Client ids must not be DB PKs](client-ids-as-primary-keys.md) — generate child-row ids server-side; module-level baked-in random ids reused across creates cause 2nd-create PK collisions

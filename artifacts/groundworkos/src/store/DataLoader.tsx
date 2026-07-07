@@ -10,6 +10,25 @@ import {
   toDocument, toScheduleEntry, toPlant, toTimesheet, toPurchaseOrder,
 } from '../lib/apiTransforms';
 import type { CISReturn } from '../types';
+import { toast } from 'sonner';
+
+const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
+
+async function loadRows(path: string, label: string): Promise<Record<string, unknown>[] | null> {
+  try {
+    const res = await fetch(`${BASE}${path}`);
+    // 401/403 mean the current role isn't permitted this dataset (e.g. a foreman
+    // hitting a manager-gated endpoint) — expected, so skip silently.
+    if (res.status === 401 || res.status === 403) return null;
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    return Array.isArray(data) ? (data as Record<string, unknown>[]) : null;
+  } catch (err) {
+    console.error(`Failed to load ${label}:`, err);
+    toast.error(`Couldn't load ${label}`, { id: 'dataload-error' });
+    return null;
+  }
+}
 
 function mapCisReturn(row: Record<string, unknown>, idx: number): CISReturn {
   const period = (row.period as string | null) ?? '';
@@ -84,48 +103,40 @@ export function DataLoader() {
   }, [clientsLoading, jobsLoading, quotesLoading, invoicesLoading, dispatch]);
 
   useEffect(() => {
-    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
-    fetch(`${BASE}/api/purchase-orders`)
-      .then(r => r.json())
-      .then((rows: Record<string, unknown>[]) => {
-        if (!Array.isArray(rows)) return;
-        dispatch({ type: 'INIT_PURCHASE_ORDERS', purchaseOrders: rows.map(toPurchaseOrder) });
-      })
-      .catch((err) => console.error('Failed to load purchase orders:', err));
+    loadRows('/api/purchase-orders', 'purchase orders').then((rows) => {
+      if (rows) dispatch({ type: 'INIT_PURCHASE_ORDERS', purchaseOrders: rows.map(toPurchaseOrder) });
+    });
   }, [dispatch]);
 
   useEffect(() => {
-    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
-    fetch(`${BASE}/api/timesheets`)
-      .then(r => r.json())
-      .then((rows: Record<string, unknown>[]) => {
-        if (!Array.isArray(rows)) return;
-        dispatch({ type: 'INIT_TIMESHEETS', timesheets: rows.map(toTimesheet) });
-      })
-      .catch((err) => console.error('Failed to load timesheets:', err));
+    loadRows('/api/timesheets', 'timesheets').then((rows) => {
+      if (rows) dispatch({ type: 'INIT_TIMESHEETS', timesheets: rows.map(toTimesheet) });
+    });
   }, [dispatch]);
 
   useEffect(() => {
-    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
-    fetch(`${BASE}/api/cis/returns`)
-      .then(r => r.json())
-      .then((rows: Record<string, unknown>[]) => {
-        if (!Array.isArray(rows)) return;
-        dispatch({ type: 'INIT_CIS_RETURNS', cisReturns: rows.map(mapCisReturn) });
-      })
-      .catch((err) => console.error('Failed to load CIS returns:', err));
+    loadRows('/api/cis/returns', 'CIS returns').then((rows) => {
+      if (rows) dispatch({ type: 'INIT_CIS_RETURNS', cisReturns: rows.map(mapCisReturn) });
+    });
   }, [dispatch]);
 
   useEffect(() => {
-    const BASE = (import.meta as any).env?.BASE_URL?.replace(/\/$/, '') ?? '';
-    fetch(`${BASE}/api/settings/company`)
-      .then(r => r.json())
-      .then(data => {
-        if (data && typeof data === 'object') {
+    (async () => {
+      try {
+        const res = await fetch(`${BASE}/api/settings/company`);
+        if (res.status === 401 || res.status === 403) return;
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        // Only merge a real settings object. A non-200 body is often
+        // { error: ... }, which must not be treated as settings.
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
           dispatch({ type: 'INIT_SETTINGS', settings: data });
         }
-      })
-      .catch((err) => console.error('Failed to load company settings:', err));
+      } catch (err) {
+        console.error('Failed to load company settings:', err);
+        toast.error("Couldn't load company settings", { id: 'dataload-error' });
+      }
+    })();
   }, [dispatch]);
 
   return null;

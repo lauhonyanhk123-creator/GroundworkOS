@@ -23,13 +23,13 @@ export async function getUserRole(req: Request): Promise<Role> {
   // full access out of the box. An explicitly-set role always takes precedence.
   let role: Role = "admin";
   if (userId) {
-    try {
-      const user = await clerkClient.users.getUser(userId);
-      const claimed = user.publicMetadata?.role;
-      if (isRole(claimed)) role = claimed;
-    } catch {
-      // fall back to the default role if Clerk lookup fails
-    }
+    // A Clerk lookup failure is intentionally NOT swallowed here. Falling back
+    // to "admin" on error would let an explicitly-demoted manager/foreman
+    // silently gain admin during a transient Clerk outage (fail-open privilege
+    // escalation). Let it throw so requireRole can fail closed with a 503.
+    const user = await clerkClient.users.getUser(userId);
+    const claimed = user.publicMetadata?.role;
+    if (isRole(claimed)) role = claimed;
   }
   (req as any)._role = role;
   return role;
@@ -47,7 +47,15 @@ export function requireRole<P = any, ResBody = any, ReqBody = any, ReqQuery = an
   minRole: Role
 ): RequestHandler<P, ResBody, ReqBody, ReqQuery> {
   return async (req, res, next) => {
-    const role = await getUserRole(req as unknown as Request);
+    let role: Role;
+    try {
+      role = await getUserRole(req as unknown as Request);
+    } catch {
+      // Fail closed: if the caller's role can't be verified (e.g. a Clerk
+      // outage), deny the request rather than assuming the default admin role.
+      (res.status(503) as any).json({ error: "Unable to verify permissions, please try again" });
+      return;
+    }
     if (ROLE_RANK[role] < ROLE_RANK[minRole]) {
       (res.status(403) as any).json({ error: `Forbidden: ${minRole} role required` });
       return;

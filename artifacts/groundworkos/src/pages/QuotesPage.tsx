@@ -31,13 +31,13 @@ const emptyLineItem = (): LineItem => ({
   total: 0,
 });
 
-const emptyForm = {
+const makeEmptyForm = () => ({
   client_id: '',
   title: '',
   valid_until: (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })(),
   notes: '',
   line_items: [emptyLineItem()],
-};
+});
 
 export function QuotesPage() {
   const { state, dispatch } = useApp();
@@ -47,7 +47,7 @@ export function QuotesPage() {
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] = useState(makeEmptyForm);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -89,7 +89,7 @@ export function QuotesPage() {
   const total = subtotal + vatAmount;
 
   function openNew() {
-    setForm(emptyForm);
+    setForm(makeEmptyForm());
     setErrors({});
     setShowModal(true);
   }

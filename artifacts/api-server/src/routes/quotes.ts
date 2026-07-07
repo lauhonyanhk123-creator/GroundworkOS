@@ -45,6 +45,7 @@ router.post("/quotes", async (req, res) => {
       await tx.insert(lineItemsTable).values(
         lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({
           ...li,
+          id: generateId(),
           quoteId: inserted.id,
           total: Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) / 100,
         }))
@@ -65,6 +66,7 @@ router.get("/quotes/:id", async (req, res) => {
 
 router.patch("/quotes/:id", async (req, res) => {
   const { lineItems, clientName: _cn, subtotal: _st, vatAmount: _va, totalAmount: _ta, ...data } = req.body;
+  const { generateId } = await import("../lib/generateId.js");
   const totals = lineItems !== undefined
     ? (lineItems.length ? computeTotalsFromLineItems(lineItems) : { subtotal: 0, vatAmount: 0, totalAmount: 0 })
     : {};
@@ -78,6 +80,7 @@ router.patch("/quotes/:id", async (req, res) => {
         await tx.insert(lineItemsTable).values(
           lineItems.map((li: typeof lineItemsTable.$inferInsert) => ({
             ...li,
+            id: generateId(),
             quoteId: updated.id,
             total: Math.round((Number(li.quantity) || 0) * (Number(li.unitPrice) || 0) * 100) / 100,
           }))
