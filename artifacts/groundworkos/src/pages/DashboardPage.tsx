@@ -7,6 +7,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { Btn } from '../components/ui/Btn';
 import { formatCurrency, formatDate } from '../lib/utils';
 import { useApp } from '../store/AppContext';
+import { useRole, isAtLeast } from '../hooks/useRole';
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, '');
 
@@ -88,6 +89,8 @@ export function DashboardPage() {
 
   const [extraStats, setExtraStats] = useState<DashboardStats | null>(null);
   const [activityFeed, setActivityFeed] = useState<AuditEntry[]>([]);
+  const role = useRole();
+  const isAdmin = isAtLeast(role, 'admin');
 
   useEffect(() => {
     fetch(`${BASE}/api/dashboard`)
@@ -97,11 +100,14 @@ export function DashboardPage() {
   }, []);
 
   useEffect(() => {
+    // The audit trail is admin-only; skip the fetch for non-admins so the
+    // Recent Activity panel isn't populated (or 403'd) for them.
+    if (!isAdmin) return;
     fetch(`${BASE}/api/audit-logs?limit=10&days=30`)
       .then(r => r.ok ? r.json() : null)
       .then((data: AuditEntry[] | null) => { if (data) setActivityFeed(data); })
       .catch(() => {});
-  }, []);
+  }, [isAdmin]);
 
   const activeJobs = jobs.filter(j => j.status === 'active');
   const outstandingInvoices = invoices.filter(i => i.status === 'sent' || i.status === 'overdue');
@@ -331,6 +337,7 @@ export function DashboardPage() {
             )}
           </Panel>
 
+          {isAdmin && (
           <Panel title="Recent Activity" actions={
             <Link href="/audit"><Btn variant="ghost" size="sm">Full log <ArrowRight className="w-3 h-3" /></Btn></Link>
           }>
@@ -372,6 +379,7 @@ export function DashboardPage() {
               </div>
             )}
           </Panel>
+          )}
         </div>
       </div>
     </div>

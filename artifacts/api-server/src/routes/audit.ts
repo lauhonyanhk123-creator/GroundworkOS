@@ -34,7 +34,7 @@ export async function logAudit(
   }
 }
 
-router.get("/audit-logs", requireRole("manager"), async (req, res) => {
+router.get("/audit-logs", requireRole("admin"), async (req, res) => {
   const { entityType, entityId, days = "30", limit = "100" } = req.query as Record<string, string>;
   const since = new Date(Date.now() - Number(days) * 86400000);
 

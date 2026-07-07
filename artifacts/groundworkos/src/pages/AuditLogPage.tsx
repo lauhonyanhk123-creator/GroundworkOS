@@ -50,13 +50,21 @@ export function AuditLogPage() {
   const [actionFilter, setActionFilter] = useState('all');
   const [days, setDays] = useState('30');
   const [selected, setSelected] = useState<AuditLog | null>(null);
+  const [forbidden, setForbidden] = useState(false);
 
   useEffect(() => {
     setLoading(true);
     const params = new URLSearchParams({ days, limit: '500' });
     if (entityFilter !== 'all') params.set('entityType', entityFilter);
     fetch(`${BASE}/api/audit-logs?${params}`)
-      .then(r => r.json())
+      .then(async r => {
+        // The audit trail is admin-only; a non-admin (e.g. a manager who
+        // reaches this route by URL) gets 403. Show a clear access message
+        // instead of a misleading empty table.
+        if (r.status === 403) { setForbidden(true); return null; }
+        setForbidden(false);
+        return r.json();
+      })
       .then(data => {
         if (Array.isArray(data)) setLogs(data);
       })
@@ -81,6 +89,14 @@ export function AuditLogPage() {
   const totalUpdates = logs.filter(l => l.action === 'update').length;
   const totalDeletes = logs.filter(l => l.action === 'delete').length;
   const uniqueUsers = new Set(logs.map(l => l.userId).filter(Boolean)).size;
+
+  if (forbidden) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[50vh] gap-3">
+        <p style={{ color: '#7a7469', fontSize: 14, fontFamily: "'Inter', sans-serif" }}>Admin access required</p>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-[1400px] mx-auto space-y-6">
