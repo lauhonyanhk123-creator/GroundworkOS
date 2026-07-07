@@ -28,7 +28,7 @@ import auditRouter from "./audit";
 const router: IRouter = Router();
 
 const PUBLIC_PATHS = [
-  "/health",
+  "/healthz",
   "/xero/callback",
   "/quickbooks/callback",
   "/sage/callback",
