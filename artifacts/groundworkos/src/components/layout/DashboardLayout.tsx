@@ -146,9 +146,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
         <div className="h-13 flex items-center justify-between px-4 py-3" style={{ borderBottom: '1px solid #d9d4ce' }}>
           <Link href="/" className="flex items-center gap-2.5 no-underline">
-            <div className="w-7 h-7 flex items-center justify-center flex-shrink-0" style={{ border: '1.5px solid #1b5e78', borderRadius: '4px' }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '14px', color: '#1b5e78', lineHeight: 1 }}>G</span>
-            </div>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '13px', color: '#181410', letterSpacing: '0.04em' }}>
               GROUNDWORK<span style={{ color: '#1b5e78' }}>OS</span>
             </span>

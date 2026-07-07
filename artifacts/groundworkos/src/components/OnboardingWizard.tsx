@@ -99,9 +99,6 @@ export function OnboardingWizard({ onComplete }: Props) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 flex items-center justify-center" style={{ border: '2px solid #1b5e78', borderRadius: '6px' }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '16px', color: '#1b5e78' }}>G</span>
-            </div>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: '15px', color: '#181410', letterSpacing: '0.04em' }}>
               GROUNDWORK<span style={{ color: '#1b5e78' }}>OS</span>
             </span>

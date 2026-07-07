@@ -149,9 +149,6 @@ function LandingPage() {
       <header style={{ backgroundColor: "#fafaf8", borderBottom: "1px solid #d9d4ce", position: "sticky", top: 0, zIndex: 10 }}>
         <div style={{ maxWidth: 1024, margin: "0 auto", padding: "0 24px", height: 56, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <div style={{ width: 28, height: 28, border: "1.5px solid #1b5e78", borderRadius: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 14, color: "#1b5e78" }}>G</span>
-            </div>
             <span style={{ fontFamily: "'Space Grotesk', sans-serif", fontWeight: 700, fontSize: 13, color: "#181410", letterSpacing: "0.04em" }}>
               GROUNDWORK<span style={{ color: "#1b5e78" }}>OS</span>
             </span>
