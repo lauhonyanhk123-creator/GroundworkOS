@@ -35,12 +35,18 @@ import { useApp } from "./store/AppContext";
 const queryClient = new QueryClient();
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-const clerkPubKey = publishableKeyFromHost(
-  window.location.hostname,
-  import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
-);
-
 const clerkProxyUrl = import.meta.env.VITE_CLERK_PROXY_URL;
+
+// With the Replit Clerk proxy (VITE_CLERK_PROXY_URL set), derive the publishable
+// key from the current host so it matches the proxied FAPI. For a standalone
+// (external) Clerk account — no proxy — use the publishable key directly, since
+// publishableKeyFromHost rebuilds a bogus FAPI host from the hostname for a live key.
+const clerkPubKey = clerkProxyUrl
+  ? publishableKeyFromHost(
+      window.location.hostname,
+      import.meta.env.VITE_CLERK_PUBLISHABLE_KEY,
+    )
+  : import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 function stripBase(path: string): string {
   return basePath && path.startsWith(basePath) ? path.slice(basePath.length) || "/" : path;
