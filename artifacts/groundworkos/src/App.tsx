@@ -53,11 +53,6 @@ if (!clerkPubKey) {
 const clerkAppearance = {
   theme: shadcn,
   cssLayerName: "clerk",
-  options: {
-    logoPlacement: "inside" as const,
-    logoLinkUrl: basePath || "/",
-    logoImageUrl: `${window.location.origin}${basePath}/logo.svg`,
-  },
   variables: {
     colorPrimary: "#1b5e78",
     colorForeground: "#181410",
@@ -85,8 +80,7 @@ const clerkAppearance = {
     identityPreviewEditButton: { color: "#1b5e78" },
     formFieldSuccessText: { color: "#2a6e45" },
     alertText: { color: "#c13a2a" },
-    logoBox: "flex justify-center py-2",
-    logoImage: { height: "36px", width: "auto" },
+    logoBox: "hidden",
     socialButtonsBlockButton: { border: "1px solid #d9d4ce", backgroundColor: "#ffffff", borderRadius: "6px" },
     formButtonPrimary: { backgroundColor: "#1b5e78", color: "#ffffff", fontFamily: "'Space Grotesk', sans-serif", fontWeight: "600", borderRadius: "6px" },
     formFieldInput: { border: "1px solid #d9d4ce", backgroundColor: "#ffffff", color: "#181410", borderRadius: "6px" },
